@@ -1,0 +1,90 @@
+name: Build & Release Study Buddy
+
+on:
+  push:
+    tags:
+      - 'v*'          # Trigger on version tags like v0.1.0, v1.0.0
+  workflow_dispatch:   # Allow manual trigger from GitHub UI
+
+permissions:
+  contents: write      # Needed to create releases
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: Windows
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            label: macOS-ARM
+          - platform: macos-13
+            target: x86_64-apple-darwin
+            label: macOS-Intel
+
+    runs-on: ${{ matrix.platform }}
+    name: Build (${{ matrix.label }})
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      # macOS: install system dependencies
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: |
+          # Tauri v2 on macOS needs no extra system deps beyond Xcode CLI tools
+          echo "macOS ready"
+
+      # Windows: install system dependencies  
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        run: |
+          # Tauri v2 on Windows needs no extra system deps
+          echo "Windows ready"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Study Buddy ${{ github.ref_name }}'
+          releaseBody: |
+            ## Study Buddy ${{ github.ref_name }}
+            
+            ### Downloads
+            - **Windows**: `.msi` or `.exe` installer
+            - **macOS ARM (M1/M2/M3)**: `.dmg` disk image
+            - **macOS Intel**: `.dmg` disk image
+            
+            ### Installation
+            - **Windows**: Download the `.msi` or `.exe` and run it
+            - **macOS**: Download the `.dmg`, open it, and drag Study Buddy to Applications
+            
+            > ⚠️ On macOS you may need to right-click → Open the first time, since the app isn't code-signed with an Apple Developer certificate.
+          releaseDraft: true
+          prerelease: false
+          args: --target ${{ matrix.target }}

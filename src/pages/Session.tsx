@@ -7,6 +7,7 @@ import { open as openExternal } from '@tauri-apps/plugin-shell';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { METACOGNITION_QUESTIONS } from '../lib/metacognitionQuestions';
+import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
 
 interface PrepItem {
     emoji: string;
@@ -89,6 +90,13 @@ export default function Session() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session, paused]);
 
+    // 10s Cooldown Warning Sound
+    useEffect(() => {
+        if (remaining === 10 && !paused) {
+            playSFX('10sec-cooldown', theme);
+        }
+    }, [remaining, paused, theme]);
+
     async function handleBlockComplete() {
         if (!session) return;
         const currentBlock = session.draft[session.nowBlockIdx];
@@ -105,6 +113,7 @@ export default function Session() {
         if (nextIdx >= session.draft.length) {
             handleSessionComplete();
         } else {
+            playSFX('10sec-cooldown', theme); // Sound for switching task into a block
             const newSession = {
                 ...session,
                 nowBlockIdx: nextIdx,
@@ -160,6 +169,29 @@ export default function Session() {
                     await updateSubjectStats(subjId, mins as number, endedAt);
                 }
             }
+
+            // Track completed chapters
+            const completedChapterIds = new Set<string>();
+
+            for (let i = 0; i <= session.nowBlockIdx; i++) {
+                const block = session.draft[i];
+                if (block.type === 'WORK' && block.subject_id && block.chapter_name) {
+                    const isCurrent = i === session.nowBlockIdx;
+                    let mins = block.minutes;
+                    if (isCurrent && !completedAll) {
+                        mins = Math.floor((block.minutes * 60 - remaining) / 60);
+                    }
+                    if (mins > 0) {
+                        const chaps = getChaptersForSubject(block.subject_id);
+                        const ch = chaps.find(c => c.name === block.chapter_name);
+                        if (ch) completedChapterIds.add(ch.id);
+                    }
+                }
+            }
+
+            for (const id of completedChapterIds) {
+                incrementStudyCount(id);
+            }
         }
 
         localStorage.removeItem('activeSession');
@@ -201,6 +233,21 @@ export default function Session() {
 
                 {currentBlock.type === 'WORK' && (
                     <div style={{ margin: '12px 0' }}>
+                        {currentBlock.chapter_name && (
+                            <div style={{
+                                background: 'var(--card-bg)',
+                                padding: '12px 16px',
+                                borderRadius: '12px',
+                                marginBottom: '8px',
+                                textAlign: 'left',
+                                maxWidth: '400px',
+                                marginLeft: 'auto',
+                                marginRight: 'auto'
+                            }}>
+                                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '4px' }}>📖 Chapter</div>
+                                <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{currentBlock.chapter_name}</div>
+                            </div>
+                        )}
                         {currentBlock.objective && (
                             <div style={{
                                 background: 'var(--card-bg)',
@@ -486,6 +533,7 @@ export default function Session() {
                                     Session Complete.
                                 </p>
                                 <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '1.1rem', lineHeight: '1.6' }}>
+                                    Recommendation: Lie down for 10 minutes.<br />
                                     Do absolutely NOTHING right now. No phone, no scrolling, no planning.<br /><br />Let your mind process what you just learned.
                                 </p>
                                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>

@@ -72,6 +72,20 @@ export const curriculum: Section[] = [
                                 { id: "c", text: "It distracts your brain, which is the only way to cure the \"illusion of competence.\"", isCorrect: false }
                             ]
                         }
+                    },
+                    {
+                        id: "lesson-1-1-c",
+                        title: "Subsection C: Brain Fuel (Nutrition)",
+                        content: "Your brain consumes about 20% of your body's total energy, despite being only 2% of your weight. If you fuel it with highly processed sugars, you will experience a rapid glucose spike followed by an inevitable crash, destroying your focus. To maintain sustained cognitive performance, you must eat foods rich in Omega-3 fatty acids (like walnuts and salmon), antioxidants (like berries), and complex carbohydrates that release energy slowly. Hydration is equally critical; even a 2% drop in hydration can profoundly impair your concentration and short-term memory.\n\n![Brain Nutrition](/assets/images/learning%20center/food.png)",
+                        question: {
+                            id: 21,
+                            question: "Why should you avoid highly processed sugars before a long study session?",
+                            options: [
+                                { id: "a", text: "They cause a rapid energy spike followed by a severe crash, which destroys sustained focus.", isCorrect: true },
+                                { id: "b", text: "They permanently decrease the size of your working memory.", isCorrect: false },
+                                { id: "c", text: "They prevent your brain from entering the \"default mode network\" required for sleep.", isCorrect: false }
+                            ]
+                        }
                     }
                 ]
             },

@@ -1,5 +1,19 @@
 // ── Subject Chapters & Spaced Repetition Recommendations ──
 
+export type FocusType = 'skill' | 'comprehension' | 'memorisation' | null;
+
+export const FOCUS_TYPE_LABELS: Record<string, string> = {
+    skill: '🎯 Savoir Faire',
+    comprehension: '💡 Comprendre',
+    memorisation: '🧠 Mémoriser',
+};
+
+export const FOCUS_TYPE_COLORS: Record<string, string> = {
+    skill: '#f59e0b',
+    comprehension: '#3b82f6',
+    memorisation: '#8b5cf6',
+};
+
 export interface Chapter {
     id: string;
     subjectId: string;
@@ -7,6 +21,7 @@ export interface Chapter {
     studyCount: number;   // 0–3
     lastStudiedAt: string | null;
     createdAt: string;
+    focusType: FocusType;
 }
 
 const LS_KEY = 'study-buddy-chapters';
@@ -36,6 +51,7 @@ export function addChapter(subjectId: string, name: string): Chapter {
         studyCount: 0,
         lastStudiedAt: null,
         createdAt: new Date().toISOString(),
+        focusType: null,
     };
     all.push(ch);
     saveAll(all);
@@ -53,6 +69,15 @@ export function incrementStudyCount(id: string) {
     if (ch && ch.studyCount < 3) {
         ch.studyCount += 1;
         ch.lastStudiedAt = new Date().toISOString();
+    }
+    saveAll(all);
+}
+
+export function updateChapterFocusType(id: string, focusType: FocusType) {
+    const all = loadAll();
+    const ch = all.find(c => c.id === id);
+    if (ch) {
+        ch.focusType = focusType;
     }
     saveAll(all);
 }

@@ -58,6 +58,32 @@ pub fn run() {
       );
       ",
       kind: MigrationKind::Up,
+    },
+    Migration {
+      version: 5,
+      description: "add_deadline_and_archived_to_subjects",
+      sql: "
+      ALTER TABLE subjects ADD COLUMN deadline TEXT NULL;
+      ALTER TABLE subjects ADD COLUMN archived INT DEFAULT 0;
+      ",
+      kind: MigrationKind::Up,
+    },
+    Migration {
+      version: 6,
+      description: "add_focus_type_and_chapters_to_subjects",
+      sql: "
+      ALTER TABLE subjects ADD COLUMN focus_type TEXT NULL;
+      ALTER TABLE subjects ADD COLUMN chapters TEXT NULL;
+      ",
+      kind: MigrationKind::Up,
+    },
+    Migration {
+      version: 7,
+      description: "add_result_to_subjects",
+      sql: "
+      ALTER TABLE subjects ADD COLUMN result TEXT NULL;
+      ",
+      kind: MigrationKind::Up,
     }
   ];
 

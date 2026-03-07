@@ -8,7 +8,8 @@ export const SFX = {
     DRAG_DOWN: 'drag_down',
     CANCELLING: 'cancelling',
     ENTER_LESSON: 'entering_lesson',
-    PERFECT_SCORE: 'perfect_score'
+    PERFECT_SCORE: 'perfect_score',
+    COOLDOWN: '10sec-cooldown'
 } as const;
 
 export type SoundEffect = typeof SFX[keyof typeof SFX];
@@ -25,6 +26,7 @@ export const SFX_LABELS: Record<SoundEffect, string> = {
     cancelling: 'Cancel / Error',
     entering_lesson: 'Enter Lesson',
     perfect_score: 'Perfect Score',
+    '10sec-cooldown': '10s Warning',
 };
 
 // ── Volume Management ──

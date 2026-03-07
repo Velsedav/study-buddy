@@ -4,11 +4,13 @@ import { getSubjects } from '../lib/db';
 import type { Subject } from '../lib/db';
 import { useUndoRedo } from '../lib/undo';
 import TechniquePickerModal from '../components/TechniquePickerModal';
-import { TECHNIQUES, getTierColor } from '../lib/techniques';
+import ChapterPickerModal from '../components/ChapterPickerModal';
+import { TECHNIQUES, getTierColor, type TechCategory } from '../lib/techniques';
 import { MoreVertical } from 'lucide-react';
 import { CustomSelect } from '../components/CustomSelect';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
+import { getChaptersForSubject } from '../lib/chapters';
 
 type BlockType = 'PREP' | 'WORK' | 'BREAK';
 
@@ -18,14 +20,19 @@ interface Block {
     minutes: number;
     subject_id: string | null;
     technique_id: string | null;
+    chapter_name?: string | null;
     objective: string;
     cycle_id?: string;
 }
 
 const TEMPLATES: Record<string, { work: number, break: number, prep: number }> = {
+    '10/5': { work: 10, break: 5, prep: 5 },
+    '15/5': { work: 15, break: 5, prep: 5 },
     '25/5': { work: 25, break: 5, prep: 10 },
+    '47/13': { work: 47, break: 13, prep: 10 },
     '50/10': { work: 50, break: 10, prep: 10 },
-    '90/20': { work: 90, break: 20, prep: 10 }
+    '90/20': { work: 90, break: 20, prep: 10 },
+    'Custom': { work: 25, break: 5, prep: 5 }
 };
 
 const PIXELS_PER_MINUTE = 16;
@@ -35,6 +42,9 @@ export default function Plan() {
     const { theme } = useSettings();
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [template, setTemplate] = useState('25/5');
+    const [customWork, setCustomWork] = useState(25);
+    const [customBreak, setCustomBreak] = useState(5);
+    const [customPrep, setCustomPrep] = useState(5);
     const [repeats, setRepeats] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
     const [draggingSubjectId, setDraggingSubjectId] = useState<string | null>(null);
@@ -43,6 +53,7 @@ export default function Plan() {
     const { present: blocks, set: setBlocks, undo, canUndo, redo, canRedo } = useUndoRedo<Block[]>([]);
 
     const [pickingBlockId, setPickingBlockId] = useState<string | null>(null);
+    const [pickingChapterBlockId, setPickingChapterBlockId] = useState<string | null>(null);
     const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
 
     const dragRef = useRef<{ id: string, startY: number, startBlocks: Block[], lastDeltaSteps: number } | null>(null);
@@ -179,7 +190,10 @@ export default function Plan() {
 
     // Removed auto-generate blocks on template/repeat change
     const addBlocks = () => {
-        const tConfig = TEMPLATES[template] || TEMPLATES['25/5'];
+        const tConfig = template === 'Custom'
+            ? { work: customWork, break: customBreak, prep: customPrep }
+            : TEMPLATES[template] || TEMPLATES['25/5'];
+
         const newBlocks: Block[] = [...blocks];
 
         // Find if we need a PREP block at the very beginning (only if blocks is empty)
@@ -230,7 +244,14 @@ export default function Plan() {
         const newBlocks = blocks.map(b => b.id === blockId ? { ...b, subject_id: subjectId } : b);
         import('../lib/sounds').then(m => m.playSFX('drop_block', 'glassmorphism'));
         setBlocks(newBlocks);
-        setPickingBlockId(blockId);
+
+        const subjectChapters = getChaptersForSubject(subjectId);
+        if (subjectChapters.length > 0) {
+            setPickingChapterBlockId(blockId);
+        } else {
+            setPickingBlockId(blockId);
+        }
+
         setHoveredBlockId(null);
     };
 
@@ -265,7 +286,13 @@ export default function Plan() {
 
     const clearBlock = (id: string) => {
         import('../lib/sounds').then(m => m.playSFX('cancelling', 'glassmorphism'));
-        setBlocks(blocks.map(b => b.id === id ? { ...b, subject_id: null, technique_id: null, objective: '' } : b));
+        setBlocks(blocks.map(b => b.id === id ? { ...b, subject_id: null, technique_id: null, chapter_name: null, objective: '' } : b));
+    };
+
+    const handleChapterSelectedModal = (chapterName: string) => {
+        setBlocks(blocks.map(b => b.id === pickingChapterBlockId ? { ...b, chapter_name: chapterName } : b));
+        setPickingBlockId(pickingChapterBlockId); // Trigger technique selection right after
+        setPickingChapterBlockId(null);
     };
 
     const handleObjectiveChange = (blockId: string, value: string) => {
@@ -351,7 +378,7 @@ export default function Plan() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <label style={{ marginRight: '8px', fontWeight: 'bold' }}>Style</label>
                         <CustomSelect
                             value={template}
@@ -360,6 +387,22 @@ export default function Plan() {
                             options={Object.keys(TEMPLATES).map(k => ({ value: k, label: k }))}
                         />
                     </div>
+                    {template === 'Custom' && (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Work (m)</label>
+                                <input type="number" min="1" max="300" value={customWork} onChange={e => setCustomWork(parseInt(e.target.value) || 0)} style={{ width: '56px', padding: '4px 6px', fontSize: '0.9rem' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Break (m)</label>
+                                <input type="number" min="1" max="180" value={customBreak} onChange={e => setCustomBreak(parseInt(e.target.value) || 0)} style={{ width: '56px', padding: '4px 6px', fontSize: '0.9rem' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Prep (m)</label>
+                                <input type="number" min="0" max="60" value={customPrep} onChange={e => setCustomPrep(parseInt(e.target.value) || 0)} style={{ width: '56px', padding: '4px 6px', fontSize: '0.9rem' }} />
+                            </div>
+                        </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <label style={{ fontWeight: 'bold' }}>Repeats</label>
                         <style>{`
@@ -520,8 +563,8 @@ export default function Plan() {
                                         alignItems: 'stretch',
                                         gap: '16px',
                                         position: 'relative',
-                                        height: isWork ? `${Math.max(heightPx, 110)}px` : 'auto',
-                                        minHeight: isWork ? `${Math.max(heightPx, 110)}px` : '40px',
+                                        height: 'auto',
+                                        minHeight: isWork ? `${Math.max(heightPx, 130)}px` : '40px',
                                     }}
                                 >
                                     {isWork && block.subject_id && (
@@ -573,7 +616,7 @@ export default function Plan() {
                                     {isWork ? (
                                         <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
                                             {subject ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, alignItems: 'stretch', paddingRight: '16px', position: 'relative', zIndex: 1, paddingBottom: isWork ? '16px' : '0' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, alignItems: 'stretch', paddingRight: '16px', position: 'relative', zIndex: 1, paddingBottom: isWork ? '32px' : '0' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                                         <strong style={{ fontSize: '1.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subject.name}</strong>
                                                         {technique && (
@@ -590,6 +633,49 @@ export default function Plan() {
                                                             </span>
                                                         )}
                                                     </div>
+                                                    {(() => {
+                                                        const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
+                                                        if (subjectChapters.length === 0) {
+                                                            return (
+                                                                <div style={{
+                                                                    width: '100%',
+                                                                    padding: '6px 12px',
+                                                                    fontSize: '0.9rem',
+                                                                    marginBottom: '4px',
+                                                                    background: 'rgba(0,0,0,0.02)',
+                                                                    border: '1px solid var(--glass-border)',
+                                                                    borderRadius: '8px',
+                                                                    color: 'var(--text-muted)',
+                                                                    fontStyle: 'italic'
+                                                                }}>
+                                                                    No chapters defined for this subject.
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <button
+                                                                onClick={() => setPickingChapterBlockId(block.id)}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '8px 12px',
+                                                                    fontSize: '0.95rem',
+                                                                    marginBottom: '4px',
+                                                                    background: 'rgba(255,255,255,0.05)',
+                                                                    border: '1px solid var(--glass-border)',
+                                                                    borderRadius: '8px',
+                                                                    color: block.chapter_name ? 'var(--text-dark)' : 'var(--text-muted)',
+                                                                    textAlign: 'left',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center'
+                                                                }}
+                                                            >
+                                                                <span>{block.chapter_name || "Select a chapter..."}</span>
+                                                                <MoreVertical size={14} opacity={0.5} style={{ transform: 'rotate(90deg)' }} />
+                                                            </button>
+                                                        );
+                                                    })()}
                                                     <input
                                                         type="text"
                                                         placeholder="Ambitious objective BUT doable!"
@@ -613,7 +699,14 @@ export default function Plan() {
                                                     <MoreVertical size={20} />
                                                 </button>
                                                 <div className="menu-dropdown" style={{ display: 'none', position: 'absolute', right: 0, top: '100%', background: '#fff', boxShadow: 'var(--shadow-md)', borderRadius: '8px', zIndex: 10, padding: '8px', width: '200px' }}>
-                                                    <button style={{ display: 'block', width: '100%', padding: '8px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => setPickingBlockId(block.id)}>Change technique...</button>
+                                                    <button style={{ display: 'block', width: '100%', padding: '8px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => {
+                                                        const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
+                                                        if (subjectChapters.length > 0 && !block.chapter_name) {
+                                                            alert("Please select a Chapter first. This helps us recommend the best techniques for your specific study focus!");
+                                                        } else {
+                                                            setPickingBlockId(block.id);
+                                                        }
+                                                    }}>Change technique...</button>
                                                     <button style={{ display: 'block', width: '100%', padding: '8px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => clearBlock(block.id)}>Clear block</button>
                                                     <button style={{ display: 'block', width: '100%', padding: '8px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger)' }} onClick={() => deleteCycle(block.id)}>Delete cycle</button>
                                                 </div>
@@ -659,15 +752,44 @@ export default function Plan() {
                 </div>
             </div>
 
-            {
-                pickingBlockId && (
+            {(() => {
+                if (!pickingBlockId) return null;
+                const pickingBlock = blocks.find(b => b.id === pickingBlockId);
+                let recommendedCategory: TechCategory | undefined;
+                if (pickingBlock?.subject_id && pickingBlock.chapter_name) {
+                    const chs = getChaptersForSubject(pickingBlock.subject_id);
+                    const ch = chs.find(c => c.name === pickingBlock.chapter_name);
+                    if (ch?.focusType) {
+                        if (ch.focusType === 'skill') recommendedCategory = 'faire';
+                        else if (ch.focusType === 'comprehension') recommendedCategory = 'comprendre';
+                        else if (ch.focusType === 'memorisation') recommendedCategory = 'memoriser';
+                    }
+                }
+
+                return (
                     <TechniquePickerModal
                         onClose={() => setPickingBlockId(null)}
                         onSelect={handleTechniqueSelected}
-                        currentSelection={blocks.find(b => b.id === pickingBlockId)?.technique_id || ""}
+                        currentSelection={pickingBlock?.technique_id || ""}
+                        recommendedCategory={recommendedCategory}
                     />
-                )
-            }
+                );
+            })()}
+
+            {(() => {
+                if (!pickingChapterBlockId) return null;
+                const pickingBlock = blocks.find(b => b.id === pickingChapterBlockId);
+                if (!pickingBlock || !pickingBlock.subject_id) return null;
+
+                return (
+                    <ChapterPickerModal
+                        subjectId={pickingBlock.subject_id}
+                        onClose={() => setPickingChapterBlockId(null)}
+                        onSelect={handleChapterSelectedModal}
+                        currentSelection={pickingBlock.chapter_name || null}
+                    />
+                );
+            })()}
         </div >
     );
 }

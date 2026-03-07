@@ -20,6 +20,9 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     );
     const [pinned, setPinned] = useState(editingSubject?.pinned ?? false);
     const [coverPath, setCoverPath] = useState<string | null>(editingSubject?.cover_path ?? null);
+    const [deadline, setDeadline] = useState<string>(editingSubject?.deadline ?? '');
+    const [result, setResult] = useState<string>(editingSubject?.result ?? '');
+    const [archived, setArchived] = useState<boolean>(editingSubject?.archived ?? false);
 
     async function handlePickCover() {
         const selected = await open({
@@ -53,7 +56,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
         if (!name.trim()) return;
         try {
             if (isEditing) {
-                await updateSubject(editingSubject!.id, name.trim(), coverPath, selectedTags);
+                await updateSubject(editingSubject!.id, name.trim(), coverPath, selectedTags, deadline || null, result || null, archived);
             } else {
                 const newSubj = {
                     id: crypto.randomUUID(),
@@ -63,6 +66,9 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                     created_at: new Date().toISOString(),
                     last_studied_at: null,
                     total_minutes: 0,
+                    deadline: deadline || null,
+                    result: result || null,
+                    archived,
                 };
                 await createSubject(newSubj, selectedTags);
             }
@@ -97,6 +103,23 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                         </label>
                     </div>
                 )}
+
+                <div className="form-group">
+                    <label>Deadline (Optional)</label>
+                    <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
+                </div>
+
+                <div className="form-group">
+                    <label>Result / Grade (Optional)</label>
+                    <input type="text" value={result} onChange={e => setResult(e.target.value)} placeholder="e.g. 18/20, A+, Passed" />
+                </div>
+
+                <div className="form-group">
+                    <label className="checkbox-label">
+                        <input type="checkbox" checked={archived} onChange={e => setArchived(e.target.checked)} />
+                        Archived
+                    </label>
+                </div>
 
                 <div className="form-group" style={{ marginBottom: '8px' }}>
                     <label>Cover Image</label>

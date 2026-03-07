@@ -357,6 +357,7 @@ export default function LearningTab() {
     const [selectedSection, setSelectedSection] = useState<Section | null>(null);
     const [animating, setAnimating] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
+    const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
     const [quizState, setQuizState] = useState<Record<number, Record<string, boolean>>>(loadQuizState);
     const [srsState, setSRSState] = useState<SRSState>(loadSRSState);
@@ -397,13 +398,20 @@ export default function LearningTab() {
     const handleSectionClick = (section: Section) => {
         const entry = srsState[section.id];
         if (isSectionLocked(entry)) return;
-        if (isSectionDue(entry)) clearSectionQuiz(section);
+
+        // Only clear quiz if the section is due AND it was previously completed.
+        // This ensures resuming a partially completed due section doesn't reset progress.
+        if (isSectionDue(entry) && entry?.lastCompleted) {
+            const isPerfect = isSectionPerfect(section, quizState);
+            if (isPerfect) clearSectionQuiz(section);
+        }
 
         playSFX('entering_lesson', theme);
         setAnimating(true);
         setTimeout(() => {
             setSelectedSection(section);
             setAnimating(false);
+            window.scrollTo(0, 0);
         }, 300);
     };
 
@@ -449,11 +457,12 @@ export default function LearningTab() {
             }
         }
 
-        playSFX('cancelling', theme);
+        playSFX('hover_sound', theme);
         setAnimating(true);
         setTimeout(() => {
             setSelectedSection(null);
             setAnimating(false);
+            window.scrollTo(0, 0);
         }, 300);
     };
 
@@ -471,6 +480,7 @@ export default function LearningTab() {
         setQuizState(newQuizState);
 
         if (option.isCorrect) {
+            playSFX('checklist_sound', theme);
             // Check if this completes the section perfectly
             const perfect = isSectionPerfect(selectedSection, newQuizState);
             if (perfect) {
@@ -518,6 +528,37 @@ export default function LearningTab() {
             <div className={`learning-lesson-view ${animating ? 'fade-out' : 'fade-in'}`}>
                 {showCelebration && (
                     <CelebrationOverlay onDone={() => setShowCelebration(false)} />
+                )}
+
+                {/* Image lightbox overlay */}
+                {enlargedImage && (
+                    <div
+                        onClick={() => setEnlargedImage(null)}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            zIndex: 9999,
+                            background: 'rgba(0, 0, 0, 0.85)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'zoom-out',
+                            animation: 'fadeIn 0.2s ease',
+                            backdropFilter: 'blur(4px)',
+                        }}
+                    >
+                        <img
+                            src={enlargedImage}
+                            alt="Enlarged view"
+                            style={{
+                                maxWidth: '90vw',
+                                maxHeight: '90vh',
+                                borderRadius: '16px',
+                                boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
+                                animation: 'scaleIn 0.25s ease',
+                            }}
+                        />
+                    </div>
                 )}
 
                 <div className="learning-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
@@ -585,11 +626,43 @@ export default function LearningTab() {
                                     const isSolved = Object.values(qState).some(v => v === true);
 
                                     return (
-                                        <div key={lesson.id} className={`glass lesson-card ${locked ? 'locked-section' : ''}`} style={{ padding: '24px', borderRadius: '16px' }}>
-                                            <h4 style={{ marginBottom: '12px', fontSize: '1.1rem' }}>{lesson.title}</h4>
+                                        <div key={lesson.id} className={`glass lesson-card ${locked ? 'locked-section' : ''}`} style={{
+                                            padding: '24px',
+                                            borderRadius: '16px',
+                                            border: isSolved ? '2px solid var(--success)' : undefined,
+                                            background: isSolved ? 'linear-gradient(145deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02))' : undefined,
+                                            boxShadow: isSolved ? '0 4px 20px rgba(34, 197, 94, 0.05)' : undefined
+                                        }}>
+                                            <h4 style={{ marginBottom: '12px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                {lesson.title}
+                                                {isSolved && <CheckCircle2 size={20} style={{ color: 'var(--success)' }} />}
+                                            </h4>
                                             <p style={{ lineHeight: '1.6', color: 'var(--text-dark)', marginBottom: '24px' }}>
                                                 {lesson.content}
                                             </p>
+
+                                            {/* Forgetting Curve image for spaced repetition lesson */}
+                                            {lesson.id === 'lesson-2-2-a' && (
+                                                <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+                                                    <img
+                                                        src="/assets/images/learning center/spaced_repetition.png"
+                                                        alt="The Forgetting Curve & Spaced Repetition"
+                                                        onClick={() => setEnlargedImage('/assets/images/learning center/spaced_repetition.png')}
+                                                        style={{
+                                                            maxWidth: '100%',
+                                                            borderRadius: '12px',
+                                                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                                                            cursor: 'zoom-in',
+                                                            transition: 'transform 0.2s ease',
+                                                        }}
+                                                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.01)')}
+                                                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                                                    />
+                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
+                                                        The Forgetting Curve shows how memory decays without review. Spaced repetition resets the curve each time. <span style={{ color: 'var(--primary)', fontWeight: 600 }}>(Click to enlarge)</span>
+                                                    </p>
+                                                </div>
+                                            )}
 
                                             <div className="quiz-container" style={{ background: 'rgba(0,0,0,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
                                                 <h5 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--primary)', fontSize: '1rem' }}>

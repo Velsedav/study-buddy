@@ -14,6 +14,14 @@ import { CustomSelect } from '../components/CustomSelect';
 import { playSFX } from '../lib/sounds';
 import { getRecommendations, type Recommendation } from '../lib/chapters';
 
+const COMPLIMENTS = [
+    { text: "You have an amazing ability to focus when you set your mind to it! 🌟", author: "A Friend" },
+    { text: "Your dedication to your goals is truly inspiring. Keep going! 🚀", author: "Study Buddy" },
+    { text: "You're doing better than you think you are. Be proud of your progress! 💖", author: "Inner Voice" },
+    { text: "Your hard work today is building the foundation for your success tomorrow. 🏛️", author: "Mentor" },
+    { text: "You always find a way to figure things out. You've got this! ✨", author: "Colleague" }
+];
+
 /** Convert a Uint8Array to a base64 data URL */
 function toDataUrl(bytes: Uint8Array, ext: string): string {
     const mime =
@@ -39,6 +47,7 @@ export default function Home() {
     const [heatmapData, setHeatmapData] = useState<{ date: Date, intensity: number, tooltip: string, sessions?: any[] }[]>([]);
     const [sortBy, setSortBy] = useState<string>('lastStudied');
     const [sortAsc, setSortAsc] = useState<boolean>(true);
+    const [showArchived, setShowArchived] = useState<boolean>(false);
 
     // Heatmap Navigation & Logs
     const [currentHeatmapMonth, setCurrentHeatmapMonth] = useState(() => {
@@ -56,6 +65,9 @@ export default function Home() {
     const [weeklyStats, setWeeklyStats] = useState({ focusTime: 0, sessions: 0, activeDays: 0 });
     const [techniqueOfWeek, setTechniqueOfWeek] = useState(() => localStorage.getItem('study-buddy-technique-week') || 't1');
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+
+    // Compliment state
+    const [complimentIdx, setComplimentIdx] = useState(() => Math.floor(Math.random() * COMPLIMENTS.length));
 
     useEffect(() => {
         loadData();
@@ -210,6 +222,7 @@ export default function Home() {
     // Filter and Sort (Shopping Style)
     const sortedAndFilteredSubjects = [...subjects]
         .filter(s => {
+            if (!showArchived && s.archived) return false;
             const matchesTag = tagFilter === 'All' || s.tags.some(t => t.id === tagFilter);
             const matchesSubject = subjectFilter === 'All' || s.id === subjectFilter;
             return matchesTag && matchesSubject;
@@ -283,7 +296,7 @@ export default function Home() {
     };
 
     return (
-        <div className="home-page">
+        <div className="home-page" style={{ paddingBottom: '20vh' }}>
             <div className="page-header" style={{ marginBottom: '24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <h1>{t('home.dashboard')}</h1>
@@ -432,10 +445,24 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
+
+                <div className="compliments-container glass"
+                    style={{ flex: 1, minWidth: '250px', padding: '16px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.2s ease' }}
+                    onMouseEnter={() => playSFX('hover_sound', theme)}
+                    onClick={() => setComplimentIdx((complimentIdx + 1) % COMPLIMENTS.length)}
+                >
+                    <h3 style={{ marginBottom: '12px', fontSize: '1.1rem', color: 'var(--primary)' }}>Daily Compliment 🌸</h3>
+                    <p style={{ fontStyle: 'italic', fontSize: '1rem', lineHeight: 1.5, marginBottom: '8px', color: 'var(--text-dark)' }}>
+                        "{COMPLIMENTS[complimentIdx].text}"
+                    </p>
+                    <div style={{ textAlign: 'right', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                        — {COMPLIMENTS[complimentIdx].author}
+                    </div>
+                </div>
             </div>
 
             <div className="shopping-filter-bar glass" style={{ maxWidth: '80%', margin: '0 auto 24px auto', position: 'relative', zIndex: 50, display: 'flex', justifyContent: 'space-between', padding: '16px', borderRadius: 'var(--border-radius)' }}>
-                <div className="filter-actions" style={{ display: 'flex', gap: '16px' }}>
+                <div className="filter-actions" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                     <div className="filter-group-inline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <label>{t('home.tag')}:</label>
                         <CustomSelect
@@ -457,6 +484,12 @@ export default function Home() {
                                 ...subjects.map(s => ({ value: s.id, label: s.name }))
                             ]}
                         />
+                    </div>
+                    <div className="filter-group-inline" style={{ marginLeft: '8px' }}>
+                        <label className="checkbox-label" style={{ margin: 0, fontWeight: 500, color: 'var(--text-dark)' }}>
+                            <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} />
+                            Archived
+                        </label>
                     </div>
                 </div>
 

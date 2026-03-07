@@ -4,7 +4,7 @@ import { daysSince, formatHM } from '../lib/time';
 import { Pin, MoreVertical, Trash2, Pencil, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
-import { getChaptersForSubject, addChapter, deleteChapter, incrementStudyCount, type Chapter } from '../lib/chapters';
+import { getChaptersForSubject, addChapter, deleteChapter, incrementStudyCount, updateChapterFocusType, type Chapter, type FocusType, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS } from '../lib/chapters';
 
 interface SubjectCardProps {
     subject: Subject;
@@ -82,9 +82,24 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
     }, [menuOpen]);
 
     const handleAddChapter = () => {
-        if (!newChapterName.trim()) return;
-        const ch = addChapter(subject.id, newChapterName.trim());
-        setChapters([...chapters, ch]);
+        const val = newChapterName.trim();
+        if (!val) return;
+
+        const parsed = parseInt(val);
+        if (!isNaN(parsed) && parsed.toString() === val && parsed > 0 && parsed <= 50) {
+            // Bulk addition
+            const newChaps = [];
+            const existingCount = chapters.filter(c => c.name.startsWith('Chapter ')).length;
+            for (let i = 1; i <= parsed; i++) {
+                newChaps.push(addChapter(subject.id, `Chapter ${existingCount + i}`));
+            }
+            setChapters([...chapters, ...newChaps]);
+        } else {
+            // Single addition
+            const ch = addChapter(subject.id, val);
+            setChapters([...chapters, ch]);
+        }
+
         setNewChapterName('');
         playSFX('checklist_sound', theme);
     };
@@ -100,22 +115,31 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
         playSFX('checklist_sound', theme);
     };
 
+    const handleFocusTypeChange = (id: string, focusType: FocusType) => {
+        updateChapterFocusType(id, focusType);
+        setChapters(getChaptersForSubject(subject.id));
+    };
+
     const hasCover = !!coverUrl;
     const textColor = hasCover
         ? (isDarkImage ? '#ffffff' : 'var(--text-dark)')
         : undefined;
 
     return (
-        <div className={`subject-card glass ${subject.pinned ? 'pinned' : ''}`} onMouseEnter={() => playSFX('hover_sound', theme)}>
+        <div
+            className={`subject-card glass ${subject.pinned ? 'pinned' : ''} ${subject.archived ? 'archived' : ''}`}
+            style={{ zIndex: menuOpen ? 200 : 1, opacity: subject.archived ? 0.6 : 1 }}
+            onMouseEnter={() => playSFX('hover_sound', theme)}
+        >
             {coverUrl && (
                 <div className="cover-image" style={{ backgroundImage: `url(${coverUrl})` }}>
                     <div className="cover-overlay"></div>
                 </div>
             )}
             <div className="card-content" style={textColor ? { color: textColor } : undefined}>
-                <div className="card-header">
-                    <h3 className="subject-name" style={textColor ? { color: textColor } : undefined}>{subject.name}</h3>
-                    <div style={{ position: 'relative' }} ref={menuRef}>
+                <div className="card-header" style={{ position: 'relative', paddingRight: '24px' }}>
+                    <h3 className="subject-name" style={{ wordBreak: 'break-word', flex: 1, ...(textColor ? { color: textColor } : {}) }}>{subject.name}</h3>
+                    <div style={{ position: 'absolute', right: -8, top: -8, zIndex: menuOpen ? 200 : 'auto' }} ref={menuRef}>
                         <button
                             className="btn-icon"
                             onClick={() => setMenuOpen(!menuOpen)}
@@ -127,14 +151,15 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
                             <div style={{
                                 position: 'absolute',
                                 right: 0,
-                                top: '100%',
+                                top: 'calc(100% + 4px)',
                                 background: 'var(--card-bg, #fff)',
                                 borderRadius: '12px',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
                                 padding: '6px 0',
                                 minWidth: '160px',
-                                zIndex: 100,
-                                overflow: 'hidden'
+                                zIndex: 200,
+                                overflow: 'hidden',
+                                border: '1px solid var(--glass-border)',
                             }}>
                                 <button
                                     onClick={() => { onEdit(); setMenuOpen(false); }}
@@ -193,6 +218,11 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
                     </span>
                     <span className="total-time">Total: {formatHM(subject.total_minutes)}</span>
                 </div>
+                {subject.deadline && (
+                    <div style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '6px', fontWeight: 'bold' }}>
+                        ⏳ Deadline: {new Date(subject.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                )}
 
                 {/* Chapters Section */}
                 <div style={{ marginTop: '8px' }}>
@@ -213,38 +243,69 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
                         <div style={{ marginTop: '8px', paddingLeft: '4px' }}>
                             {chapters.map(ch => (
                                 <div key={ch.id} style={{
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    padding: '6px 8px', marginBottom: '4px',
+                                    padding: '8px 10px', marginBottom: '4px',
                                     background: 'rgba(0,0,0,0.04)', borderRadius: '8px',
                                     fontSize: '0.82rem',
                                 }}>
-                                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</span>
-                                    {/* Study count dots */}
-                                    <div style={{ display: 'flex', gap: '3px' }}>
-                                        {[0, 1, 2].map(i => (
-                                            <div key={i} style={{
-                                                width: '8px', height: '8px', borderRadius: '50%',
-                                                background: i < ch.studyCount ? 'var(--success)' : 'rgba(0,0,0,0.1)',
-                                                transition: 'background 0.2s',
-                                            }} />
-                                        ))}
-                                    </div>
-                                    {ch.studyCount < 3 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.name}</span>
+                                        {/* Study count dots */}
+                                        <div style={{ display: 'flex', gap: '3px' }}>
+                                            {[0, 1, 2].map(i => (
+                                                <div key={i} style={{
+                                                    width: '8px', height: '8px', borderRadius: '50%',
+                                                    background: i < ch.studyCount ? 'var(--success)' : 'rgba(0,0,0,0.1)',
+                                                    transition: 'background 0.2s',
+                                                }} />
+                                            ))}
+                                        </div>
+                                        {ch.studyCount < 3 && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleStudyChapter(ch.id); }}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success)', fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 4px' }}
+                                                title="Mark as studied"
+                                            >
+                                                +1
+                                            </button>
+                                        )}
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); handleStudyChapter(ch.id); }}
-                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success)', fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 4px' }}
-                                            title="Mark as studied"
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteChapter(ch.id); }}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '2px' }}
+                                            title="Delete chapter"
                                         >
-                                            +1
+                                            <X size={12} />
                                         </button>
-                                    )}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteChapter(ch.id); }}
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '2px' }}
-                                        title="Delete chapter"
-                                    >
-                                        <X size={12} />
-                                    </button>
+                                    </div>
+                                    {/* Focus type selector */}
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '5px' }}>
+                                        {(['skill', 'comprehension', 'memorisation'] as const).map(ft => {
+                                            const isActive = ch.focusType === ft;
+                                            return (
+                                                <button
+                                                    key={ft}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleFocusTypeChange(ch.id, isActive ? null : ft);
+                                                    }}
+                                                    style={{
+                                                        background: isActive ? FOCUS_TYPE_COLORS[ft] : 'rgba(0,0,0,0.06)',
+                                                        color: isActive ? '#fff' : 'var(--text-muted)',
+                                                        border: 'none',
+                                                        borderRadius: '6px',
+                                                        padding: '2px 7px',
+                                                        fontSize: '0.7rem',
+                                                        fontWeight: isActive ? 700 : 500,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease',
+                                                        whiteSpace: 'nowrap',
+                                                    }}
+                                                    title={FOCUS_TYPE_LABELS[ft]}
+                                                >
+                                                    {FOCUS_TYPE_LABELS[ft]}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ))}
 
@@ -252,7 +313,7 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
                             <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                                 <input
                                     type="text"
-                                    placeholder="New chapter..."
+                                    placeholder="Chapter name or # for bulk..."
                                     value={newChapterName}
                                     onChange={e => setNewChapterName(e.target.value)}
                                     onKeyDown={e => { if (e.key === 'Enter') handleAddChapter(); }}
@@ -276,6 +337,6 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
 
                 {subject.pinned && <Pin className="pin-icon" size={16} />}
             </div>
-        </div>
+        </div >
     );
 }

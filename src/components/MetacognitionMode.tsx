@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Wrench, PowerOff, Target, Settings2, Copy, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Wrench, PowerOff, Target, Settings2, Copy, CheckCircle2, Timer } from 'lucide-react';
 import { saveMetacognitionLog } from '../lib/db';
+import { formatSecondsMMSS } from '../lib/time';
 
 export default function MetacognitionMode({ onComplete }: { onComplete: () => void }) {
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [copied, setCopied] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(15 * 60);
 
     // Telemetry Form Data
     const [retention, setRetention] = useState<string>('');
@@ -13,6 +15,32 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
 
     // Tune Engine Data
     const [metacognitiveFix, setMetacognitiveFix] = useState<string>('');
+
+    const handleAutoSaveAndComplete = async () => {
+        await saveMetacognitionLog({
+            retention: retention,
+            focus_drop: focusDrop,
+            memorization_align: memorizationAlign,
+            mechanical_fix: metacognitiveFix,
+        });
+        setStep(1);
+        setRetention('');
+        setFocusDrop('');
+        setMemorizationAlign('');
+        setMetacognitiveFix('');
+        onComplete();
+    };
+
+    useEffect(() => {
+        if (timeLeft <= 0) {
+            handleAutoSaveAndComplete();
+            return;
+        }
+        const timerId = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+        return () => clearInterval(timerId);
+    }, [timeLeft]);
 
     const generateExportText = () => {
         return `
@@ -40,12 +68,22 @@ ${metacognitiveFix || 'None implemented.'}
 
     return (
         <div className="metacognition-mode-container glass">
-            <div className="metacognition-header">
+            <div className="metacognition-header" style={{ position: 'relative' }}>
                 <div className="metacognition-title">
                     <Wrench className="icon-gold" size={24} />
                     <h2>Metacognition Mode</h2>
                 </div>
                 <p>Time for a pit stop. Step outside the study material and analyze your workflow.</p>
+                <div style={{ position: 'absolute', top: 0, right: 0 }}>
+                    <button
+                        className="btn"
+                        style={{ background: 'var(--danger)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}
+                        onClick={handleAutoSaveAndComplete}
+                    >
+                        <Timer size={16} />
+                        {formatSecondsMMSS(timeLeft)}
+                    </button>
+                </div>
             </div>
 
             <div className="metacognition-steps">
@@ -130,20 +168,7 @@ ${metacognitiveFix || 'None implemented.'}
                                 {copied ? <CheckCircle2 size={18} /> : <Copy size={18} />}
                                 {copied ? 'Copied to Clipboard!' : 'Export to LLM'}
                             </button>
-                            <button className="btn btn-primary ml-auto" onClick={async () => {
-                                await saveMetacognitionLog({
-                                    retention: retention,
-                                    focus_drop: focusDrop,
-                                    memorization_align: memorizationAlign,
-                                    mechanical_fix: metacognitiveFix,
-                                });
-                                setStep(1);
-                                setRetention('');
-                                setFocusDrop('');
-                                setMemorizationAlign('');
-                                setMetacognitiveFix('');
-                                onComplete();
-                            }}>Complete Pit Stop</button>
+                            <button className="btn btn-primary ml-auto" onClick={handleAutoSaveAndComplete}>Complete Pit Stop</button>
                         </div>
                     </div>
                 )}

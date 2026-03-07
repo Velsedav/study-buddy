@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSettings } from '../lib/settings';
-import { getSessions, getSubjects } from '../lib/db';
-import type { Session, Subject } from '../lib/db';
-import { Activity, Clock, CalendarDays, Flame, ChevronLeft, ChevronRight, X, Flag, Trash2 } from 'lucide-react';
+import { getSessions, getSubjects, getAllSessionBlocks } from '../lib/db';
+import type { Session, Subject, SessionBlock } from '../lib/db';
+import { Activity, Clock, CalendarDays, Flame, ChevronLeft, ChevronRight, X, Flag, Trash2, PieChart as PieChartIcon, Zap } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
+import { TECHNIQUES, getTierColor } from '../lib/techniques';
 
 // ── Goal Dates ──
 
@@ -91,6 +92,7 @@ function getStartOfWeek(date: Date, weekStart: 'monday' | 'sunday') {
 export default function AnalyticsTab() {
     const { weekStart, theme } = useSettings();
     const [sessions, setSessions] = useState<Session[]>([]);
+    const [blocks, setBlocks] = useState<SessionBlock[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [useFakeData, setUseFakeData] = useState(false);
     const [fakeData] = useState<Session[]>(() => generateFakeData());
@@ -121,10 +123,13 @@ export default function AnalyticsTab() {
                 const data = await getSessions();
                 setSessions(data);
 
+                const blks = await getAllSessionBlocks();
+                setBlocks(blks);
+
                 const subs = await getSubjects();
                 setSubjects(subs);
             } catch (e) {
-                console.error("Failed to load sessions", e);
+                console.error("Failed to load analytics data", e);
             }
         }
         load();
@@ -194,6 +199,90 @@ export default function AnalyticsTab() {
             }
         };
     }, [activeSessions, weekStart, currentHeatmapMonth]);
+
+    const streaks = useMemo(() => {
+        const datesWithSessions = new Set<string>();
+        activeSessions.forEach(s => {
+            if (s.actual_minutes > 0) {
+                datesWithSessions.add(s.started_at.split('T')[0]);
+            }
+        });
+
+        const sortedDates = Array.from(datesWithSessions).sort();
+        if (sortedDates.length === 0) return { current: 0, best: 0 };
+
+        let best = 1;
+        let current = 1;
+
+        let lastDate = new Date(sortedDates[0]);
+        for (let i = 1; i < sortedDates.length; i++) {
+            const d = new Date(sortedDates[i]);
+            // calculate whole days between dates avoiding daylight savings hours issues
+            const diffDays = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate())) / (1000 * 3600 * 24));
+
+            if (diffDays === 1) {
+                current++;
+                if (current > best) best = current;
+            } else if (diffDays > 1) {
+                current = 1;
+            }
+            lastDate = d;
+        }
+
+        const today = new Date();
+        const diffToToday = Math.round((Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate())) / (1000 * 3600 * 24));
+        if (diffToToday > 1) {
+            current = 0;
+        }
+
+        return { current, best: Math.max(current, best) };
+    }, [activeSessions]);
+
+    const pieChart = useMemo(() => {
+        if (useFakeData) {
+            return {
+                data: [
+                    { tier: 'S', mins: 120, pct: 40, color: 'linear-gradient(135deg, var(--primary), var(--accent))' },
+                    { tier: 'A', mins: 90, pct: 30, color: 'var(--success)' },
+                    { tier: 'B', mins: 60, pct: 20, color: '#3b82f6' },
+                    { tier: 'D', mins: 15, pct: 5, color: '#f59e0b' },
+                    { tier: 'F', mins: 15, pct: 5, color: '#9ca3af' },
+                ],
+                total: 300,
+                dfRatio: 10
+            };
+        }
+
+        const tierMap: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+        const validSessionIds = new Set(sessions.map(s => s.id));
+
+        let total = 0;
+        blocks.forEach(b => {
+            if (validSessionIds.has(b.session_id) && b.type === 'focus' && b.technique_id) {
+                const tech = TECHNIQUES.find(t => t.id === b.technique_id);
+                if (tech && tech.tier) {
+                    tierMap[tech.tier] += b.minutes;
+                    total += b.minutes;
+                }
+            }
+        });
+
+        if (total === 0) return { data: [], total: 0, dfRatio: 0 };
+
+        const tierOrder = ['S', 'A', 'B', 'C', 'D', 'E', 'F'] as const;
+        const data = tierOrder
+            .map(t => ({
+                tier: t,
+                mins: tierMap[t],
+                pct: Math.round((tierMap[t] / total) * 100),
+                color: getTierColor(t as any) || '#ccc'
+            }))
+            .filter(d => d.mins > 0);
+
+        const dfPct = Math.round(((tierMap['D'] + tierMap['F'] + tierMap['E']) / total) * 100);
+
+        return { data, total, dfRatio: dfPct };
+    }, [useFakeData, sessions, blocks]);
 
     // Filtering and Daily Logs Extractor
     const sessionsForSelectedDate = useMemo(() => {
@@ -267,7 +356,10 @@ export default function AnalyticsTab() {
 
         const maxMins = Math.max(...data.map(d => d.minutes), 60);
 
-        return { data, maxMins };
+        const studiedDays = data.filter(d => d.minutes > 0).length;
+        const totalPeriodMinutes = data.reduce((acc, d) => acc + d.minutes, 0);
+
+        return { data, maxMins, studiedDays, totalPeriodMinutes };
     }, [activeSessions, timelineFilter]);
 
     // Goal dates helpers
@@ -326,6 +418,18 @@ export default function AnalyticsTab() {
                         <Flame className="stat-icon danger-text" size={20} />
                         <div className="stat-val">{weeklyStats.days} / 7</div>
                         <div className="stat-label">Active Days</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Zap className="stat-icon" size={20} style={{ color: 'var(--accent)' }} />
+                        <div className="stat-val">{streaks.current} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
+                        <div className="stat-label">Current Streak</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Flag className="stat-icon" size={20} style={{ color: 'var(--success)' }} />
+                        <div className="stat-val">{streaks.best} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
+                        <div className="stat-label">Best Streak</div>
                     </div>
                 </div>
             </div>
@@ -424,170 +528,260 @@ export default function AnalyticsTab() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                <div className="heatmap-section" style={{ flex: 1 }}>
-                    <div className="heatmap-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <CalendarDays size={20} className="icon-blue" />
-                            {currentHeatmapMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
-                        </h3>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                                className="btn btn-secondary"
-                                style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                onClick={() => setShowGoalModal(true)}
-                            >
-                                <Flag size={14} /> Goals
-                            </button>
-                            <button
-                                className="btn btn-icon glass"
-                                style={{ width: '32px', height: '32px' }}
-                                onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-                            >
-                                <ChevronLeft size={18} />
-                            </button>
-                            <button
-                                className="btn btn-icon glass"
-                                style={{ width: '32px', height: '32px' }}
-                                onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-                            >
-                                <ChevronRight size={18} />
-                            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-evenly', gap: '24px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '24px', flex: 1, minWidth: '500px', flexWrap: 'wrap' }}>
+                    <div className="heatmap-section" style={{ flex: 1, minWidth: '350px' }}>
+                        <div className="heatmap-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <CalendarDays size={20} className="icon-blue" />
+                                {currentHeatmapMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+                            </h3>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                    className="btn btn-secondary"
+                                    style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                    onClick={() => setShowGoalModal(true)}
+                                >
+                                    <span style={{ fontSize: '14px', fontWeight: 'bold' }}>+</span> Add a deadline
+                                </button>
+                                <button
+                                    className="btn btn-icon glass"
+                                    style={{ width: '32px', height: '32px' }}
+                                    onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                                <button
+                                    className="btn btn-icon glass"
+                                    style={{ width: '32px', height: '32px' }}
+                                    onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="heatmap-grid" style={{ position: 'relative' }}>
+                            {(() => {
+                                const firstDayOfMonthDate = new Date(currentHeatmapMonth.getFullYear(), currentHeatmapMonth.getMonth(), 1);
+                                const firstDayOfWeek = firstDayOfMonthDate.getDay();
+                                const emptyPrefixCount = weekStart === 'monday'
+                                    ? (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1)
+                                    : firstDayOfWeek;
+
+                                return (
+                                    <>
+                                        {weekStart === 'monday' ? (
+                                            <>
+                                                <div className="calendar-day-header">Mon</div>
+                                                <div className="calendar-day-header">Tue</div>
+                                                <div className="calendar-day-header">Wed</div>
+                                                <div className="calendar-day-header">Thu</div>
+                                                <div className="calendar-day-header">Fri</div>
+                                                <div className="calendar-day-header">Sat</div>
+                                                <div className="calendar-day-header">Sun</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="calendar-day-header">Sun</div>
+                                                <div className="calendar-day-header">Mon</div>
+                                                <div className="calendar-day-header">Tue</div>
+                                                <div className="calendar-day-header">Wed</div>
+                                                <div className="calendar-day-header">Thu</div>
+                                                <div className="calendar-day-header">Fri</div>
+                                                <div className="calendar-day-header">Sat</div>
+                                            </>
+                                        )}
+                                        {Array.from({ length: emptyPrefixCount }).map((_, i) => (
+                                            <div key={`empty-${i}`} className="heatmap-cell empty"></div>
+                                        ))}
+                                        {heatmapData.map((d, i) => {
+                                            const isRainbow = d.mins > 0 && weeklyStats.days === 7;
+                                            const isFlame = d.mins > 0 && weeklyStats.days >= 5 && weeklyStats.days < 7;
+                                            const dateStr = d.date.toISOString().split('T')[0];
+                                            const goal = goalDateSet[dateStr];
+
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'rainbow-pulse' : ''} ${goal ? 'goal-cell' : ''}`}
+                                                    title={goal ? `🏁 ${goal.label} • ${d.tooltip}` : d.tooltip}
+                                                    style={{ cursor: d.mins > 0 || goal ? 'pointer' : 'default' }}
+                                                    onMouseEnter={() => { if (d.mins > 0 || goal) playSFX('hover_sound', theme); }}
+                                                    onClick={() => {
+                                                        if (d.mins > 0) setSelectedLogDate(d.date);
+                                                    }}
+                                                >
+                                                    {d.date.getDate()}
+                                                    {goal && <span className="goal-flag" title={goal.label}>🏁</span>}
+                                                    {!goal && isFlame && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>🔥</span>}
+                                                    {!goal && isRainbow && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>✨</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </>
+                                );
+                            })()}
+                        </div>
+                        <div className="heatmap-legend">
+                            Less <span className="heatmap-cell h-level-0"></span>
+                            <span className="heatmap-cell h-level-1"></span>
+                            <span className="heatmap-cell h-level-2"></span>
+                            <span className="heatmap-cell h-level-3"></span>
+                            <span className="heatmap-cell h-level-4"></span> More
+                            <span style={{ marginLeft: '12px' }}>🏁 = Goal</span>
                         </div>
                     </div>
 
-                    <div className="heatmap-grid" style={{ position: 'relative' }}>
+                    {/* ── Upcoming Deadlines Panel ── */}
+                    <div className="glass" style={{ width: '280px', flexShrink: 0, padding: '20px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
+                        <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}>
+                            <Flag size={18} /> Upcoming Deadlines
+                        </h3>
                         {(() => {
-                            const firstDayOfMonthDate = new Date(currentHeatmapMonth.getFullYear(), currentHeatmapMonth.getMonth(), 1);
-                            const firstDayOfWeek = firstDayOfMonthDate.getDay();
-                            const emptyPrefixCount = weekStart === 'monday'
-                                ? (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1)
-                                : firstDayOfWeek;
+                            const allDeadlines = [
+                                ...goalDates.map(g => ({ ...g, type: 'manual' as const, result: null })),
+                                ...subjects.filter(s => s.deadline).map(s => ({ id: s.id, label: s.name, date: s.deadline!, type: 'subject' as const, result: s.result }))
+                            ];
+
+                            const upcoming = allDeadlines.filter(g => new Date(g.date + 'T00:00:00') >= new Date(new Date().toISOString().split('T')[0] + 'T00:00:00'))
+                                .sort((a, b) => a.date.localeCompare(b.date));
+
+                            const pastWithResults = allDeadlines.filter(g => g.result && new Date(g.date + 'T00:00:00') < new Date(new Date().toISOString().split('T')[0] + 'T00:00:00'))
+                                .sort((a, b) => b.date.localeCompare(a.date));
 
                             return (
                                 <>
-                                    {weekStart === 'monday' ? (
-                                        <>
-                                            <div className="calendar-day-header">Mon</div>
-                                            <div className="calendar-day-header">Tue</div>
-                                            <div className="calendar-day-header">Wed</div>
-                                            <div className="calendar-day-header">Thu</div>
-                                            <div className="calendar-day-header">Fri</div>
-                                            <div className="calendar-day-header">Sat</div>
-                                            <div className="calendar-day-header">Sun</div>
-                                        </>
+                                    {upcoming.length === 0 ? (
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: 'auto 0' }}>No deadlines set yet.<br />Click "+ Add a deadline" to add one, or set it on a subject.</p>
                                     ) : (
-                                        <>
-                                            <div className="calendar-day-header">Sun</div>
-                                            <div className="calendar-day-header">Mon</div>
-                                            <div className="calendar-day-header">Tue</div>
-                                            <div className="calendar-day-header">Wed</div>
-                                            <div className="calendar-day-header">Thu</div>
-                                            <div className="calendar-day-header">Fri</div>
-                                            <div className="calendar-day-header">Sat</div>
-                                        </>
-                                    )}
-                                    {Array.from({ length: emptyPrefixCount }).map((_, i) => (
-                                        <div key={`empty-${i}`} className="heatmap-cell empty"></div>
-                                    ))}
-                                    {heatmapData.map((d, i) => {
-                                        const isRainbow = d.mins > 0 && weeklyStats.days === 7;
-                                        const isFlame = d.mins > 0 && weeklyStats.days >= 5 && weeklyStats.days < 7;
-                                        const dateStr = d.date.toISOString().split('T')[0];
-                                        const goal = goalDateSet[dateStr];
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflowY: 'auto', marginBottom: '16px' }}>
+                                            {upcoming.map((g, idx) => {
+                                                const goalDate = new Date(g.date + 'T00:00:00');
+                                                const now = new Date();
+                                                now.setHours(0, 0, 0, 0);
+                                                const diffMs = goalDate.getTime() - now.getTime();
+                                                const totalDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                                                const months = Math.floor(totalDays / 30);
+                                                const weeks = Math.floor((totalDays % 30) / 7);
+                                                const days = totalDays % 7;
 
-                                        return (
-                                            <div
-                                                key={i}
-                                                className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'rainbow-pulse' : ''} ${goal ? 'goal-cell' : ''}`}
-                                                title={goal ? `🏁 ${goal.label} • ${d.tooltip}` : d.tooltip}
-                                                style={{ cursor: d.mins > 0 || goal ? 'pointer' : 'default' }}
-                                                onMouseEnter={() => { if (d.mins > 0 || goal) playSFX('hover_sound', theme); }}
-                                                onClick={() => {
-                                                    if (d.mins > 0) setSelectedLogDate(d.date);
-                                                }}
-                                            >
-                                                {d.date.getDate()}
-                                                {goal && <span className="goal-flag" title={goal.label}>🏁</span>}
-                                                {!goal && isFlame && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>🔥</span>}
-                                                {!goal && isRainbow && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>✨</span>}
+                                                let countdown = '';
+                                                if (totalDays === 0) countdown = 'Today!';
+                                                else {
+                                                    const parts: string[] = [];
+                                                    if (months > 0) parts.push(`${months}mo`);
+                                                    if (weeks > 0) parts.push(`${weeks}w`);
+                                                    if (days > 0) parts.push(`${days}d`);
+                                                    countdown = parts.join(' ');
+                                                }
+
+                                                return (
+                                                    <div key={`${g.id}-${idx}`} style={{
+                                                        padding: '12px',
+                                                        background: 'rgba(var(--primary-rgb), 0.06)',
+                                                        borderRadius: '12px',
+                                                        borderLeft: totalDays <= 7 ? '3px solid var(--danger)' : totalDays <= 30 ? '3px solid var(--accent)' : '3px solid var(--primary)',
+                                                        position: 'relative'
+                                                    }}>
+                                                        <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '4px' }}>🏁 {g.label}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{g.date}</div>
+                                                        <div style={{
+                                                            fontSize: '1.1rem',
+                                                            fontWeight: 'bold',
+                                                            color: totalDays <= 7 ? 'var(--danger)' : totalDays <= 30 ? 'var(--accent)' : 'var(--primary)',
+                                                        }}>
+                                                            {countdown}
+                                                        </div>
+                                                        {g.type === 'manual' && (
+                                                            <button
+                                                                className="btn-icon"
+                                                                onClick={() => removeGoalDate(g.id)}
+                                                                title="Remove deadline"
+                                                                style={{ position: 'absolute', right: '8px', top: '8px' }}
+                                                            >
+                                                                <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {pastWithResults.length > 0 && (
+                                        <div style={{ marginTop: 'auto', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
+                                            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Past Results</h4>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {pastWithResults.map((p, idx) => (
+                                                    <div key={`past-${p.id}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: '8px' }}>
+                                                        <div>
+                                                            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.label}</div>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.date}</div>
+                                                        </div>
+                                                        <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{p.result}</div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    )}
                                 </>
                             );
                         })()}
                     </div>
-                    <div className="heatmap-legend">
-                        Less <span className="heatmap-cell h-level-0"></span>
-                        <span className="heatmap-cell h-level-1"></span>
-                        <span className="heatmap-cell h-level-2"></span>
-                        <span className="heatmap-cell h-level-3"></span>
-                        <span className="heatmap-cell h-level-4"></span> More
-                        <span style={{ marginLeft: '12px' }}>🏁 = Goal</span>
-                    </div>
                 </div>
 
-                {/* ── Upcoming Goals Panel ── */}
-                <div className="glass" style={{ width: '280px', flexShrink: 0, padding: '20px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
+                {/* ── Technique Pie Chart ── */}
+                <div className="glass" style={{ width: '300px', flexShrink: 0, padding: '20px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
                     <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}>
-                        <Flag size={18} /> Upcoming Goals
+                        <PieChartIcon size={18} /> Technique Tiers
                     </h3>
-                    {goalDates.length === 0 ? (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: 'auto 0' }}>No goals set yet.<br />Click "Goals" to add one.</p>
+
+                    {pieChart.total === 0 ? (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: 'auto 0' }}>No techniques logged yet.</p>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflowY: 'auto' }}>
-                            {goalDates
-                                .filter(g => new Date(g.date + 'T00:00:00') >= new Date(new Date().toISOString().split('T')[0] + 'T00:00:00'))
-                                .sort((a, b) => a.date.localeCompare(b.date))
-                                .map(g => {
-                                    const goalDate = new Date(g.date + 'T00:00:00');
-                                    const now = new Date();
-                                    now.setHours(0, 0, 0, 0);
-                                    const diffMs = goalDate.getTime() - now.getTime();
-                                    const totalDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                                    const months = Math.floor(totalDays / 30);
-                                    const weeks = Math.floor((totalDays % 30) / 7);
-                                    const days = totalDays % 7;
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                            <div style={{
+                                width: '160px', height: '160px', borderRadius: '50%', margin: '0 auto 24px auto',
+                                background: `conic-gradient(${pieChart.data.reduce((acc, slice, idx) => {
+                                    const prevPct = idx === 0 ? 0 : pieChart.data.slice(0, idx).reduce((sum, d) => sum + d.pct, 0);
+                                    const endPct = prevPct + slice.pct;
+                                    const colorStr = slice.color.startsWith('linear-gradient') ? slice.color.split(',')[1].trim() : slice.color; // Simplify gradient for conic
+                                    return acc + (idx > 0 ? ', ' : '') + `${colorStr} ${prevPct}% ${endPct}%`;
+                                }, '')
+                                    })`,
+                                border: '1px solid var(--glass-border)',
+                                position: 'relative'
+                            }}>
+                                <div style={{
+                                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                                    width: '100px', height: '100px', borderRadius: '50%', background: 'var(--card-bg)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
+                                    fontWeight: 'bold', fontSize: '1.2rem'
+                                }}>
+                                    {pieChart.data[0]?.tier}
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>Top Tier</span>
+                                </div>
+                            </div>
 
-                                    let countdown = '';
-                                    if (totalDays === 0) countdown = 'Today!';
-                                    else {
-                                        const parts: string[] = [];
-                                        if (months > 0) parts.push(`${months}mo`);
-                                        if (weeks > 0) parts.push(`${weeks}w`);
-                                        if (days > 0) parts.push(`${days}d`);
-                                        countdown = parts.join(' ');
-                                    }
-
-                                    return (
-                                        <div key={g.id} style={{
-                                            padding: '12px',
-                                            background: 'rgba(var(--primary-rgb), 0.06)',
-                                            borderRadius: '12px',
-                                            borderLeft: totalDays <= 7 ? '3px solid var(--danger)' : totalDays <= 30 ? '3px solid var(--accent)' : '3px solid var(--primary)',
-                                        }}>
-                                            <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '4px' }}>🏁 {g.label}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{g.date}</div>
-                                            <div style={{
-                                                fontSize: '1.1rem',
-                                                fontWeight: 'bold',
-                                                color: totalDays <= 7 ? 'var(--danger)' : totalDays <= 30 ? 'var(--accent)' : 'var(--primary)',
-                                            }}>
-                                                {countdown}
-                                            </div>
-                                            <button
-                                                className="btn-icon"
-                                                onClick={() => removeGoalDate(g.id)}
-                                                title="Remove goal"
-                                                style={{ position: 'absolute', right: '8px', top: '8px' }}
-                                            >
-                                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+                                {pieChart.data.map(slice => (
+                                    <div key={slice.tier} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: slice.color.startsWith('linear-gradient') ? slice.color.split(',')[1].trim() : slice.color }}></div>
+                                            <span style={{ fontWeight: 600 }}>Tier {slice.tier}</span>
                                         </div>
-                                    );
-                                })}
-                            {goalDates.filter(g => new Date(g.date + 'T00:00:00') >= new Date(new Date().toISOString().split('T')[0] + 'T00:00:00')).length === 0 && (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center' }}>All goals have passed.</p>
+                                        <div style={{ color: 'var(--text-muted)' }}>
+                                            {slice.pct}% <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>({Math.round(slice.mins)}m)</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {pieChart.dfRatio >= 30 && (
+                                <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(var(--danger-rgb), 0.1)', borderLeft: '3px solid var(--danger)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-dark)' }}>
+                                    <strong>Warning:</strong> {pieChart.dfRatio}% of your study time is spent on highly inefficient D/F techniques. Focus on Active Recall (S/A tier).
+                                </div>
                             )}
                         </div>
                     )}
@@ -600,26 +794,31 @@ export default function AnalyticsTab() {
                         <Activity size={20} className="icon-blue" />
                         Study Time Graph
                     </h3>
-                    <select
-                        value={timelineFilter}
-                        onChange={e => setTimelineFilter(parseFloat(e.target.value))}
-                        style={{ width: 'auto', minWidth: '150px' }}
-                    >
-                        <option value={0.25}>Last Week</option>
-                        <option value={0.5}>Last 2 Weeks</option>
-                        <option value={1}>Last Month</option>
-                        <option value={2}>Last 2 Months</option>
-                        <option value={3}>Last 3 Months</option>
-                        <option value={4}>Last 4 Months</option>
-                        <option value={5}>Last 5 Months</option>
-                        <option value={6}>Last 6 Months</option>
-                        <option value={7}>Last 7 Months</option>
-                        <option value={8}>Last 8 Months</option>
-                        <option value={9}>Last 9 Months</option>
-                        <option value={10}>Last 10 Months</option>
-                        <option value={11}>Last 11 Months</option>
-                        <option value={12}>Last 12 Months</option>
-                    </select>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            I studied {timelineData.studiedDays} days, {formatTime(timelineData.totalPeriodMinutes)} for the last
+                        </div>
+                        <select
+                            value={timelineFilter}
+                            onChange={e => setTimelineFilter(parseFloat(e.target.value))}
+                            style={{ width: 'auto', minWidth: '150px' }}
+                        >
+                            <option value={0.25}>Last Week</option>
+                            <option value={0.5}>Last 2 Weeks</option>
+                            <option value={1}>Last Month</option>
+                            <option value={2}>Last 2 Months</option>
+                            <option value={3}>Last 3 Months</option>
+                            <option value={4}>Last 4 Months</option>
+                            <option value={5}>Last 5 Months</option>
+                            <option value={6}>Last 6 Months</option>
+                            <option value={7}>Last 7 Months</option>
+                            <option value={8}>Last 8 Months</option>
+                            <option value={9}>Last 9 Months</option>
+                            <option value={10}>Last 10 Months</option>
+                            <option value={11}>Last 11 Months</option>
+                            <option value={12}>Last 12 Months</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', marginTop: '32px' }}>
@@ -704,6 +903,6 @@ export default function AnalyticsTab() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

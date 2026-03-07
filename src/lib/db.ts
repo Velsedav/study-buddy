@@ -17,6 +17,9 @@ export interface Subject {
     created_at: string;
     last_studied_at: string | null;
     total_minutes: number;
+    deadline: string | null;
+    result: string | null;
+    archived: boolean;
 }
 
 export interface Tag {
@@ -46,7 +49,7 @@ export interface Session {
 export async function getSubjects(): Promise<Subject[]> {
     const db = await getDb();
     const rows = await db.select<Subject[]>(`SELECT * FROM subjects`);
-    return rows.map(r => ({ ...r, pinned: Boolean(r.pinned) }));
+    return rows.map(r => ({ ...r, pinned: Boolean(r.pinned), archived: Boolean(r.archived) }));
 }
 
 export async function getSubjectTags(subjectId: string): Promise<Tag[]> {
@@ -63,12 +66,12 @@ export async function getAllTags(): Promise<Tag[]> {
     return db.select<Tag[]>(`SELECT * FROM tags ORDER BY name`);
 }
 
-export async function createSubject(subject: Omit<Subject, 'pinned'> & { pinned: boolean }, tags: string[]) {
+export async function createSubject(subject: Omit<Subject, 'pinned' | 'archived'> & { pinned: boolean, archived: boolean }, tags: string[]) {
     const db = await getDb();
     await db.execute(
-        `INSERT INTO subjects (id, name, cover_path, pinned, created_at, last_studied_at, total_minutes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [subject.id, subject.name, subject.cover_path, subject.pinned ? 1 : 0, subject.created_at, subject.last_studied_at, subject.total_minutes]
+        `INSERT INTO subjects (id, name, cover_path, pinned, created_at, last_studied_at, total_minutes, deadline, result, archived)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [subject.id, subject.name, subject.cover_path, subject.pinned ? 1 : 0, subject.created_at, subject.last_studied_at, subject.total_minutes, subject.deadline, subject.result, subject.archived ? 1 : 0]
     );
 
     for (const tName of tags) {
@@ -103,9 +106,12 @@ export async function updateSubjectCover(id: string, path: string | null) {
     await db.execute(`UPDATE subjects SET cover_path = $1 WHERE id = $2`, [path, id]);
 }
 
-export async function updateSubject(id: string, name: string, coverPath: string | null, tags: string[]) {
+export async function updateSubject(id: string, name: string, coverPath: string | null, tags: string[], deadline: string | null, result: string | null, archived: boolean) {
     const db = await getDb();
-    await db.execute(`UPDATE subjects SET name = $1, cover_path = $2 WHERE id = $3`, [name, coverPath, id]);
+    await db.execute(
+        `UPDATE subjects SET name = $1, cover_path = $2, deadline = $3, result = $4, archived = $5 WHERE id = $6`,
+        [name, coverPath, deadline, result, archived ? 1 : 0, id]
+    );
 
     // Replace all tag associations
     await db.execute(`DELETE FROM subject_tags WHERE subject_id = $1`, [id]);
@@ -153,6 +159,23 @@ export async function saveSession(session: Omit<Session, 'id'> & { id: string },
 export async function getSessions(): Promise<Session[]> {
     const db = await getDb();
     return db.select<Session[]>(`SELECT * FROM sessions ORDER BY started_at DESC`);
+}
+
+export interface SessionBlock {
+    id: string;
+    session_id: string;
+    idx: number;
+    type: string;
+    minutes: number;
+    subject_id: string | null;
+    technique_id: string | null;
+    started_at: string | null;
+    ended_at: string | null;
+}
+
+export async function getAllSessionBlocks(): Promise<SessionBlock[]> {
+    const db = await getDb();
+    return db.select<SessionBlock[]>(`SELECT * FROM session_blocks`);
 }
 
 // ── Quotes ──

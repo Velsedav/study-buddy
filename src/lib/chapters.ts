@@ -38,6 +38,10 @@ function saveAll(chapters: Chapter[]) {
     localStorage.setItem(LS_KEY, JSON.stringify(chapters));
 }
 
+export function getAllChapters(): Chapter[] {
+    return loadAll();
+}
+
 export function getChaptersForSubject(subjectId: string): Chapter[] {
     return loadAll().filter(c => c.subjectId === subjectId);
 }

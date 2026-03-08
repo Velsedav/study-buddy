@@ -2,83 +2,18 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSettings } from '../lib/settings';
 import { getSessions, getSubjects, getAllSessionBlocks } from '../lib/db';
 import type { Session, Subject, SessionBlock } from '../lib/db';
-import { Activity, Clock, CalendarDays, Flame, ChevronLeft, ChevronRight, X, Flag, Trash2, PieChart as PieChartIcon, Zap } from 'lucide-react';
-import { playSFX } from '../lib/sounds';
+import { Activity, Clock, Flame, Flag, PieChart as PieChartIcon, Zap } from 'lucide-react';
 import { TECHNIQUES, getTierColor } from '../lib/techniques';
-
-// ── Goal Dates ──
-
-interface GoalDate {
-    id: string;
-    date: string; // YYYY-MM-DD
-    label: string;
-}
-
-function loadGoalDates(): GoalDate[] {
-    try {
-        const saved = localStorage.getItem('study-buddy-goal-dates');
-        if (saved) return JSON.parse(saved);
-    } catch { }
-    return [];
-}
-
-function saveGoalDates(goals: GoalDate[]) {
-    localStorage.setItem('study-buddy-goal-dates', JSON.stringify(goals));
-}
-
-// ── Fake Data Generator ──
-
-function generateFakeData(): Session[] {
-    const fakeSessions: Session[] = [];
-    const now = new Date();
-
-    // Generate 6 months of fake data
-    for (let daysAgo = 0; daysAgo < 180; daysAgo++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - daysAgo);
-        date.setHours(9, 0, 0, 0);
-
-        // Probability of studying on a given day (higher on weekdays)
-        const dayOfWeek = date.getDay();
-        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-        const studyProbability = isWeekday ? 0.75 : 0.4;
-
-        if (Math.random() > studyProbability) continue;
-
-        // 1-3 sessions per day
-        const sessionsCount = 1 + Math.floor(Math.random() * 3);
-
-        for (let s = 0; s < sessionsCount; s++) {
-            const hour = 8 + Math.floor(Math.random() * 12);
-            const startDate = new Date(date);
-            startDate.setHours(hour, Math.floor(Math.random() * 60));
-
-            // Session duration: 15-120 minutes, weighted toward 25-50
-            let minutes: number;
-            const r = Math.random();
-            if (r < 0.4) minutes = 25;
-            else if (r < 0.7) minutes = 50;
-            else if (r < 0.85) minutes = 15 + Math.floor(Math.random() * 35);
-            else minutes = 60 + Math.floor(Math.random() * 60);
-
-            const endDate = new Date(startDate.getTime() + minutes * 60000);
-
-            fakeSessions.push({
-                id: `fake-${daysAgo}-${s}`,
-                started_at: startDate.toISOString(),
-                ended_at: endDate.toISOString(),
-                template: r < 0.5 ? '25/5' : '50/10',
-                repeats: 1,
-                planned_minutes: minutes,
-                actual_minutes: minutes,
-            });
-        }
-    }
-
-    return fakeSessions;
-}
+import { getAllChapters } from '../lib/chapters';
+import type { Chapter } from '../lib/chapters';
+import CalendarPanel from '../components/CalendarPanel';
+import './Analytics.css';
 
 // ── Helpers ──
+
+function toLocalDateStr(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 function getStartOfWeek(date: Date, weekStart: 'monday' | 'sunday') {
     const d = new Date(date);
@@ -90,32 +25,13 @@ function getStartOfWeek(date: Date, weekStart: 'monday' | 'sunday') {
 }
 
 export default function AnalyticsTab() {
-    const { weekStart, theme } = useSettings();
+    const { weekStart } = useSettings();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [blocks, setBlocks] = useState<SessionBlock[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [useFakeData, setUseFakeData] = useState(false);
-    const [fakeData] = useState<Session[]>(() => generateFakeData());
+    const [allChapters, setAllChapters] = useState<Chapter[]>([]);
     const [hoveredBarIdx, setHoveredBarIdx] = useState<number | null>(null);
-
-    const [currentHeatmapMonth, setCurrentHeatmapMonth] = useState(() => {
-        const d = new Date();
-        d.setDate(1);
-        d.setHours(0, 0, 0, 0);
-        return d;
-    });
-    const [selectedLogDate, setSelectedLogDate] = useState<Date | null>(null);
     const [timelineFilter, setTimelineFilter] = useState<number>(1);
-
-    // Goal dates state
-    const [goalDates, setGoalDates] = useState<GoalDate[]>(loadGoalDates);
-    const [showGoalModal, setShowGoalModal] = useState(false);
-    const [newGoalDate, setNewGoalDate] = useState('');
-    const [newGoalLabel, setNewGoalLabel] = useState('');
-
-    useEffect(() => {
-        saveGoalDates(goalDates);
-    }, [goalDates]);
 
     useEffect(() => {
         async function load() {
@@ -128,6 +44,8 @@ export default function AnalyticsTab() {
 
                 const subs = await getSubjects();
                 setSubjects(subs);
+
+                setAllChapters(getAllChapters());
             } catch (e) {
                 console.error("Failed to load analytics data", e);
             }
@@ -135,76 +53,36 @@ export default function AnalyticsTab() {
         load();
     }, []);
 
-    const activeSessions = useFakeData ? fakeData : sessions;
-
-    const { heatmapData, weeklyStats } = useMemo(() => {
+    const weeklyStats = useMemo(() => {
         const today = new Date();
         const startOfWeek = getStartOfWeek(today, weekStart);
         startOfWeek.setHours(0, 0, 0, 0);
 
         let weekMinutes = 0;
         let weekSessionsCount = 0;
-        let weekDaysActive = new Set<string>();
+        const weekDaysActive = new Set<string>();
 
-        activeSessions.forEach(s => {
-            const dateStr = s.started_at.split('T')[0];
+        sessions.forEach(s => {
             const sd = new Date(s.started_at);
-
             if (sd >= startOfWeek) {
                 weekMinutes += s.actual_minutes;
                 weekSessionsCount++;
-                weekDaysActive.add(dateStr);
+                weekDaysActive.add(toLocalDateStr(sd));
             }
-        });
-
-        // Heatmap - Current Selected Month
-        const year = currentHeatmapMonth.getFullYear();
-        const month = currentHeatmapMonth.getMonth();
-        const startNodeDate = new Date(year, month, 1);
-        const nextMonthDate = new Date(year, month + 1, 1);
-
-        const monthDays: Date[] = [];
-        let itr = new Date(startNodeDate);
-        while (itr < nextMonthDate) {
-            monthDays.push(new Date(itr));
-            itr.setDate(itr.getDate() + 1);
-        }
-
-        const mapData = monthDays.map(date => {
-            const dateStr = date.toISOString().split('T')[0];
-            const daySessions = activeSessions.filter(s => {
-                const sd = new Date(s.started_at);
-                return sd.toISOString().split('T')[0] === dateStr;
-            });
-
-            let dayMin = 0;
-            daySessions.forEach(s => { if (s.actual_minutes) dayMin += s.actual_minutes });
-
-            let tooltip = date.toLocaleDateString();
-            if (dayMin > 0) {
-                tooltip += ` - ${dayMin} minutes (${daySessions.length} sessions)`;
-            } else {
-                tooltip += ' - No sessions';
-            }
-
-            return { date, mins: dayMin, tooltip, sessions: daySessions };
         });
 
         return {
-            heatmapData: mapData,
-            weeklyStats: {
-                minutes: weekMinutes,
-                count: weekSessionsCount,
-                days: weekDaysActive.size
-            }
+            minutes: weekMinutes,
+            count: weekSessionsCount,
+            days: weekDaysActive.size
         };
-    }, [activeSessions, weekStart, currentHeatmapMonth]);
+    }, [sessions, weekStart]);
 
     const streaks = useMemo(() => {
         const datesWithSessions = new Set<string>();
-        activeSessions.forEach(s => {
+        sessions.forEach(s => {
             if (s.actual_minutes > 0) {
-                datesWithSessions.add(s.started_at.split('T')[0]);
+                datesWithSessions.add(toLocalDateStr(new Date(s.started_at)));
             }
         });
 
@@ -217,7 +95,6 @@ export default function AnalyticsTab() {
         let lastDate = new Date(sortedDates[0]);
         for (let i = 1; i < sortedDates.length; i++) {
             const d = new Date(sortedDates[i]);
-            // calculate whole days between dates avoiding daylight savings hours issues
             const diffDays = Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate())) / (1000 * 3600 * 24));
 
             if (diffDays === 1) {
@@ -236,23 +113,9 @@ export default function AnalyticsTab() {
         }
 
         return { current, best: Math.max(current, best) };
-    }, [activeSessions]);
+    }, [sessions]);
 
     const pieChart = useMemo(() => {
-        if (useFakeData) {
-            return {
-                data: [
-                    { tier: 'S', mins: 120, pct: 40, color: 'linear-gradient(135deg, var(--primary), var(--accent))' },
-                    { tier: 'A', mins: 90, pct: 30, color: 'var(--success)' },
-                    { tier: 'B', mins: 60, pct: 20, color: '#3b82f6' },
-                    { tier: 'D', mins: 15, pct: 5, color: '#f59e0b' },
-                    { tier: 'F', mins: 15, pct: 5, color: '#9ca3af' },
-                ],
-                total: 300,
-                dfRatio: 10
-            };
-        }
-
         const tierMap: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
         const validSessionIds = new Set(sessions.map(s => s.id));
 
@@ -282,36 +145,13 @@ export default function AnalyticsTab() {
         const dfPct = Math.round(((tierMap['D'] + tierMap['F'] + tierMap['E']) / total) * 100);
 
         return { data, total, dfRatio: dfPct };
-    }, [useFakeData, sessions, blocks]);
-
-    // Filtering and Daily Logs Extractor
-    const sessionsForSelectedDate = useMemo(() => {
-        if (!selectedLogDate) return [];
-        const targetStr = selectedLogDate.toISOString().split('T')[0];
-
-        return (heatmapData.find(d => d.date.toISOString().split('T')[0] === targetStr)?.sessions || [])
-            .map((session: any) => {
-                const attachedSub = subjects.find(s => s.id === session.subject_id);
-                return {
-                    ...session,
-                    subject_name: attachedSub ? attachedSub.name : (useFakeData ? 'Sample Subject' : 'Unknown Subject')
-                };
-            });
-    }, [selectedLogDate, heatmapData, subjects, useFakeData]);
+    }, [sessions, blocks]);
 
     const formatTime = (mins: number) => {
         const h = Math.floor(mins / 60);
         const m = Math.round(mins % 60);
         if (h > 0) return `${h}h ${m}m`;
         return `${m}m`;
-    };
-
-    const getIntensityClass = (mins: number) => {
-        if (mins === 0) return 'h-level-0';
-        if (mins < 30) return 'h-level-1';
-        if (mins < 60) return 'h-level-2';
-        if (mins < 120) return 'h-level-3';
-        return 'h-level-4';
     };
 
     // Timeline logic
@@ -333,14 +173,14 @@ export default function AnalyticsTab() {
 
         let itr = new Date(startPeriod);
         while (itr <= now) {
-            dailyTotals[itr.toISOString().split('T')[0]] = 0;
+            dailyTotals[toLocalDateStr(itr)] = 0;
             itr.setDate(itr.getDate() + 1);
         }
 
-        activeSessions.forEach(s => {
+        sessions.forEach(s => {
             const sd = new Date(s.started_at);
             if (sd >= startPeriod && sd <= now) {
-                const dStr = sd.toISOString().split('T')[0];
+                const dStr = toLocalDateStr(sd);
                 if (dailyTotals[dStr] !== undefined) {
                     dailyTotals[dStr] += (s.actual_minutes || 0);
                 }
@@ -350,55 +190,22 @@ export default function AnalyticsTab() {
         const sortedDays = Object.keys(dailyTotals).sort();
         const data = sortedDays.map(dateStr => ({
             dateStr,
-            date: new Date(dateStr),
+            date: new Date(dateStr + 'T12:00:00'),
             minutes: dailyTotals[dateStr]
         }));
 
         const maxMins = Math.max(...data.map(d => d.minutes), 60);
-
         const studiedDays = data.filter(d => d.minutes > 0).length;
         const totalPeriodMinutes = data.reduce((acc, d) => acc + d.minutes, 0);
 
         return { data, maxMins, studiedDays, totalPeriodMinutes };
-    }, [activeSessions, timelineFilter]);
-
-    // Goal dates helpers
-    const goalDateSet = useMemo(() => {
-        const map: Record<string, GoalDate> = {};
-        for (const g of goalDates) map[g.date] = g;
-        return map;
-    }, [goalDates]);
-
-    const addGoalDate = () => {
-        if (!newGoalDate || !newGoalLabel.trim()) return;
-        const goal: GoalDate = {
-            id: crypto.randomUUID(),
-            date: newGoalDate,
-            label: newGoalLabel.trim(),
-        };
-        setGoalDates(prev => [...prev, goal]);
-        setNewGoalDate('');
-        setNewGoalLabel('');
-        setShowGoalModal(false);
-    };
-
-    const removeGoalDate = (id: string) => {
-        setGoalDates(prev => prev.filter(g => g.id !== id));
-    };
+    }, [sessions, timelineFilter]);
 
     return (
         <div className="analytics-tab">
             <div className="analytics-summary">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="analytics-header">
                     <h3>This Week</h3>
-                    <button
-                        className={`btn btn-secondary`}
-                        style={{ fontSize: '0.78rem', padding: '4px 12px', opacity: useFakeData ? 1 : 0.6 }}
-                        onClick={() => setUseFakeData(!useFakeData)}
-                        title={useFakeData ? 'Switch to real data' : 'Show demo data'}
-                    >
-                        {useFakeData ? '📊 Demo Mode' : '📊 Demo'}
-                    </button>
                 </div>
 
                 <div className="stats-grid">
@@ -434,352 +241,56 @@ export default function AnalyticsTab() {
                 </div>
             </div>
 
-            {selectedLogDate && (
-                <div className="modal-overlay" onClick={() => setSelectedLogDate(null)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>
-                                Logs for {selectedLogDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
-                            </h2>
-                            <button className="btn btn-icon" onClick={() => setSelectedLogDate(null)}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {sessionsForSelectedDate.length === 0 ? (
-                            <p className="text-muted text-center">No recorded focus sessions on this day.</p>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {sessionsForSelectedDate.map(session => (
-                                    <div key={session.id} className="glass" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ fontWeight: 600, color: 'var(--text-dark)' }}>{session.subject_name}</div>
-                                        <div style={{ color: 'var(--primary)', fontWeight: 'bold' }}>{session.actual_minutes} min</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Goal Date Modal */}
-            {showGoalModal && (
-                <div className="modal-overlay" onClick={() => setShowGoalModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h2 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Flag size={20} />
-                                Add Goal Date
-                            </h2>
-                            <button className="btn btn-icon" onClick={() => setShowGoalModal(false)}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <div className="form-group">
-                                <label>Label (e.g. "Math Exam")</label>
-                                <input
-                                    type="text"
-                                    value={newGoalLabel}
-                                    onChange={e => setNewGoalLabel(e.target.value)}
-                                    placeholder="Exam / Deadline name"
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Date</label>
-                                <input
-                                    type="date"
-                                    value={newGoalDate}
-                                    onChange={e => setNewGoalDate(e.target.value)}
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
-                            <button
-                                className="btn btn-primary w-full"
-                                onClick={addGoalDate}
-                                disabled={!newGoalDate || !newGoalLabel.trim()}
-                            >
-                                Add Goal
-                            </button>
-                        </div>
-
-                        {goalDates.length > 0 && (
-                            <div style={{ marginTop: '20px', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
-                                <h4 style={{ marginBottom: '12px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Existing Goals</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {goalDates.sort((a, b) => a.date.localeCompare(b.date)).map(g => (
-                                        <div key={g.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(var(--primary-rgb), 0.06)', borderRadius: '8px' }}>
-                                            <div>
-                                                <span style={{ marginRight: '8px' }}>🏁</span>
-                                                <strong>{g.label}</strong>
-                                                <span style={{ color: 'var(--text-muted)', marginLeft: '8px', fontSize: '0.85rem' }}>{g.date}</span>
-                                            </div>
-                                            <button className="btn-icon" onClick={() => removeGoalDate(g.id)} title="Remove goal">
-                                                <Trash2 size={14} style={{ color: 'var(--danger)' }} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-evenly', gap: '24px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '24px', flex: 1, minWidth: '500px', flexWrap: 'wrap' }}>
-                    <div className="heatmap-section" style={{ flex: 1, minWidth: '350px' }}>
-                        <div className="heatmap-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <CalendarDays size={20} className="icon-blue" />
-                                {currentHeatmapMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
-                            </h3>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button
-                                    className="btn btn-secondary"
-                                    style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                    onClick={() => setShowGoalModal(true)}
-                                >
-                                    <span style={{ fontSize: '14px', fontWeight: 'bold' }}>+</span> Add a deadline
-                                </button>
-                                <button
-                                    className="btn btn-icon glass"
-                                    style={{ width: '32px', height: '32px' }}
-                                    onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-                                >
-                                    <ChevronLeft size={18} />
-                                </button>
-                                <button
-                                    className="btn btn-icon glass"
-                                    style={{ width: '32px', height: '32px' }}
-                                    onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-                                >
-                                    <ChevronRight size={18} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="heatmap-grid" style={{ position: 'relative' }}>
-                            {(() => {
-                                const firstDayOfMonthDate = new Date(currentHeatmapMonth.getFullYear(), currentHeatmapMonth.getMonth(), 1);
-                                const firstDayOfWeek = firstDayOfMonthDate.getDay();
-                                const emptyPrefixCount = weekStart === 'monday'
-                                    ? (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1)
-                                    : firstDayOfWeek;
-
-                                return (
-                                    <>
-                                        {weekStart === 'monday' ? (
-                                            <>
-                                                <div className="calendar-day-header">Mon</div>
-                                                <div className="calendar-day-header">Tue</div>
-                                                <div className="calendar-day-header">Wed</div>
-                                                <div className="calendar-day-header">Thu</div>
-                                                <div className="calendar-day-header">Fri</div>
-                                                <div className="calendar-day-header">Sat</div>
-                                                <div className="calendar-day-header">Sun</div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="calendar-day-header">Sun</div>
-                                                <div className="calendar-day-header">Mon</div>
-                                                <div className="calendar-day-header">Tue</div>
-                                                <div className="calendar-day-header">Wed</div>
-                                                <div className="calendar-day-header">Thu</div>
-                                                <div className="calendar-day-header">Fri</div>
-                                                <div className="calendar-day-header">Sat</div>
-                                            </>
-                                        )}
-                                        {Array.from({ length: emptyPrefixCount }).map((_, i) => (
-                                            <div key={`empty-${i}`} className="heatmap-cell empty"></div>
-                                        ))}
-                                        {heatmapData.map((d, i) => {
-                                            const isRainbow = d.mins > 0 && weeklyStats.days === 7;
-                                            const isFlame = d.mins > 0 && weeklyStats.days >= 5 && weeklyStats.days < 7;
-                                            const dateStr = d.date.toISOString().split('T')[0];
-                                            const goal = goalDateSet[dateStr];
-
-                                            return (
-                                                <div
-                                                    key={i}
-                                                    className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'rainbow-pulse' : ''} ${goal ? 'goal-cell' : ''}`}
-                                                    title={goal ? `🏁 ${goal.label} • ${d.tooltip}` : d.tooltip}
-                                                    style={{ cursor: d.mins > 0 || goal ? 'pointer' : 'default' }}
-                                                    onMouseEnter={() => { if (d.mins > 0 || goal) playSFX('hover_sound', theme); }}
-                                                    onClick={() => {
-                                                        if (d.mins > 0) setSelectedLogDate(d.date);
-                                                    }}
-                                                >
-                                                    {d.date.getDate()}
-                                                    {goal && <span className="goal-flag" title={goal.label}>🏁</span>}
-                                                    {!goal && isFlame && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>🔥</span>}
-                                                    {!goal && isRainbow && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>✨</span>}
-                                                </div>
-                                            );
-                                        })}
-                                    </>
-                                );
-                            })()}
-                        </div>
-                        <div className="heatmap-legend">
-                            Less <span className="heatmap-cell h-level-0"></span>
-                            <span className="heatmap-cell h-level-1"></span>
-                            <span className="heatmap-cell h-level-2"></span>
-                            <span className="heatmap-cell h-level-3"></span>
-                            <span className="heatmap-cell h-level-4"></span> More
-                            <span style={{ marginLeft: '12px' }}>🏁 = Goal</span>
-                        </div>
-                    </div>
-
-                    {/* ── Upcoming Deadlines Panel ── */}
-                    <div className="glass" style={{ width: '280px', flexShrink: 0, padding: '20px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
-                        <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}>
-                            <Flag size={18} /> Upcoming Deadlines
-                        </h3>
-                        {(() => {
-                            const allDeadlines = [
-                                ...goalDates.map(g => ({ ...g, type: 'manual' as const, result: null })),
-                                ...subjects.filter(s => s.deadline).map(s => ({ id: s.id, label: s.name, date: s.deadline!, type: 'subject' as const, result: s.result }))
-                            ];
-
-                            const upcoming = allDeadlines.filter(g => new Date(g.date + 'T00:00:00') >= new Date(new Date().toISOString().split('T')[0] + 'T00:00:00'))
-                                .sort((a, b) => a.date.localeCompare(b.date));
-
-                            const pastWithResults = allDeadlines.filter(g => g.result && new Date(g.date + 'T00:00:00') < new Date(new Date().toISOString().split('T')[0] + 'T00:00:00'))
-                                .sort((a, b) => b.date.localeCompare(a.date));
-
-                            return (
-                                <>
-                                    {upcoming.length === 0 ? (
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: 'auto 0' }}>No deadlines set yet.<br />Click "+ Add a deadline" to add one, or set it on a subject.</p>
-                                    ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflowY: 'auto', marginBottom: '16px' }}>
-                                            {upcoming.map((g, idx) => {
-                                                const goalDate = new Date(g.date + 'T00:00:00');
-                                                const now = new Date();
-                                                now.setHours(0, 0, 0, 0);
-                                                const diffMs = goalDate.getTime() - now.getTime();
-                                                const totalDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                                                const months = Math.floor(totalDays / 30);
-                                                const weeks = Math.floor((totalDays % 30) / 7);
-                                                const days = totalDays % 7;
-
-                                                let countdown = '';
-                                                if (totalDays === 0) countdown = 'Today!';
-                                                else {
-                                                    const parts: string[] = [];
-                                                    if (months > 0) parts.push(`${months}mo`);
-                                                    if (weeks > 0) parts.push(`${weeks}w`);
-                                                    if (days > 0) parts.push(`${days}d`);
-                                                    countdown = parts.join(' ');
-                                                }
-
-                                                return (
-                                                    <div key={`${g.id}-${idx}`} style={{
-                                                        padding: '12px',
-                                                        background: 'rgba(var(--primary-rgb), 0.06)',
-                                                        borderRadius: '12px',
-                                                        borderLeft: totalDays <= 7 ? '3px solid var(--danger)' : totalDays <= 30 ? '3px solid var(--accent)' : '3px solid var(--primary)',
-                                                        position: 'relative'
-                                                    }}>
-                                                        <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '4px' }}>🏁 {g.label}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>{g.date}</div>
-                                                        <div style={{
-                                                            fontSize: '1.1rem',
-                                                            fontWeight: 'bold',
-                                                            color: totalDays <= 7 ? 'var(--danger)' : totalDays <= 30 ? 'var(--accent)' : 'var(--primary)',
-                                                        }}>
-                                                            {countdown}
-                                                        </div>
-                                                        {g.type === 'manual' && (
-                                                            <button
-                                                                className="btn-icon"
-                                                                onClick={() => removeGoalDate(g.id)}
-                                                                title="Remove deadline"
-                                                                style={{ position: 'absolute', right: '8px', top: '8px' }}
-                                                            >
-                                                                <Trash2 size={14} style={{ color: 'var(--danger)' }} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {pastWithResults.length > 0 && (
-                                        <div style={{ marginTop: 'auto', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
-                                            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Past Results</h4>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                {pastWithResults.map((p, idx) => (
-                                                    <div key={`past-${p.id}-${idx}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(var(--primary-rgb), 0.05)', borderRadius: '8px' }}>
-                                                        <div>
-                                                            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{p.label}</div>
-                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.date}</div>
-                                                        </div>
-                                                        <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{p.result}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
-                            );
-                        })()}
-                    </div>
-                </div>
+            <div className="analytics-panels">
+                <CalendarPanel
+                    sessions={sessions}
+                    blocks={blocks}
+                    subjects={subjects}
+                    allChapters={allChapters}
+                    weeklyActiveDays={weeklyStats.days}
+                />
 
                 {/* ── Technique Pie Chart ── */}
-                <div className="glass" style={{ width: '300px', flexShrink: 0, padding: '20px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}>
+                <div className="glass pie-chart-panel">
+                    <h3 className="panel-header">
                         <PieChartIcon size={18} /> Technique Tiers
                     </h3>
 
                     {pieChart.total === 0 ? (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', margin: 'auto 0' }}>No techniques logged yet.</p>
+                        <p className="empty-state-text">No techniques logged yet.</p>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                            <div style={{
-                                width: '160px', height: '160px', borderRadius: '50%', margin: '0 auto 24px auto',
+                        <div className="pie-chart-container">
+                            <div className="pie-chart-circle" style={{
                                 background: `conic-gradient(${pieChart.data.reduce((acc, slice, idx) => {
                                     const prevPct = idx === 0 ? 0 : pieChart.data.slice(0, idx).reduce((sum, d) => sum + d.pct, 0);
                                     const endPct = prevPct + slice.pct;
-                                    const colorStr = slice.color.startsWith('linear-gradient') ? slice.color.split(',')[1].trim() : slice.color; // Simplify gradient for conic
+                                    const colorStr = slice.color.startsWith('linear-gradient') ? slice.color.split(',')[1].trim() : slice.color;
                                     return acc + (idx > 0 ? ', ' : '') + `${colorStr} ${prevPct}% ${endPct}%`;
                                 }, '')
-                                    })`,
-                                border: '1px solid var(--glass-border)',
-                                position: 'relative'
+                                    })`
                             }}>
-                                <div style={{
-                                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                                    width: '100px', height: '100px', borderRadius: '50%', background: 'var(--card-bg)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
-                                    fontWeight: 'bold', fontSize: '1.2rem'
-                                }}>
+                                <div className="pie-chart-center">
                                     {pieChart.data[0]?.tier}
-                                    <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: 'var(--text-muted)' }}>Top Tier</span>
+                                    <span className="pie-chart-center-sub">Top Tier</span>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+                            <div className="pie-chart-legend">
                                 {pieChart.data.map(slice => (
-                                    <div key={slice.tier} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: slice.color.startsWith('linear-gradient') ? slice.color.split(',')[1].trim() : slice.color }}></div>
-                                            <span style={{ fontWeight: 600 }}>Tier {slice.tier}</span>
+                                    <div key={slice.tier} className="pie-chart-legend-item">
+                                        <div className="legend-item-left">
+                                            <div className="legend-item-color" style={{ background: slice.color.startsWith('linear-gradient') ? slice.color.split(',')[1].trim() : slice.color }}></div>
+                                            <span className="legend-item-label">Tier {slice.tier}</span>
                                         </div>
-                                        <div style={{ color: 'var(--text-muted)' }}>
-                                            {slice.pct}% <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>({Math.round(slice.mins)}m)</span>
+                                        <div className="legend-item-right">
+                                            {slice.pct}% <span className="legend-item-mins">({Math.round(slice.mins)}m)</span>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
                             {pieChart.dfRatio >= 30 && (
-                                <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(var(--danger-rgb), 0.1)', borderLeft: '3px solid var(--danger)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-dark)' }}>
+                                <div className="pie-chart-warning">
                                     <strong>Warning:</strong> {pieChart.dfRatio}% of your study time is spent on highly inefficient D/F techniques. Focus on Active Recall (S/A tier).
                                 </div>
                             )}
@@ -788,20 +299,20 @@ export default function AnalyticsTab() {
                 </div>
             </div>
 
-            <div className="glass" style={{ padding: '24px', borderRadius: 'var(--border-radius)', marginTop: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="glass timeline-panel">
+                <div className="timeline-header">
+                    <h3 className="timeline-title">
                         <Activity size={20} className="icon-blue" />
                         Study Time Graph
                     </h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <div className="timeline-controls">
+                        <div className="timeline-stats-text">
                             I studied {timelineData.studiedDays} days, {formatTime(timelineData.totalPeriodMinutes)} for the last
                         </div>
                         <select
                             value={timelineFilter}
                             onChange={e => setTimelineFilter(parseFloat(e.target.value))}
-                            style={{ width: 'auto', minWidth: '150px' }}
+                            className="timeline-select"
                         >
                             <option value={0.25}>Last Week</option>
                             <option value={0.5}>Last 2 Weeks</option>
@@ -821,79 +332,47 @@ export default function AnalyticsTab() {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', marginTop: '32px' }}>
+                <div className="timeline-graph-container">
                     {/* Y-axis labels */}
-                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: '8px', height: '200px', minWidth: '40px' }}>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatTime(timelineData.maxMins)}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatTime(Math.round(timelineData.maxMins * 2 / 3))}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{formatTime(Math.round(timelineData.maxMins / 3))}</span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>0m</span>
+                    <div className="y-axis-labels">
+                        <span className="y-axis-label">{formatTime(timelineData.maxMins)}</span>
+                        <span className="y-axis-label">{formatTime(Math.round(timelineData.maxMins * 2 / 3))}</span>
+                        <span className="y-axis-label">{formatTime(Math.round(timelineData.maxMins / 3))}</span>
+                        <span className="y-axis-label">0m</span>
                     </div>
-                    <div style={{ height: '200px', display: 'flex', alignItems: 'flex-end', gap: '2px', flex: 1, position: 'relative' }}>
+                    <div className="graph-bars-wrapper">
                         {timelineData.data.map((day, i) => {
                             const heightPct = Math.max((day.minutes / timelineData.maxMins) * 100, day.minutes > 0 ? 2 : 0);
-                            const isToday = new Date().toISOString().split('T')[0] === day.dateStr;
+                            const isToday = toLocalDateStr(new Date()) === day.dateStr;
                             const isHovered = hoveredBarIdx === i;
                             return (
                                 <div
                                     key={i}
-                                    style={{
-                                        flex: 1,
-                                        height: '100%',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        justifyContent: 'flex-end',
-                                        position: 'relative'
-                                    }}
+                                    className="graph-bar-col"
                                     onMouseEnter={() => setHoveredBarIdx(i)}
                                     onMouseLeave={() => setHoveredBarIdx(null)}
                                 >
-                                    {/* Hover tooltip */}
                                     {isHovered && day.minutes > 0 && (
-                                        <div style={{
-                                            position: 'absolute',
+                                        <div className="graph-tooltip" style={{
                                             top: `${Math.max(100 - heightPct - 15, 0)}%`,
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            background: 'var(--card-bg)',
-                                            border: '1px solid var(--glass-border)',
-                                            borderRadius: '8px',
-                                            padding: '6px 10px',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 'bold',
-                                            color: 'var(--text-dark)',
-                                            whiteSpace: 'nowrap',
-                                            zIndex: 20,
-                                            boxShadow: 'var(--shadow-md)',
-                                            pointerEvents: 'none',
                                         }}>
                                             {formatTime(day.minutes)}
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 'normal' }}>
+                                            <div className="graph-tooltip-date">
                                                 {day.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                                             </div>
                                         </div>
                                     )}
                                     <div
+                                        className="graph-bar graph-bar-hover"
                                         style={{
-                                            width: '100%',
                                             height: `${heightPct}%`,
                                             background: isToday ? 'var(--accent)' : 'var(--primary)',
-                                            borderRadius: '4px 4px 0 0',
-                                            transition: 'height 0.3s ease, opacity 0.15s',
                                             opacity: isHovered ? 1 : (day.minutes > 0 ? 0.8 : 0.1),
                                             cursor: day.minutes > 0 ? 'pointer' : 'default',
                                         }}
-                                        className="graph-bar-hover"
                                     />
                                     {timelineData.data.length <= 14 && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '-20px',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            fontSize: '0.65rem',
-                                            color: 'var(--text-muted)'
-                                        }}>
+                                        <div className="x-axis-label">
                                             {day.date.getDate()}
                                         </div>
                                     )}
@@ -903,6 +382,6 @@ export default function AnalyticsTab() {
                     </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 }

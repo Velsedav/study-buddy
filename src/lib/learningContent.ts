@@ -121,6 +121,20 @@ export const curriculum: Section[] = [
                                 { id: "d", text: "You are entering the \"diffuse mode\" of thinking, which is a highly productive state.", isCorrect: false }
                             ]
                         }
+                    },
+                    {
+                        id: "lesson-1-2-c",
+                        title: "Subsection C: Focused Mode vs. Diffuse Mode",
+                        content: "Your brain operates in two fundamentally different thinking modes, and mastering both is the key to solving hard problems. Focused Mode is a tight, concentrated state where your prefrontal cortex is engaged—perfect for practicing known techniques and following familiar pathways. Diffuse Mode is the opposite: a relaxed, big-picture state where your brain makes unexpected connections across distant neural regions. This is why your best ideas strike in the shower or during a walk.\n\nThe crucial insight: you cannot be in both modes simultaneously. To tackle a hard problem, you must first engage Focused Mode to load the problem into your brain, then deliberately switch to Diffuse Mode (take a walk, sleep, rest) to let it incubate. The Pomodoro break is not laziness—it is a biological necessity for your brain to consolidate and make creative leaps.",
+                        question: {
+                            id: 21,
+                            question: "Why is your break after a focused study session scientifically important, not just a reward?",
+                            options: [
+                                { id: "a", text: "The relaxed Diffuse Mode allows your brain to make unexpected connections and consolidate the material you studied in Focused Mode.", isCorrect: true },
+                                { id: "b", text: "Breaks reset your pain center so procrastination disappears for the rest of the day.", isCorrect: false },
+                                { id: "c", text: "Taking breaks reduces cortisol permanently, which increases your IQ over time.", isCorrect: false }
+                            ]
+                        }
                     }
                 ]
             }

@@ -104,6 +104,30 @@ export default function Layout() {
         ? quotes[currentIdx % quotes.length]?.text
         : 'Let\'s do our best today! ✨';
 
+    const isTerminal = theme === 'terminal-orange' || theme === 'terminal-green';
+
+    // Terminal typing effect
+    const [typedText, setTypedText] = useState('');
+    const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (!isTerminal) return;
+        if (typingRef.current) clearTimeout(typingRef.current);
+        setTypedText('');
+
+        let i = 0;
+        const full = currentQuote;
+        function typeNext() {
+            i++;
+            setTypedText(full.slice(0, i));
+            if (i < full.length) {
+                typingRef.current = setTimeout(typeNext, 12);
+            }
+        }
+        typingRef.current = setTimeout(typeNext, 80);
+        return () => { if (typingRef.current) clearTimeout(typingRef.current); };
+    }, [currentQuote, isTerminal]);
+
     return (
         <div className="layout">
             {/* Sidebar Navigation */}
@@ -132,21 +156,38 @@ export default function Layout() {
                     })}
                 </ul>
 
-                <div className="mascot-container">
-                    <div className="mascot-bubble-wrapper">
-                        <div className={`mascot-bubble ${animClass}`} key={currentIdx}>
-                            {currentQuote}
+                {isTerminal ? (
+                    <div className="terminal-quote-container">
+                        <div className="terminal-quote-line">
+                            <span className="terminal-prompt">&gt; </span>
+                            <span className="terminal-typed">{typedText}</span>
+                            <span className="terminal-cursor">█</span>
                         </div>
                         <button
-                            className="quote-edit-btn"
+                            className="quote-edit-btn terminal-edit-btn"
                             onClick={() => setEditorOpen(true)}
                             title="Edit quotes"
                         >
                             <Pencil size={12} />
                         </button>
                     </div>
-                    <img src="/mascot.png" alt="Study Buddy Mascot" className="mascot-img" />
-                </div>
+                ) : (
+                    <div className="mascot-container">
+                        <div className="mascot-bubble-wrapper">
+                            <div className={`mascot-bubble ${animClass}`} key={currentIdx}>
+                                {currentQuote}
+                            </div>
+                            <button
+                                className="quote-edit-btn"
+                                onClick={() => setEditorOpen(true)}
+                                title="Edit quotes"
+                            >
+                                <Pencil size={12} />
+                            </button>
+                        </div>
+                        <img src="/mascot.png" alt="Study Buddy Mascot" className="mascot-img" />
+                    </div>
+                )}
             </nav>
 
             {/* Main Content Area */}

@@ -24,6 +24,9 @@ jobs:
           - platform: macos-13
             target: x86_64-apple-darwin
             label: macOS-Intel
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            label: Linux
 
     runs-on: ${{ matrix.platform }}
     name: Build (${{ matrix.label }})
@@ -48,19 +51,12 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
-      # macOS: install system dependencies
-      - name: Install macOS dependencies
-        if: runner.os == 'macOS'
+      # Linux: install system dependencies
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
         run: |
-          # Tauri v2 on macOS needs no extra system deps beyond Xcode CLI tools
-          echo "macOS ready"
-
-      # Windows: install system dependencies  
-      - name: Install Windows dependencies
-        if: runner.os == 'Windows'
-        run: |
-          # Tauri v2 on Windows needs no extra system deps
-          echo "Windows ready"
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install frontend dependencies
         run: npm ci
@@ -74,16 +70,18 @@ jobs:
           releaseName: 'Study Buddy ${{ github.ref_name }}'
           releaseBody: |
             ## Study Buddy ${{ github.ref_name }}
-            
+
             ### Downloads
             - **Windows**: `.msi` or `.exe` installer
             - **macOS ARM (M1/M2/M3)**: `.dmg` disk image
             - **macOS Intel**: `.dmg` disk image
-            
+            - **Linux**: `.AppImage` or `.deb` package
+
             ### Installation
             - **Windows**: Download the `.msi` or `.exe` and run it
             - **macOS**: Download the `.dmg`, open it, and drag Study Buddy to Applications
-            
+            - **Linux**: Download the `.AppImage` (chmod +x, then run) or install the `.deb` with `sudo dpkg -i`
+
             > ⚠️ On macOS you may need to right-click → Open the first time, since the app isn't code-signed with an Apple Developer certificate.
           releaseDraft: true
           prerelease: false

@@ -571,6 +571,16 @@ h2 {
   }
 }
 
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
 @keyframes scaleIn {
   from {
     transform: scale(0.8);
@@ -581,6 +591,172 @@ h2 {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* ── Global Entrance Animations ── */
+@keyframes staggerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes staggerFadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.anim-enter {
+  animation: staggerFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.anim-enter-left {
+  animation: staggerFadeInLeft 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Apply entrance animation to all major page-level sections */
+.home-page .dashboard-top-section,
+.home-page .shopping-filter-bar,
+.home-page .dashboard-grid {
+  animation: staggerFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.home-page .dashboard-top-section {
+  animation-delay: 0ms;
+}
+
+.home-page .shopping-filter-bar {
+  animation-delay: 80ms;
+}
+
+.home-page .dashboard-grid {
+  animation-delay: 140ms;
+}
+
+/* Subject cards staggered */
+.subjects-grid .subject-card {
+  animation: staggerFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+.subjects-grid .add-subject-card {
+  animation: staggerFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+/* Heatmap cells stagger */
+.heatmap-grid .heatmap-cell {
+  animation: staggerFadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 15ms);
+}
+
+/* Weekly stats stagger */
+.weekly-stats-grid .stat-card {
+  animation: staggerFadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+/* Plan page blocks */
+.plan-page .plan-block {
+  animation: staggerFadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/* Analytics charts */
+.analytics-page>* {
+  animation: staggerFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+/* Settings sections */
+.settings-page .glass {
+  animation: staggerFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Recommendation cards */
+.home-page .recommendations-card {
+  animation: staggerFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 200ms;
+}
+
+/* ── Planner page entrance ── */
+/* Opacity-only overrides: transform-based fade-in creates a containing block
+   for position:fixed children (modal-overlay), breaking their positioning.
+   Any page wrapper that contains fixed-position modals must not use transforms. */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.planner-page.fade-in,
+.settings-tab.fade-in {
+  animation: pageFadeIn 0.35s ease forwards;
+}
+
+.drag-subject-item {
+  animation: learningFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--animation-order, 0) * 50ms);
+}
+
+/* ── MetacognitionLogs page entrance ── */
+.metacognition-logs-page .page-header {
+  animation: staggerFadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0ms;
+}
+
+.metacog-month-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 48px;
+}
+
+.metacog-log-card {
+  animation: learningFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--animation-order, 0) * 70ms);
+  padding: 20px;
+}
+
+.metacog-log-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  border: 2px dashed var(--glass-border) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 600px) {
+  .metacog-month-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Settings page entrance ── */
+.settings-tab .settings-section {
+  animation: learningFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--animation-order, 0) * 65ms);
 }
 
 /* Inputs */
@@ -723,7 +899,6 @@ input[type="checkbox"] {
 .shopping-filter-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 16px;
   border-radius: var(--border-radius);
   margin-bottom: 24px;
@@ -986,7 +1161,7 @@ input[type="checkbox"] {
 .analytics-summary h3,
 .heatmap-header h3 {
   font-size: 1.1rem;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -996,6 +1171,8 @@ input[type="checkbox"] {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+  max-width: 50%;
+  margin: 0 auto;
 }
 
 .stat-card {
@@ -1368,7 +1545,40 @@ input[type="checkbox"] {
   box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4);
 }
 
-/* ── Mechanic Mode ── */
+/* ── MetacognitionMode Swipe Animations ── */
+@keyframes mcSlideForward {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes mcSlideBackward {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.mc-slide-forward {
+  animation: mcSlideForward 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.mc-slide-backward {
+  animation: mcSlideBackward 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ── Mechanic Mode (legacy styles kept for mc-input) ── */
 .metacognition-mode-container {
   padding: 32px;
   margin-bottom: 32px;
@@ -1552,6 +1762,68 @@ input[type="checkbox"] {
 .nav-link.active {
   background: rgba(var(--primary-rgb), 0.2);
   color: var(--primary);
+}
+
+/* ── Terminal Quote (terminal themes) ── */
+.terminal-quote-container {
+  margin-top: auto;
+  position: relative;
+  padding: 10px 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.85;
+}
+
+.terminal-quote-line {
+  display: flex;
+  align-items: flex-start;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.terminal-prompt {
+  flex-shrink: 0;
+  font-weight: bold;
+  margin-right: 2px;
+}
+
+.terminal-typed {
+  flex: 1;
+}
+
+@keyframes terminalBlink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+.terminal-cursor {
+  animation: terminalBlink 1s step-start infinite;
+  font-size: 0.7em;
+  line-height: 1;
+  align-self: center;
+  margin-left: 1px;
+}
+
+.terminal-edit-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.terminal-quote-container:hover .terminal-edit-btn {
+  opacity: 1;
 }
 
 .mascot-container {
@@ -1810,14 +2082,14 @@ input[type="checkbox"] {
 .dashboard-grid {
   display: flex;
   gap: 24px;
-  max-width: 80%;
+  max-width: 70%;
   margin: 0 auto;
 }
 
 .subjects-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
   gap: 20px;
   align-content: start;
 }

@@ -4,6 +4,7 @@ import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { curriculum } from '../lib/learningContent';
 import type { Section, QuizOption } from '../lib/learningContent';
+import './Learning.css';
 
 // ── Spaced Repetition Types & Constants ──
 
@@ -534,45 +535,28 @@ export default function LearningTab() {
                 {enlargedImage && (
                     <div
                         onClick={() => setEnlargedImage(null)}
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            zIndex: 9999,
-                            background: 'rgba(0, 0, 0, 0.85)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'zoom-out',
-                            animation: 'fadeIn 0.2s ease',
-                            backdropFilter: 'blur(4px)',
-                        }}
+                        className="learning-lightbox"
                     >
                         <img
                             src={enlargedImage}
                             alt="Enlarged view"
-                            style={{
-                                maxWidth: '90vw',
-                                maxHeight: '90vh',
-                                borderRadius: '16px',
-                                boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
-                                animation: 'scaleIn 0.25s ease',
-                            }}
+                            className="learning-lightbox-img"
                         />
                     </div>
                 )}
 
-                <div className="learning-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-                    <button className="btn-icon" onClick={handleBackClick} style={{ background: 'var(--card-bg)', border: '1px solid var(--glass-border)' }}>
+                <div className="learning-header">
+                    <button className="btn-icon learning-header-btn" onClick={handleBackClick}>
                         <ArrowLeft size={20} />
                     </button>
-                    <div style={{ flex: 1 }}>
-                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ fontSize: '1.5rem', background: selectedSection.color, width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', color: '#fff' }}>
+                    <div className="learning-header-title-container">
+                        <h2 className="learning-header-title">
+                            <span className="learning-header-icon" style={{ background: selectedSection.color }}>
                                 {selectedSection.icon}
                             </span>
                             {selectedSection.title}
                         </h2>
-                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)' }}>{selectedSection.description}</p>
+                        <p className="learning-header-desc">{selectedSection.description}</p>
                     </div>
                     {entry && entry.level > 0 && (
                         <div className={`srs-level-indicator ${graduated ? 'graduated' : ''}`}>
@@ -614,63 +598,94 @@ export default function LearningTab() {
                     </div>
                 )}
 
-                <div className="learning-content" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                <div className="learning-content">
                     {selectedSection.chapters.map(chapter => (
                         <div key={chapter.id} className="chapter-container">
-                            <h3 style={{ borderBottom: '2px solid var(--glass-border)', paddingBottom: '8px', marginBottom: '16px', color: selectedSection.color }}>
+                            <h3 className="learning-chapter-title" style={{ color: selectedSection.color }}>
                                 {chapter.title}
                             </h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div className="learning-lessons-list">
                                 {chapter.lessons.map(lesson => {
                                     const qState = quizState[lesson.question.id] || {};
                                     const isSolved = Object.values(qState).some(v => v === true);
 
                                     return (
-                                        <div key={lesson.id} className={`glass lesson-card ${locked ? 'locked-section' : ''}`} style={{
-                                            padding: '24px',
-                                            borderRadius: '16px',
-                                            border: isSolved ? '2px solid var(--success)' : undefined,
-                                            background: isSolved ? 'linear-gradient(145deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02))' : undefined,
-                                            boxShadow: isSolved ? '0 4px 20px rgba(34, 197, 94, 0.05)' : undefined
-                                        }}>
-                                            <h4 style={{ marginBottom: '12px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div key={lesson.id} className={`glass lesson-card ${locked ? 'locked-section' : ''} ${isSolved ? 'solved' : ''}`}>
+                                            <h4 className="lesson-card-title">
                                                 {lesson.title}
-                                                {isSolved && <CheckCircle2 size={20} style={{ color: 'var(--success)' }} />}
+                                                {isSolved && <CheckCircle2 size={20} className="lesson-card-title-icon" />}
                                             </h4>
-                                            <p style={{ lineHeight: '1.6', color: 'var(--text-dark)', marginBottom: '24px' }}>
+                                            <p className="lesson-card-desc">
                                                 {lesson.content}
                                             </p>
 
-                                            {/* Forgetting Curve image for spaced repetition lesson */}
-                                            {lesson.id === 'lesson-2-2-a' && (
-                                                <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+                                            {/* Sleep mascot image */}
+                                            {lesson.id === 'lesson-1-1-a' && (
+                                                <div className="lesson-mascot-container">
                                                     <img
-                                                        src="/assets/images/learning center/spaced_repetition.png"
-                                                        alt="The Forgetting Curve & Spaced Repetition"
-                                                        onClick={() => setEnlargedImage('/assets/images/learning center/spaced_repetition.png')}
-                                                        style={{
-                                                            maxWidth: '100%',
-                                                            borderRadius: '12px',
-                                                            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                                                            cursor: 'zoom-in',
-                                                            transition: 'transform 0.2s ease',
-                                                        }}
-                                                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.01)')}
+                                                        src="/assets/images/learning center/01_mascot-sleep.png"
+                                                        alt="The mascot sleeping — memory consolidation happens during sleep"
+                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-sleep.png')}
+                                                        className="lesson-mascot-img"
+                                                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
                                                         onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                                                     />
-                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', fontStyle: 'italic' }}>
-                                                        The Forgetting Curve shows how memory decays without review. Spaced repetition resets the curve each time. <span style={{ color: 'var(--primary)', fontWeight: 600 }}>(Click to enlarge)</span>
+                                                    <p className="lesson-mascot-caption">
+                                                        Sleep is when your brain consolidates memories and grows new neural connections. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
                                                     </p>
                                                 </div>
                                             )}
 
-                                            <div className="quiz-container" style={{ background: 'rgba(0,0,0,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                                                <h5 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--primary)', fontSize: '1rem' }}>
+                                            {/* Focused vs Diffuse Mode images */}
+                                            {lesson.id === 'lesson-1-2-c' && (
+                                                <div className="lesson-mascot-container">
+                                                    <div className="lesson-modes-grid">
+                                                        {[
+                                                            { src: '/assets/images/learning center/01_mascot_focused-mode.png', label: 'Focused Mode — tight, directed thinking along known neural paths.' },
+                                                            { src: '/assets/images/learning center/01_mascot-diffuse-mode.png', label: 'Diffuse Mode — relaxed, wandering thought that makes unexpected connections.' },
+                                                        ].map(img => (
+                                                            <div key={img.src} className="lesson-modes-item">
+                                                                <img
+                                                                    src={img.src}
+                                                                    alt={img.label}
+                                                                    onClick={() => setEnlargedImage(img.src)}
+                                                                    className="lesson-mascot-img full-width"
+                                                                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
+                                                                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                                                                />
+                                                                <p className="lesson-mascot-caption small">
+                                                                    {img.label} <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Forgetting Curve image for spaced repetition lesson */}
+                                            {lesson.id === 'lesson-2-2-a' && (
+                                                <div className="lesson-mascot-container">
+                                                    <img
+                                                        src="/assets/images/learning center/spaced_repetition.png"
+                                                        alt="The Forgetting Curve & Spaced Repetition"
+                                                        onClick={() => setEnlargedImage('/assets/images/learning center/spaced_repetition.png')}
+                                                        className="lesson-mascot-img full-width"
+                                                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.01)')}
+                                                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                                                    />
+                                                    <p className="lesson-mascot-caption">
+                                                        The Forgetting Curve shows how memory decays without review. Spaced repetition resets the curve each time. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            <div className="concept-check-container">
+                                                <h5 className="concept-check-header">
                                                     <Sparkles size={18} /> Concept Check
                                                 </h5>
-                                                <p style={{ fontWeight: 500, marginBottom: '16px' }}>{lesson.question.question}</p>
+                                                <p className="concept-check-question">{lesson.question.question}</p>
 
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div className="concept-check-options">
                                                     {lesson.question.options.map(opt => {
                                                         const clickedStatus = qState[opt.id];
                                                         let optClass = 'quiz-option';
@@ -713,12 +728,12 @@ export default function LearningTab() {
 
     return (
         <div className={`learning-tab ${animating ? 'fade-out' : 'fade-in'}`}>
-            <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="learning-tab-header">
+                <h1 className="learning-tab-title">
                     <Sparkles className="icon-gold" size={32} />
                     Learning Track
                 </h1>
-                <p style={{ color: 'var(--text-muted)' }}>Master the science of learning to study smarter, not harder.</p>
+                <p className="learning-tab-desc">Master the science of learning to study smarter, not harder.</p>
             </div>
 
             <div className="learning-grid">
@@ -746,7 +761,7 @@ export default function LearningTab() {
                                 {locked ? <Lock size={20} /> : section.icon}
                             </div>
                             <h3>{section.title}</h3>
-                            <p style={{ lineHeight: '1.5' }}>{section.description}</p>
+                            <p className="learning-section-card-desc">{section.description}</p>
 
                             {locked && (
                                 <div className="srs-badge locked">
@@ -774,8 +789,7 @@ export default function LearningTab() {
                             )}
 
                             <button
-                                className={`btn ${locked ? 'btn-disabled' : 'btn-secondary'}`}
-                                style={{ marginTop: 'auto', alignSelf: 'flex-start' }}
+                                className={`btn learning-section-card-action ${locked ? 'btn-disabled' : 'btn-secondary'}`}
                                 disabled={locked}
                             >
                                 {locked ? 'Locked' : due ? 'Review Now' : graduated ? 'Review' : hasLevel ? 'Revisit' : 'Start Lesson'}

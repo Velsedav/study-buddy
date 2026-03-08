@@ -8,6 +8,7 @@ import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { METACOGNITION_QUESTIONS } from '../lib/metacognitionQuestions';
 import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
+import './Session.css';
 
 interface PrepItem {
     emoji: string;
@@ -23,6 +24,8 @@ const PREP_CHECKLIST: PrepItem[] = [
     { emoji: '🔊', label: 'Bruit blanc', url: 'https://asoftmurmur.com/' },
     { emoji: '👥', label: 'Body Doubling (Soutien psychologique)' },
     { emoji: '🧦', label: 'Grosses chaussettes (Confort thermique)' },
+    { emoji: '🍇', label: 'Préparer un snack sain' },
+    { emoji: '🧹', label: 'Désencombrer mon espace de travail' },
 ];
 
 const CUSTOM_PREP_KEY = 'study-buddy-custom-prep';
@@ -49,6 +52,7 @@ export default function Session() {
     const allPrepItems = [...PREP_CHECKLIST, ...customPrepItems];
     const [checkedItems, setCheckedItems] = useState<boolean[]>(allPrepItems.map(() => false));
     const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'total-rest'>('none');
+    const [restCountdown, setRestCountdown] = useState(600); // 10 minutes in seconds
     const [newCustomItem, setNewCustomItem] = useState('');
     const { theme } = useSettings();
 
@@ -124,9 +128,18 @@ export default function Session() {
     }
     function handleSessionComplete() {
         playSFX('pause_theme', theme);
+        setRestCountdown(600);
         setEndConfirmStep('total-rest');
         setPaused(true);
     }
+
+    // Rest countdown
+    useEffect(() => {
+        if (endConfirmStep !== 'total-rest') return;
+        if (restCountdown <= 0) return;
+        const t = setTimeout(() => setRestCountdown(r => r - 1), 1000);
+        return () => clearTimeout(t);
+    }, [endConfirmStep, restCountdown]);
 
     async function finishSession(completedAll = false, saveProgress = true) {
         if (!session) return;
@@ -201,9 +214,9 @@ export default function Session() {
 
     if (!session) {
         return (
-            <div className="session-page" style={{ textAlign: 'center', marginTop: '100px' }}>
+            <div className="session-page session-page-container">
                 <h2>No Active Session</h2>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Draft a plan in the Planner to start studying!</p>
+                <p className="session-no-active-text">Draft a plan in the Planner to start studying!</p>
                 <Link to="/plan" className="btn btn-primary">Open Planner</Link>
             </div>
         );
@@ -213,91 +226,43 @@ export default function Session() {
     const tech = currentBlock.technique_id ? TECHNIQUES.find(t => t.id === currentBlock.technique_id) : null;
 
     return (
-        <div className="session-page" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '70vh'
-        }}>
-            <div className="glass" style={{
-                padding: '60px',
-                textAlign: 'center',
-                width: '100%',
-                maxWidth: '600px',
-                borderRadius: '32px'
-            }}>
-                <h2 style={{ color: 'var(--primary-hover)', letterSpacing: '2px', textTransform: 'uppercase' }}>
+        <div className="session-page session-main-container">
+            <div className="glass session-panel">
+                <h2 className="session-block-type">
                     {currentBlock.type}
                 </h2>
 
                 {currentBlock.type === 'WORK' && (
-                    <div style={{ margin: '12px 0' }}>
+                    <div className="session-work-container">
                         {currentBlock.chapter_name && (
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                marginBottom: '8px',
-                                textAlign: 'left',
-                                maxWidth: '400px',
-                                marginLeft: 'auto',
-                                marginRight: 'auto'
-                            }}>
-                                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '4px' }}>📖 Chapter</div>
-                                <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>{currentBlock.chapter_name}</div>
+                            <div className="session-info-card">
+                                <div className="session-info-label">📖 Chapter</div>
+                                <div className="session-info-value">{currentBlock.chapter_name}</div>
                             </div>
                         )}
                         {currentBlock.objective && (
-                            <div style={{
-                                background: 'var(--card-bg)',
-                                padding: '12px 16px',
-                                borderRadius: '12px',
-                                marginBottom: '8px',
-                                textAlign: 'left',
-                                maxWidth: '400px',
-                                marginLeft: 'auto',
-                                marginRight: 'auto'
-                            }}>
-                                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '4px' }}>🎯 Objective</div>
-                                <div style={{ fontSize: '1rem' }}>{currentBlock.objective}</div>
+                            <div className="session-info-card">
+                                <div className="session-info-label">🎯 Objective</div>
+                                <div className="session-info-value">{currentBlock.objective}</div>
                             </div>
                         )}
                         {tech ? (
-                            <div style={{ background: 'var(--card-bg)', padding: '12px', borderRadius: '12px', display: 'inline-block' }}>
+                            <div className="session-tech-card">
                                 <strong>{tech.name}</strong>
-                                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{tech.hint}</div>
+                                <div className="session-tech-hint">{tech.hint}</div>
                             </div>
                         ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>Focus time</span>
+                            <span className="session-focus-text">Focus time</span>
                         )}
 
                         {/* Metacognition Reminder */}
                         {currentBlock.technique_id && METACOGNITION_QUESTIONS[currentBlock.technique_id] && (
-                            <div style={{
-                                background: METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'F' || METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'D'
-                                    ? 'rgba(239, 68, 68, 0.08)'
-                                    : 'rgba(var(--primary-rgb), 0.06)',
-                                border: METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'F' || METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'D'
-                                    ? '1px solid rgba(239, 68, 68, 0.2)'
-                                    : '1px solid rgba(var(--primary-rgb), 0.15)',
-                                borderRadius: '12px',
-                                padding: '14px 18px',
-                                marginTop: '16px',
-                                maxWidth: '420px',
-                                marginLeft: 'auto',
-                                marginRight: 'auto',
-                                textAlign: 'left',
-                            }}>
-                                <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '8px' }}>🧠 Metacognition Check</div>
+                            <div className={`meta-check-card ${METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'F' || METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'D' ? 'warning' : 'normal'}`}>
+                                <div className="meta-check-label">🧠 Metacognition Check</div>
                                 {METACOGNITION_QUESTIONS[currentBlock.technique_id].questions.map((q, qi) => (
-                                    <div key={qi} style={{
-                                        fontSize: '0.85rem',
-                                        fontStyle: 'italic',
-                                        color: 'var(--text-dark)',
-                                        marginBottom: qi < METACOGNITION_QUESTIONS[currentBlock.technique_id].questions.length - 1 ? '6px' : 0,
-                                        lineHeight: '1.4',
-                                    }}>{q}</div>
+                                    <div key={qi} className={`meta-check-question ${qi < METACOGNITION_QUESTIONS[currentBlock.technique_id].questions.length - 1 ? 'spaced' : ''}`}>
+                                        {q}
+                                    </div>
                                 ))}
                             </div>
                         )}
@@ -305,29 +270,12 @@ export default function Session() {
                 )}
 
                 {currentBlock.type === 'PREP' && (
-                    <div style={{
-                        textAlign: 'left',
-                        margin: '16px auto',
-                        maxWidth: '380px',
-                        background: 'var(--card-bg)',
-                        borderRadius: '16px',
-                        padding: '20px 24px'
-                    }}>
-                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '12px' }}>✨ Checklist de préparation</div>
+                    <div className="prep-checklist-card">
+                        <div className="prep-checklist-title">✨ Checklist de préparation</div>
                         {allPrepItems.map((item, idx) => (
                             <label
                                 key={idx}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    padding: '8px 4px',
-                                    cursor: 'pointer',
-                                    borderBottom: idx < allPrepItems.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none',
-                                    opacity: checkedItems[idx] ? 0.5 : 1,
-                                    textDecoration: checkedItems[idx] ? 'line-through' : 'none',
-                                    transition: 'opacity 0.2s ease'
-                                }}
+                                className={`prep-item-label ${idx < allPrepItems.length - 1 ? 'bordered' : ''} ${checkedItems[idx] ? 'checked' : ''}`}
                             >
                                 <input
                                     type="checkbox"
@@ -340,14 +288,14 @@ export default function Session() {
                                             playSFX('checklist_sound', theme);
                                         }
                                     }}
-                                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                                    className="prep-item-checkbox"
                                 />
-                                <span style={{ fontSize: '1rem', flex: 1 }}>
+                                <span className="prep-item-text">
                                     {item.emoji} {item.url ? (
                                         <a
                                             href="#"
                                             onClick={e => { e.preventDefault(); e.stopPropagation(); openExternal(item.url!); }}
-                                            style={{ color: 'var(--primary-hover)', fontWeight: 'bold', textDecoration: 'underline' }}
+                                            className="prep-item-link"
                                         >
                                             {item.label}
                                         </a>
@@ -356,7 +304,7 @@ export default function Session() {
                                 {/* Remove button for custom items */}
                                 {idx >= PREP_CHECKLIST.length && (
                                     <button
-                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '1rem', padding: '2px' }}
+                                        className="prep-item-remove-btn"
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
@@ -377,7 +325,7 @@ export default function Session() {
                         ))}
 
                         {/* Add custom item */}
-                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div className="prep-custom-container">
                             <input
                                 type="text"
                                 placeholder="Add custom item..."
@@ -393,11 +341,10 @@ export default function Session() {
                                         setNewCustomItem('');
                                     }
                                 }}
-                                style={{ flex: 1, padding: '6px 10px', fontSize: '0.85rem', borderRadius: '8px' }}
+                                className="prep-custom-input"
                             />
                             <button
-                                className="btn btn-secondary"
-                                style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                                className="btn btn-secondary prep-custom-btn"
                                 onClick={() => {
                                     if (newCustomItem.trim()) {
                                         const newItem: PrepItem = { emoji: '📌', label: newCustomItem.trim() };
@@ -415,23 +362,14 @@ export default function Session() {
                     </div>
                 )}
 
-                <div style={{
-                    fontSize: '7rem',
-                    fontWeight: 700,
-                    fontVariantNumeric: 'tabular-nums',
-                    fontFamily: 'monospace',
-                    color: paused ? 'var(--text-muted)' : 'var(--text-dark)',
-                    margin: '24px 0',
-                    textShadow: '2px 4px 12px rgba(var(--primary-rgb), 0.3)'
-                }}>
+                <div className={`timer-display ${paused ? 'paused' : 'running'}`}>
                     {formatSecondsMMSS(remaining)}
                 </div>
 
-                <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginTop: '32px' }}>
+                <div className="session-controls">
                     <button
-                        className={`btn ${paused ? 'btn-primary' : 'btn-secondary'}`}
+                        className={`btn pause-resume-btn ${paused ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setPaused(!paused)}
-                        style={{ minWidth: '120px' }}
                     >
                         {paused ? 'Resume' : 'Pause'}
                     </button>
@@ -439,12 +377,7 @@ export default function Session() {
                         Skip Block
                     </button>
                     <button
-                        className="btn"
-                        style={{
-                            background: 'transparent',
-                            color: 'var(--danger)',
-                            border: '2px solid var(--danger)'
-                        }}
+                        className="btn end-session-btn"
                         onClick={() => {
                             setPaused(true);
                             setEndConfirmStep('confirm-stop');
@@ -456,33 +389,19 @@ export default function Session() {
             </div>
 
             {/* Mini timeline */}
-            <div style={{
-                display: 'flex',
-                gap: '8px',
-                marginTop: '40px',
-                flexWrap: 'wrap',
-                maxWidth: '800px',
-                justifyContent: 'center'
-            }}>
+            <div className="timeline-container">
                 {session.draft.map((b: any, i: number) => {
                     const isActive = i === session.nowBlockIdx;
                     const isDone = i < session.nowBlockIdx;
-                    let bg = 'rgba(255,255,255,0.5)';
-                    if (isActive) bg = 'var(--primary)';
-                    else if (isDone) bg = 'var(--success)';
+                    let blockClass = 'pending';
+                    if (isActive) blockClass = 'active';
+                    else if (isDone) blockClass = 'done';
 
                     return (
                         <div
                             key={i}
                             title={`${b.type} - ${b.minutes}m`}
-                            style={{
-                                width: isActive ? '32px' : '16px',
-                                height: '16px',
-                                borderRadius: '8px',
-                                background: bg,
-                                transition: 'all 0.3s ease',
-                                boxShadow: isActive ? '0 0 12px var(--primary)' : 'none'
-                            }}
+                            className={`timeline-block ${blockClass}`}
                         />
                     );
                 })}
@@ -491,18 +410,18 @@ export default function Session() {
             {/* End Session Confirmation Modal */}
             {endConfirmStep !== 'none' && (
                 <div className="modal-overlay" onClick={() => { setEndConfirmStep('none'); setPaused(false); }}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', textAlign: 'center' }}>
+                    <div className="modal-content confirm-modal-content" onClick={e => e.stopPropagation()}>
                         {endConfirmStep === 'confirm-stop' && (
                             <>
-                                <h2 style={{ marginBottom: '12px' }}>⏸️ Stop studying?</h2>
-                                <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
+                                <h2 className="confirm-modal-title">⏸️ Stop studying?</h2>
+                                <p className="confirm-modal-text">
                                     Are you sure you want to end this session early?
                                 </p>
-                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                                <div className="confirm-modal-actions">
                                     <button className="btn btn-primary" onClick={() => { setEndConfirmStep('none'); setPaused(false); }}>
                                         Keep studying
                                     </button>
-                                    <button className="btn btn-secondary" style={{ color: 'var(--danger)' }} onClick={() => setEndConfirmStep('confirm-save')}>
+                                    <button className="btn btn-secondary confirm-btn-danger" onClick={() => setEndConfirmStep('confirm-save')}>
                                         Yes, stop
                                     </button>
                                 </div>
@@ -511,11 +430,11 @@ export default function Session() {
 
                         {endConfirmStep === 'confirm-save' && (
                             <>
-                                <h2 style={{ marginBottom: '12px' }}>💾 Save your progress?</h2>
-                                <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
+                                <h2 className="confirm-modal-title">💾 Save your progress?</h2>
+                                <p className="confirm-modal-text">
                                     Do you want to record the time you studied so far during this session?
                                 </p>
-                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                                <div className="confirm-modal-actions">
                                     <button className="btn btn-primary" onClick={() => finishSession(false, true)}>
                                         Save progress
                                     </button>
@@ -527,18 +446,32 @@ export default function Session() {
                         )}
 
                         {endConfirmStep === 'total-rest' && (
-                            <div style={{ padding: '24px 0' }}>
-                                <h2 style={{ marginBottom: '16px', fontSize: '2rem', color: 'var(--primary-hover)' }}>🛑 TOTAL REST!</h2>
-                                <p style={{ color: 'var(--text-dark)', marginBottom: '16px', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                            <div className="total-rest-container">
+                                <h2 className="total-rest-title">🛑 TOTAL REST!</h2>
+                                <p className="total-rest-subtitle">
                                     Session Complete.
                                 </p>
-                                <p style={{ color: 'var(--text-muted)', marginBottom: '32px', fontSize: '1.1rem', lineHeight: '1.6' }}>
+
+                                <img
+                                    src="/assets/images/learning center/01_mascot-diffuse-mode.png"
+                                    alt="Diffuse mode rest"
+                                    className="total-rest-img"
+                                />
+
+                                <p className="total-rest-desc">
                                     Recommendation: Lie down for 10 minutes.<br />
-                                    Do absolutely NOTHING right now. No phone, no scrolling, no planning.<br /><br />Let your mind process what you just learned.
+                                    Do absolutely NOTHING right now. No phone, no scrolling, no planning.<br /><br />
+                                    Let your mind process what you just learned.
                                 </p>
-                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                                    <button className="btn btn-primary btn-holographic" onClick={() => finishSession(true, true)} style={{ padding: '12px 32px', fontSize: '1.2rem' }}>
-                                        I am rested. Close session.
+
+                                {/* Countdown */}
+                                <div className={`total-rest-countdown ${restCountdown === 0 ? 'done' : 'running'}`}>
+                                    {String(Math.floor(restCountdown / 60)).padStart(2, '0')}:{String(restCountdown % 60).padStart(2, '0')}
+                                </div>
+
+                                <div className="total-rest-actions">
+                                    <button className="btn btn-primary btn-holographic total-rest-btn" onClick={() => finishSession(true, true)}>
+                                        {restCountdown === 0 ? '✓ I am rested. Close session.' : 'Skip rest & close'}
                                     </button>
                                 </div>
                             </div>

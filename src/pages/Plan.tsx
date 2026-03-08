@@ -11,6 +11,7 @@ import { CustomSelect } from '../components/CustomSelect';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { getChaptersForSubject } from '../lib/chapters';
+import './Plan.css';
 
 type BlockType = 'PREP' | 'WORK' | 'BREAK';
 
@@ -370,135 +371,76 @@ export default function Plan() {
     const endsText = `${endsAt.getHours().toString().padStart(2, '0')}:${endsAt.getMinutes().toString().padStart(2, '0')}`;
 
     return (
-        <div className={`planner-page ${isDragging ? 'is-dragging' : ''}`}>
-            <div className="page-header drag-dim" style={{ alignItems: 'flex-start' }}>
+        <div className={`planner-page fade-in ${isDragging ? 'is-dragging' : ''}`}>
+            <div className="page-header drag-dim">
                 <div>
                     <h1>Pomodoro Planner</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Ends roughly at {endsText} • {totalWork}m Work, {totalBreak}m Rest</p>
+                    <p>Ends roughly at {endsText} • {totalWork}m Work, {totalBreak}m Rest</p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <label style={{ marginRight: '8px', fontWeight: 'bold' }}>Style</label>
+                <div className="planner-controls">
+                    <div className="planner-control-group">
+                        <label className="planner-control-label">Style</label>
                         <CustomSelect
                             value={template}
                             onChange={(val) => setTemplate(val)}
-                            style={{ height: '100%' }}
                             options={Object.keys(TEMPLATES).map(k => ({ value: k, label: k }))}
                         />
                     </div>
                     {template === 'Custom' && (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Work (m)</label>
-                                <input type="number" min="1" max="300" value={customWork} onChange={e => setCustomWork(parseInt(e.target.value) || 0)} style={{ width: '56px', padding: '4px 6px', fontSize: '0.9rem' }} />
+                        <div className="planner-custom-group">
+                            <div className="planner-custom-input-group">
+                                <label className="planner-custom-input-label">Work (m)</label>
+                                <input type="number" min="1" max="300" className="planner-custom-input" value={customWork} onChange={e => setCustomWork(parseInt(e.target.value) || 0)} />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Break (m)</label>
-                                <input type="number" min="1" max="180" value={customBreak} onChange={e => setCustomBreak(parseInt(e.target.value) || 0)} style={{ width: '56px', padding: '4px 6px', fontSize: '0.9rem' }} />
+                            <div className="planner-custom-input-group">
+                                <label className="planner-custom-input-label">Break (m)</label>
+                                <input type="number" min="1" max="180" className="planner-custom-input" value={customBreak} onChange={e => setCustomBreak(parseInt(e.target.value) || 0)} />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <label style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>Prep (m)</label>
-                                <input type="number" min="0" max="60" value={customPrep} onChange={e => setCustomPrep(parseInt(e.target.value) || 0)} style={{ width: '56px', padding: '4px 6px', fontSize: '0.9rem' }} />
+                            <div className="planner-custom-input-group">
+                                <label className="planner-custom-input-label">Prep (m)</label>
+                                <input type="number" min="0" max="60" className="planner-custom-input" value={customPrep} onChange={e => setCustomPrep(parseInt(e.target.value) || 0)} />
                             </div>
                         </div>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ fontWeight: 'bold' }}>Repeats</label>
-                        <style>{`
-                            .btn-repeat {
-                                background: var(--text-dark);
-                                color: var(--card-bg);
-                                border: none;
-                                border-radius: 0;
-                                padding: 8px 18px;
-                                height: 100%;
-                                font-weight: bold;
-                                font-size: 1.2rem;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                cursor: pointer;
-                                transition: all 0.2s ease;
-                            }
-                            .btn-repeat:hover {
-                                background: var(--card-bg);
-                                color: var(--text-dark);
-                            }
-                            
-                            /* Holographic Experimental Button */
-                            @keyframes shimmer {
-                                0% { background-position: -200% center; }
-                                100% { background-position: 200% center; }
-                            }
-                            .btn-holographic {
-                                position: relative;
-                                overflow: hidden;
-                                transition: transform 0.2s, box-shadow 0.2s;
-                            }
-                            .btn-holographic::before {
-                                content: '';
-                                position: absolute;
-                                top: 0; left: 0; right: 0; bottom: 0;
-                                background: linear-gradient(
-                                    120deg, 
-                                    transparent 0%, 
-                                    rgba(255, 105, 180, 0.4) 20%, 
-                                    rgba(0, 255, 255, 0.6) 40%, 
-                                    rgba(255, 255, 255, 0.9) 50%,
-                                    rgba(255, 255, 0, 0.6) 60%, 
-                                    rgba(255, 105, 180, 0.4) 80%,
-                                    transparent 100%
-                                );
-                                background-size: 200% auto;
-                                opacity: 0;
-                                transition: opacity 0.3s ease;
-                                pointer-events: none;
-                                mix-blend-mode: overlay;
-                                z-index: 2;
-                            }
-                            .btn-holographic:hover::before {
-                                opacity: 1;
-                                animation: shimmer 2s linear infinite;
-                            }
-                        `}</style>
-                        <div style={{ display: 'flex', alignItems: 'center', background: 'var(--card-bg)', borderRadius: '8px', overflow: 'hidden', border: '2px solid var(--text-dark)', height: '100%' }}>
-                            <button className="btn-repeat" style={{ borderRight: '2px solid var(--text-dark)' }} onClick={() => setRepeats(Math.max(1, repeats - 1))}>-</button>
-                            <span style={{ padding: '0 16px', minWidth: '40px', textAlign: 'center', fontWeight: 'bold' }}>{repeats}</span>
-                            <button className="btn-repeat" style={{ borderLeft: '2px solid var(--text-dark)' }} onClick={() => setRepeats(Math.min(12, repeats + 1))}>+</button>
+                    <div className="planner-repeats-group">
+                        <label className="planner-repeats-label">Repeats</label>
+                        <div className="planner-repeats-control">
+                            <button className="btn-repeat btn-repeat-minus" onClick={() => setRepeats(Math.max(1, repeats - 1))}>-</button>
+                            <span className="planner-repeats-value">{repeats}</span>
+                            <button className="btn-repeat btn-repeat-plus" onClick={() => setRepeats(Math.min(12, repeats + 1))}>+</button>
                         </div>
                     </div>
 
                     <button
                         className="btn btn-primary btn-holographic"
                         onClick={addBlocks}
-                        style={{ zIndex: 1, marginRight: '16px' }}
                     >
                         Add to Timeline
                     </button>
 
                     <button
-                        className="btn btn-primary"
+                        className="btn btn-primary btn-start-session"
                         onClick={startSession}
-                        style={{ zIndex: 1, background: 'var(--success)', borderColor: 'var(--success)' }}
                     >
                         Start Session
                     </button>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '24px' }}>
+            <div className="planner-content-area">
                 {/* Subjects List */}
-                <div className="glass" style={{ width: '250px', padding: '16px', borderRadius: 'var(--border-radius-sm)', maxHeight: '70vh', overflowY: 'auto' }}>
-                    <h3 style={{ marginBottom: '16px' }}>Drag Subjects</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {subjects.map(s => (
+                <div className="glass planner-subjects-panel">
+                    <h3>Drag Subjects</h3>
+                    <div className="planner-subjects-list">
+                        {subjects.map((s, idx) => (
                             <div
                                 key={s.id}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, s.id)}
                                 onDragEnd={handleDragEnd}
                                 className={`drag-subject-item ${isDragging && draggingSubjectId === s.id ? 'drag-active' : ''} ${isDragging && draggingSubjectId !== s.id ? 'drag-dim' : ''}`}
+                                style={{ '--animation-order': idx } as any}
                             >
                                 <strong>{s.name}</strong>
                             </div>
@@ -507,7 +449,7 @@ export default function Plan() {
                 </div>
 
                 {/* Timeline */}
-                <div className="glass timeline" style={{ flex: 1, padding: '24px', borderRadius: 'var(--border-radius)', minHeight: '500px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="glass planner-timeline">
                     {(() => {
                         const groupedBlocks: Block[][] = [];
                         let currentCycleId: string | null = null;
@@ -551,83 +493,52 @@ export default function Plan() {
                                     onDragOver={isWork ? handleDragOver : undefined}
                                     onDragEnter={isWork ? () => handleBlockDragEnter(block.id) : undefined}
                                     onDragLeave={isWork ? handleBlockDragLeave : undefined}
-                                    className={`planner-block ${isDragging && isDropTarget ? 'drop-target' : ''} ${isDragging && !isDropTarget ? 'drag-dim' : ''} ${isHovered ? 'drop-hover' : ''}`}
+                                    className={`planner-block ${isWork && block.subject_id ? (!isDropTarget ? 'bg-card border-solid' : 'bg-transparent border-dashed') : 'bg-transparent'} ${isDragging && isDropTarget ? 'drop-target' : ''} ${isDragging && !isDropTarget ? 'drag-dim' : ''} ${isHovered ? 'drop-hover' : ''}`}
                                     onMouseEnter={() => { if (isWork && block.subject_id) playSFX('hover_sound', theme); }}
                                     style={{
-                                        padding: '16px 24px 36px 24px',
-                                        borderRadius: '12px',
-                                        background: isWork ? 'var(--card-bg)' : 'transparent',
-                                        border: isWork ? (block.subject_id ? '2px solid var(--primary)' : '2px dashed var(--primary)') : '1px solid transparent',
-                                        display: 'flex',
-                                        flexDirection: 'row',
-                                        alignItems: 'stretch',
-                                        gap: '16px',
-                                        position: 'relative',
-                                        height: 'auto',
                                         minHeight: isWork ? `${Math.max(heightPx, 130)}px` : '40px',
                                     }}
                                 >
                                     {isWork && block.subject_id && (
                                         <div
                                             onMouseDown={(e) => handleResizeStart(e, block.id)}
+                                            className="block-resize-handle"
                                             style={{
-                                                position: 'absolute',
-                                                bottom: 0,
-                                                left: 0,
-                                                width: '100%',
                                                 cursor: resizingBlockId === block.id ? 'grabbing' : 'grab',
-                                                zIndex: 5,
-                                                display: 'flex',
-                                                justifyContent: 'center',
-                                                alignItems: 'center',
-                                                padding: '16px 0',
-                                                background: 'linear-gradient(to top, rgba(0,0,0,0.05) 0%, transparent 100%)'
                                             }}
                                             title="Drag to adjust time"
                                         >
-                                            <div style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: 'repeat(4, 4px)',
-                                                gridTemplateRows: 'repeat(2, 4px)',
-                                                gap: '4px',
-                                                opacity: 0.5,
-                                                userSelect: 'none'
-                                            }}>
+                                            <div className="block-resize-dots">
                                                 {[...Array(8)].map((_, i) => (
-                                                    <div key={i} style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--text-muted)' }} />
+                                                    <div key={i} className="block-resize-dot" />
                                                 ))}
                                             </div>
                                         </div>
                                     )}
-                                    <div style={{ width: '80px', fontWeight: 'bold', color: 'var(--text-muted)' }}>
+                                    <div className="block-time-info">
                                         {isSmall ? (
-                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                            <div className="block-time-small">
                                                 <span>{block.minutes}m</span>
-                                                <span style={{ fontSize: '0.7rem', color: isWork ? 'var(--primary-hover)' : 'inherit' }}>{block.type}</span>
+                                                <span className={`block-type-label small ${isWork ? 'work' : ''}`}>{block.type}</span>
                                             </div>
                                         ) : (
                                             <>
                                                 {block.minutes}m<br />
-                                                <span style={{ fontSize: '0.8rem', color: isWork ? 'var(--primary-hover)' : 'inherit' }}>{block.type}</span>
+                                                <span className={`block-type-label ${isWork ? 'work' : ''}`}>{block.type}</span>
                                             </>
                                         )}
                                     </div>
 
                                     {isWork ? (
-                                        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
+                                        <div className="block-content-area">
                                             {subject ? (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, alignItems: 'stretch', paddingRight: '16px', position: 'relative', zIndex: 1, paddingBottom: isWork ? '32px' : '0' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                        <strong style={{ fontSize: '1.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subject.name}</strong>
+                                                <div className="block-subject-details" style={{ paddingBottom: isWork ? '32px' : '0' }}>
+                                                    <div className="block-subject-header">
+                                                        <strong className="block-subject-name">{subject.name}</strong>
                                                         {technique && (
-                                                            <span title={technique.hint} style={{
+                                                            <span title={technique.hint} className="block-technique-tag" style={{
                                                                 background: getTierColor(technique.tier),
-                                                                color: technique.tier === 'S' || technique.tier === 'F' ? '#fff' : '#000',
-                                                                padding: '4px 8px',
-                                                                borderRadius: '12px',
-                                                                fontSize: '0.8rem',
-                                                                fontWeight: 'bold',
-                                                                whiteSpace: 'nowrap'
+                                                                color: technique.tier === 'S' || technique.tier === 'F' ? '#fff' : '#000'
                                                             }}>
                                                                 {technique.name}
                                                             </span>
@@ -637,17 +548,7 @@ export default function Plan() {
                                                         const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
                                                         if (subjectChapters.length === 0) {
                                                             return (
-                                                                <div style={{
-                                                                    width: '100%',
-                                                                    padding: '6px 12px',
-                                                                    fontSize: '0.9rem',
-                                                                    marginBottom: '4px',
-                                                                    background: 'rgba(0,0,0,0.02)',
-                                                                    border: '1px solid var(--glass-border)',
-                                                                    borderRadius: '8px',
-                                                                    color: 'var(--text-muted)',
-                                                                    fontStyle: 'italic'
-                                                                }}>
+                                                                <div className="block-no-chapters">
                                                                     No chapters defined for this subject.
                                                                 </div>
                                                             );
@@ -655,21 +556,7 @@ export default function Plan() {
                                                         return (
                                                             <button
                                                                 onClick={() => setPickingChapterBlockId(block.id)}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    padding: '8px 12px',
-                                                                    fontSize: '0.95rem',
-                                                                    marginBottom: '4px',
-                                                                    background: 'rgba(255,255,255,0.05)',
-                                                                    border: '1px solid var(--glass-border)',
-                                                                    borderRadius: '8px',
-                                                                    color: block.chapter_name ? 'var(--text-dark)' : 'var(--text-muted)',
-                                                                    textAlign: 'left',
-                                                                    cursor: 'pointer',
-                                                                    display: 'flex',
-                                                                    justifyContent: 'space-between',
-                                                                    alignItems: 'center'
-                                                                }}
+                                                                className={`block-chapter-button ${block.chapter_name ? 'selected' : 'empty'}`}
                                                             >
                                                                 <span>{block.chapter_name || "Select a chapter..."}</span>
                                                                 <MoreVertical size={14} opacity={0.5} style={{ transform: 'rotate(90deg)' }} />
@@ -681,25 +568,19 @@ export default function Plan() {
                                                         placeholder="Ambitious objective BUT doable!"
                                                         value={block.objective}
                                                         onChange={e => handleObjectiveChange(block.id, e.target.value)}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '8px 12px',
-                                                            fontSize: '1rem',
-                                                            height: 'auto',
-                                                            minHeight: 'auto'
-                                                        }}
+                                                        className="block-objective-input"
                                                     />
                                                 </div>
                                             ) : (
-                                                <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center' }}>Drop a subject here</span>
+                                                <span className="block-drop-prompt">Drop a subject here</span>
                                             )}
 
-                                            <div style={{ position: 'relative', alignSelf: 'flex-start' }} className="block-menu">
+                                            <div className="block-menu-container">
                                                 <button className="btn-icon">
                                                     <MoreVertical size={20} />
                                                 </button>
-                                                <div className="menu-dropdown" style={{ display: 'none', position: 'absolute', right: 0, top: '100%', background: '#fff', boxShadow: 'var(--shadow-md)', borderRadius: '8px', zIndex: 10, padding: '8px', width: '200px' }}>
-                                                    <button style={{ display: 'block', width: '100%', padding: '8px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => {
+                                                <div className="block-menu-dropdown">
+                                                    <button className="block-menu-btn" onClick={() => {
                                                         const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
                                                         if (subjectChapters.length > 0 && !block.chapter_name) {
                                                             alert("Please select a Chapter first. This helps us recommend the best techniques for your specific study focus!");
@@ -707,13 +588,13 @@ export default function Plan() {
                                                             setPickingBlockId(block.id);
                                                         }
                                                     }}>Change technique...</button>
-                                                    <button style={{ display: 'block', width: '100%', padding: '8px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer' }} onClick={() => clearBlock(block.id)}>Clear block</button>
-                                                    <button style={{ display: 'block', width: '100%', padding: '8px', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--danger)' }} onClick={() => deleteCycle(block.id)}>Delete cycle</button>
+                                                    <button className="block-menu-btn" onClick={() => clearBlock(block.id)}>Clear block</button>
+                                                    <button className="block-menu-btn danger" onClick={() => deleteCycle(block.id)}>Delete cycle</button>
                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div style={{ flex: 1, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                        <div className="block-break-content">
                                             {block.type === 'BREAK' ? 'Take a break, maybe stretch a little!' : 'Prepare your materials.'}
                                         </div>
                                     )}
@@ -727,18 +608,9 @@ export default function Plan() {
                             if (isWorkGroup) {
                                 const totalMinutes = group.reduce((acc, b) => acc + b.minutes, 0);
                                 return (
-                                    <div key={`group-${group[0].cycle_id}`} style={{
-                                        background: 'rgba(255, 255, 255, 0.03)',
-                                        border: '1px dashed var(--border)',
-                                        borderRadius: '16px',
-                                        padding: '16px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '12px',
-                                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-                                    }}>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)' }}></div>
+                                    <div key={`group-${group[0].cycle_id}`} className="study-block-group">
+                                        <div className="study-block-group-header">
+                                            <div className="study-block-group-dot"></div>
                                             Study Block ({totalMinutes}m Limit)
                                         </div>
                                         {group.map((block) => renderBlockNode(block))}

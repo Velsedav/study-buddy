@@ -1,4 +1,4 @@
-export type TierType = 'S' | 'A' | 'B' | 'D' | 'E' | 'F';
+export type TierType = 'S' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 export type TechCategory = 'memoriser' | 'comprendre' | 'faire';
 
@@ -27,19 +27,21 @@ export interface Technique {
 
 export const TECHNIQUES: Technique[] = [
     // 🏆 S-TIER (God Tier - Maximum Efficiency)
-    { id: 't1', name: 'Active Recall', tier: 'S', hint: 'Instead of passively reading, train yourself to pull information out. This struggle builds long-term memory.', advantage: 'Builds powerful long-term memory through effortful retrieval', category: 'memoriser' },
+    { id: 't1', name: 'Active Recall', tier: 'S', hint: 'Instead of passively reading, train yourself to pull information out. This struggle builds long-term memory.', advantage: 'Builds powerful long-term memory through effortful retrieval', category: 'memoriser', externalLink: 'https://www.youtube.com/watch?v=FatnXnlwAc4&t=29s' },
     { id: 'a1', name: 'Anki / Spaced Repetition', tier: 'S', hint: 'Algorithm-optimized flashcards. This is the most direct and efficient way to apply spaced repetition and interrupt the forgetting curve.', defaultMinutes: 25, advantage: 'Algorithm-optimized to defeat the forgetting curve', category: 'memoriser', externalLink: 'https://youtu.be/OxUNYr2ruh8' },
-    { id: 's4', name: 'Faire les annales', tier: 'S', hint: 'Using past exams helps spot exact knowledge gaps and prepares you for the real format.', defaultMinutes: 50, advantage: 'Reveals exact exam blind spots & builds exam readiness', category: 'faire' },
-    { id: 'new1', name: 'La Feuille Blanche (Blurting)', tier: 'S', hint: 'Write down everything you know from scratch in 10-15 minutes. It is the ultimate diagnostic tool to find what you missed.', defaultMinutes: 15, advantage: 'Ultimate diagnostic: instantly reveals what you truly know', category: 'memoriser', externalLink: 'https://youtu.be/jG-xs9cH9Ks' },
-    { id: 't5', name: 'Interleaving (Entrelacement)', tier: 'S', hint: 'Mélange différents types de problèmes ou chapitres dans une même session. Cela t\'apprend non seulement "comment" résoudre un problème, mais surtout "quand" utiliser la bonne méthode.', advantage: 'Teaches WHEN to use formulas, not just HOW', category: 'faire' },
+    { id: 's4', name: 'Faire les annales', tier: 'S', hint: 'Using past exams helps spot exact knowledge gaps and prepares you for the real format.', defaultMinutes: 50, advantage: 'Reveals exact exam blind spots & builds exam readiness', category: 'faire', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7?artifactId=8b0027de-0c9d-4758-83ad-8fc1b0fcc0e5' },
+    { id: 'new1', name: 'La Feuille Blanche (Blurting)', tier: 'S', hint: 'Write down everything you know from scratch in 10-15 minutes. It is the ultimate diagnostic tool to find what you missed.', defaultMinutes: 15, advantage: 'Ultimate diagnostic: instantly reveals what you truly know', category: 'memoriser', externalLink: 'https://www.youtube.com/watch?v=t_Gl270AJW4' },
     { id: 's6', name: 'Faire des exercices', tier: 'S', hint: 'Résoudre des problèmes et exercices types pour s\'entraîner. La pratique active est le meilleur prédicteur de performance en examen.', defaultMinutes: 50, advantage: 'Direct practice = best exam performance predictor', category: 'faire' },
 
     // 🥇 A-TIER (Highly Effective for Comprehension)
     { id: 'c1', name: 'Filtrer le cours (Filtrage & Synthèse)', tier: 'A', hint: 'Trier délibérément le cours pour ne garder que l\'essentiel (concepts clés, zones denses, éléments insistés par le prof) au lieu de tout apprendre. C\'est l\'étape indispensable avant de créer des flashcards.', advantage: 'Eliminates noise & focuses on highest-value content', category: 'comprendre', externalLink: 'https://youtu.be/rzFJkuumZl8?t=282' },
-    { id: 't3', name: 'Enseigner aux autres (Feynman)', tier: 'A', hint: 'Explaining a concept out loud helps you instantly identify your gaps in understanding.', advantage: 'Instantly exposes hidden gaps in understanding', category: 'comprendre' },
-    { id: 'b2', name: 'Mind-mapping', tier: 'A', hint: 'Forces you to chunk info and draw relationships. Extremely effective if kept to keywords and visual links rather than long text.', defaultMinutes: 20, advantage: 'Creates a visual network that mirrors how the brain stores info', category: 'comprendre' },
+    { id: 't3', name: 'Enseigner aux autres (Feynman)', tier: 'A', hint: 'Explaining a concept out loud helps you instantly identify your gaps in understanding.', advantage: 'Instantly exposes hidden gaps in understanding', category: 'comprendre', externalLink: 'https://www.youtube.com/watch?v=o_dSpOqGtrQ&pp=ygUWZmV5bm1hbiB0ZWNobmlxdWUgZXJ5bg%3D%3D' },
+    { id: 'b2', name: 'Mind-mapping', tier: 'A', hint: 'Forces you to chunk info and draw relationships. Extremely effective if kept to keywords and visual links rather than long text.', defaultMinutes: 20, advantage: 'Creates a visual network that mirrors how the brain stores info', category: 'comprendre', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7?artifactId=f0bac232-39e4-4282-a80b-770a7d6716d5' },
     { id: 'a3', name: 'Priming', tier: 'A', hint: 'Skimming headings and diagrams before reading. It builds subconscious familiarity and speeds up deep reading', defaultMinutes: 10, advantage: 'Pre-builds a mental framework so deep reading sticks', category: 'comprendre' },
-    { id: 's5', name: 'Créer ses propres notes', tier: 'A', hint: 'Must combine visual and verbal elements (Dual Coding) to be highly effective, rather than acting as a passive transcription', advantage: 'Dual-coded notes are 2x more memorable than plain text', category: 'comprendre' },
+
+    // 🟡 C-TIER (Situational — useful with caveats)
+    { id: 't5', name: 'Interleaving (Entrelacement)', tier: 'C', hint: 'Mélange différents types de problèmes ou chapitres dans une même session. Cela t\'apprend non seulement "comment" résoudre un problème, mais surtout "quand" utiliser la bonne méthode.', advantage: 'Teaches WHEN to use formulas, not just HOW', category: 'faire', externalLink: 'https://youtu.be/J4YazZUXT_A' },
+    { id: 's5', name: 'Créer ses propres notes', tier: 'C', hint: 'Must combine visual and verbal elements (Dual Coding) to be highly effective, rather than acting as a passive transcription', advantage: 'Dual-coded notes are 2x more memorable than plain text', category: 'comprendre', externalLink: 'https://youtu.be/AY7XYMM_9l8' },
 
     // ⚠️ D-TIER (Low utility, situational at best)
     { id: 'd1', name: 'Apprentissage par coeur', tier: 'D', hint: 'Mémorisation mécanique. Always try to understand the concept first, as comprehension reduces the need for rote memorization', category: 'memoriser' },
@@ -57,6 +59,7 @@ export function getTierColor(tier: TierType): string {
         case 'S': return 'linear-gradient(135deg, var(--primary), var(--accent))';
         case 'A': return 'var(--success)';
         case 'B': return '#3b82f6';
+        case 'C': return '#22d3ee';
         case 'D': return '#f59e0b';
         case 'E': return 'var(--danger)';
         case 'F': return '#9ca3af';

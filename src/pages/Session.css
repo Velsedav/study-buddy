@@ -1,0 +1,344 @@
+/* Session.css */
+
+.session-page-container {
+    text-align: center;
+    margin-top: 100px;
+}
+
+.session-no-active-text {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+
+.session-main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+}
+
+.session-panel {
+    padding: 60px;
+    text-align: center;
+    width: 100%;
+    max-width: 600px;
+    border-radius: 32px;
+}
+
+.session-block-type {
+    color: var(--primary-hover);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.session-work-container {
+    margin: 12px 0;
+}
+
+.session-info-card {
+    background: var(--card-bg);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    text-align: left;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.session-info-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.session-info-value {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.session-tech-card {
+    background: var(--card-bg);
+    padding: 12px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+.session-tech-hint {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.session-focus-text {
+    color: var(--text-muted);
+}
+
+.meta-check-card {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 16px;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+}
+
+.meta-check-card.warning {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.meta-check-card.normal {
+    background: rgba(var(--primary-rgb), 0.06);
+    border: 1px solid rgba(var(--primary-rgb), 0.15);
+}
+
+.meta-check-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.meta-check-question {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--text-dark);
+    line-height: 1.4;
+}
+
+.meta-check-question.spaced {
+    margin-bottom: 6px;
+}
+
+.prep-checklist-card {
+    text-align: left;
+    margin: 16px auto;
+    max-width: 380px;
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px 24px;
+}
+
+.prep-checklist-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.prep-item-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.prep-item-label.bordered {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.prep-item-label.checked {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+.prep-item-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.prep-item-text {
+    font-size: 1rem;
+    flex: 1;
+}
+
+.prep-item-link {
+    color: var(--primary-hover);
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.prep-item-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--danger);
+    font-size: 1rem;
+    padding: 2px;
+}
+
+.prep-custom-container {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.prep-custom-input {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+}
+
+.prep-custom-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+.timer-display {
+    font-size: 7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-family: monospace;
+    margin: 24px 0;
+    text-shadow: 2px 4px 12px rgba(var(--primary-rgb), 0.3);
+}
+
+.timer-display.paused {
+    color: var(--text-muted);
+}
+
+.timer-display.running {
+    color: var(--text-dark);
+}
+
+.session-controls {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 32px;
+}
+
+.pause-resume-btn {
+    min-width: 120px;
+}
+
+.end-session-btn {
+    background: transparent;
+    color: var(--danger);
+    border: 2px solid var(--danger);
+}
+
+.timeline-container {
+    display: flex;
+    gap: 8px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+    max-width: 800px;
+    justify-content: center;
+}
+
+.timeline-block {
+    height: 16px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.timeline-block.active {
+    width: 32px;
+    background: var(--primary);
+    box-shadow: 0 0 12px var(--primary);
+}
+
+.timeline-block.done {
+    width: 16px;
+    background: var(--success);
+}
+
+.timeline-block.pending {
+    width: 16px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.confirm-modal-content {
+    max-width: 420px;
+    text-align: center;
+}
+
+.confirm-modal-title {
+    margin-bottom: 12px;
+}
+
+.confirm-modal-text {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.confirm-btn-danger {
+    color: var(--danger);
+}
+
+.total-rest-container {
+    padding: 16px 0;
+}
+
+.total-rest-title {
+    margin-bottom: 8px;
+    font-size: 2rem;
+    color: var(--primary-hover);
+}
+
+.total-rest-subtitle {
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.total-rest-img {
+    width: 160px;
+    height: auto;
+    margin: 0 auto 16px auto;
+    display: block;
+}
+
+.total-rest-desc {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.total-rest-countdown {
+    font-size: 3.5rem;
+    font-weight: 700;
+    font-family: monospace;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 24px;
+    text-shadow: 2px 4px 12px rgba(var(--primary-rgb), 0.3);
+}
+
+.total-rest-countdown.done {
+    color: var(--success);
+}
+
+.total-rest-countdown.running {
+    color: var(--primary-hover);
+}
+
+.total-rest-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.total-rest-btn {
+    padding: 12px 32px;
+    font-size: 1.1rem;
+}

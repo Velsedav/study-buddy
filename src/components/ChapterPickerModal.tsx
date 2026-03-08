@@ -32,6 +32,7 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                     ) : (
                         chapters.map(ch => {
                             const isSelected = currentSelection === ch.name;
+                            const isSubChapter = /^\s+[A-Z]\./.test(ch.name);
                             return (
                                 <div
                                     key={ch.id}
@@ -41,19 +42,21 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                                     }}
                                     onMouseEnter={() => playSFX('hover_sound', theme)}
                                     style={{
-                                        padding: '16px',
+                                        padding: isSubChapter ? '10px 14px' : '16px',
                                         cursor: 'pointer',
                                         border: isSelected ? '2px solid var(--primary)' : '2px solid transparent',
                                         transition: 'all 0.2s ease',
                                         borderRadius: 'var(--border-radius)',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        gap: '8px'
+                                        gap: '6px',
+                                        marginLeft: isSubChapter ? '24px' : '0',
+                                        borderLeft: isSubChapter ? '3px solid var(--glass-border)' : undefined,
                                     }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <span style={{ fontWeight: 600, fontSize: '1.05rem' }}>{ch.name}</span>
+                                            <span style={{ fontWeight: isSubChapter ? 400 : 600, fontSize: isSubChapter ? '0.95rem' : '1.05rem' }}>{ch.name}</span>
                                             {ch.focusType && (
                                                 <span style={{
                                                     background: FOCUS_TYPE_COLORS[ch.focusType],

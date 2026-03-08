@@ -20,6 +20,7 @@ export interface Subject {
     deadline: string | null;
     result: string | null;
     archived: boolean;
+    deleted_at: string | null;
 }
 
 export interface Tag {
@@ -48,8 +49,30 @@ export interface Session {
 // Queries
 export async function getSubjects(): Promise<Subject[]> {
     const db = await getDb();
-    const rows = await db.select<Subject[]>(`SELECT * FROM subjects`);
+    const rows = await db.select<Subject[]>(`SELECT * FROM subjects WHERE deleted_at IS NULL`);
     return rows.map(r => ({ ...r, pinned: Boolean(r.pinned), archived: Boolean(r.archived) }));
+}
+
+export async function getTrashedSubjects(): Promise<Subject[]> {
+    const db = await getDb();
+    const rows = await db.select<Subject[]>(`SELECT * FROM subjects WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC`);
+    return rows.map(r => ({ ...r, pinned: Boolean(r.pinned), archived: Boolean(r.archived) }));
+}
+
+export async function softDeleteSubject(id: string) {
+    const db = await getDb();
+    await db.execute(`UPDATE subjects SET deleted_at = $1 WHERE id = $2`, [new Date().toISOString(), id]);
+}
+
+export async function restoreSubject(id: string) {
+    const db = await getDb();
+    await db.execute(`UPDATE subjects SET deleted_at = NULL WHERE id = $1`, [id]);
+}
+
+export async function permanentlyDeleteSubject(id: string) {
+    const db = await getDb();
+    await db.execute(`DELETE FROM subject_tags WHERE subject_id = $1`, [id]);
+    await db.execute(`DELETE FROM subjects WHERE id = $1`, [id]);
 }
 
 export async function getSubjectTags(subjectId: string): Promise<Tag[]> {

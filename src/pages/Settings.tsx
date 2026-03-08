@@ -7,6 +7,7 @@ import { deleteAllData } from '../lib/db';
 import { CustomSelect } from '../components/CustomSelect';
 import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, stopAllSounds } from '../lib/sounds';
 import type { SoundEffect, VolumeSettings } from '../lib/sounds';
+import './Settings.css';
 
 export default function SettingsTab() {
     const {
@@ -77,31 +78,15 @@ export default function SettingsTab() {
     };
 
     return (
-        <div className="settings-tab">
-            <style>{`
-                .btn-danger-outline {
-                    border: 2px solid var(--danger);
-                    background: white;
-                    color: var(--danger);
-                    transition: all 0.2s ease;
-                }
-                .btn-danger-outline:hover {
-                    background: var(--danger);
-                    color: white;
-                }
-                .danger-modal {
-                    border: 2px solid var(--danger);
-                }
-            `}</style>
-
+        <div className="settings-tab fade-in">
             {showDeleteModal && (
                 <div className="modal-overlay">
                     <div className="modal-content danger-modal">
-                        <div className="settings-header" style={{ borderBottomColor: 'var(--danger)', color: 'var(--danger)' }}>
+                        <div className="settings-header danger-modal-header">
                             <AlertTriangle size={24} />
                             <h2>{t('settings.danger_zone')}</h2>
                         </div>
-                        <p style={{ margin: '16px 0', lineHeight: 1.5 }}>
+                        <p className="danger-modal-text">
                             {t('settings.delete_confirm_msg')}
                             <br /><br />
                             <strong>{t('settings.delete_keyword')}</strong>
@@ -111,16 +96,15 @@ export default function SettingsTab() {
                             value={deleteInput}
                             onChange={(e) => setDeleteInput(e.target.value)}
                             placeholder={t('settings.delete_keyword')}
-                            style={{ width: '100%', marginBottom: '16px', border: '2px solid var(--danger)' }}
+                            className="danger-modal-input"
                         />
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                        <div className="danger-modal-actions">
                             <button className="btn btn-secondary" onClick={() => {
                                 setShowDeleteModal(false);
                                 setDeleteInput('');
                             }}>Cancel</button>
                             <button
-                                className="btn btn-danger-outline"
-                                style={{ background: 'var(--danger)', color: 'white' }}
+                                className="btn btn-danger-outline btn-danger-outline-solid"
                                 disabled={deleteInput.toLowerCase() !== t('settings.delete_keyword').toLowerCase()}
                                 onClick={handleDeleteAll}
                             >
@@ -132,12 +116,12 @@ export default function SettingsTab() {
                 </div>
             )}
 
-            <div className="settings-section">
+            <div className="settings-section settings-section-appearance settings-section-base">
                 <div className="settings-header">
                     <Palette size={18} className="text-muted" />
                     <h3>{t('settings.appearance')}</h3>
                 </div>
-                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '16px' }}>
+                <div className="form-group theme-selector-container">
                     <div className="card-select-theme" style={{ borderColor: activeThemeColor }}>
                         <div className="card-select-theme-title" style={{ background: activeThemeBackground }}>
                             <p>Select the <strong>{activeThemeName}</strong></p>
@@ -158,7 +142,7 @@ export default function SettingsTab() {
                 </div>
             </div>
 
-            <div className="settings-section" style={{ position: 'relative', zIndex: 10 }}>
+            <div className="settings-section settings-section-preferences settings-section-base">
                 <div className="settings-header">
                     <Calendar size={18} className="text-muted" />
                     <h3>{t('settings.preferences')}</h3>
@@ -176,7 +160,7 @@ export default function SettingsTab() {
                 </div>
             </div>
 
-            <div className="settings-section" style={{ position: 'relative', zIndex: 9 }}>
+            <div className="settings-section settings-section-language settings-section-base">
                 <div className="settings-header">
                     <Globe size={18} className="text-muted" />
                     <h3>{t('settings.language')}</h3>
@@ -197,7 +181,7 @@ export default function SettingsTab() {
                 </div>
             </div>
 
-            <div className="settings-section" style={{ position: 'relative', zIndex: 8 }}>
+            <div className="settings-section settings-section-shortcuts settings-section-base">
                 <div className="settings-header">
                     <Keyboard size={18} className="text-muted" />
                     <h3>Shortcuts</h3>
@@ -217,18 +201,18 @@ export default function SettingsTab() {
                         <kbd>Ctrl+Scroll</kbd>
                     </div>
                 </div>
-                <button className="btn btn-secondary w-full" style={{ marginTop: '8px' }}>Modify Shortcuts</button>
+                <button className="btn btn-secondary w-full shortcut-btn">Modify Shortcuts</button>
             </div>
 
-            <div className="settings-section">
+            <div className="settings-section settings-section-audio settings-section-base">
                 <div className="settings-header">
                     <Volume2 size={18} className="text-muted" />
                     <h3>Audio</h3>
                 </div>
                 <div className="form-group">
-                    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label className="audio-header-label">
                         <span>Master Volume</span>
-                        <span style={{ fontWeight: 700, color: 'var(--primary)', minWidth: '40px', textAlign: 'right' }}>{volumeSettings.master}%</span>
+                        <span className="audio-master-val">{volumeSettings.master}%</span>
                     </label>
                     <input
                         type="range"
@@ -268,7 +252,7 @@ export default function SettingsTab() {
                 </div>
             </div>
 
-            <div className="settings-section">
+            <div className="settings-section settings-section-data settings-section-base">
                 <div className="settings-header">
                     <Database size={18} className="text-muted" />
                     <h3>{t('settings.data_management')}</h3>
@@ -280,16 +264,15 @@ export default function SettingsTab() {
                 </div>
             </div>
 
-            <div className="settings-section" style={{ border: '1px solid var(--danger)' }}>
-                <div className="settings-header" style={{ borderBottomColor: 'var(--danger)' }}>
-                    <AlertTriangle size={18} style={{ color: 'var(--danger)' }} />
-                    <h3 style={{ color: 'var(--danger)' }}>{t('settings.danger_zone')}</h3>
+            <div className="settings-section settings-section-danger settings-section-base">
+                <div className="settings-header settings-danger-header">
+                    <AlertTriangle size={18} className="settings-danger-icon" />
+                    <h3 className="settings-danger-title">{t('settings.danger_zone')}</h3>
                 </div>
-                <p className="settings-desc" style={{ color: 'var(--text-dark)' }}>{t('settings.delete_all_data')}</p>
+                <p className="settings-desc settings-danger-desc">{t('settings.delete_all_data')}</p>
                 <button
-                    className="btn btn-danger-outline w-full"
+                    className="btn btn-danger-outline w-full delete-all-btn"
                     onClick={() => setShowDeleteModal(true)}
-                    style={{ marginTop: '8px' }}
                 >
                     <Trash2 size={18} style={{ marginRight: '8px' }} />
                     {t('settings.delete_all_data')}

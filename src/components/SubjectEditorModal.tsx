@@ -82,6 +82,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                     deadline: deadline || null,
                     result: result || null,
                     archived,
+                    deleted_at: null,
                 };
                 await createSubject(newSubj, selectedTags);
             }

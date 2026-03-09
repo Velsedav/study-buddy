@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useCountUp } from '../lib/useCountUp';
 import { CalendarDays, Clock, CheckCircle, Lightbulb, Pen, ArrowUp, ArrowDown, X, BookOpen, Trash2, RotateCcw } from 'lucide-react';
 import type { Subject, Tag, Session, SessionBlock } from '../lib/db';
 import { getSubjects, getSubjectTags, softDeleteSubject, updateSubjectPin, getSessions, getAllSessionBlocks, getTrashedSubjects, restoreSubject, permanentlyDeleteSubject } from '../lib/db';
@@ -52,8 +53,22 @@ export default function Home() {
     const [showMetacognition, setShowMetacognition] = useState(false);
     const [showTechniqueModal, setShowTechniqueModal] = useState(false);
     const [weeklyStats, setWeeklyStats] = useState({ focusTime: 0, sessions: 0, activeDays: 0 });
+
+    const animFocusTime = useCountUp(weeklyStats.focusTime);
+    const animSessions = useCountUp(weeklyStats.sessions);
+    const animActiveDays = useCountUp(weeklyStats.activeDays);
     const [techniqueOfWeek, setTechniqueOfWeek] = useState(() => localStorage.getItem('study-buddy-technique-week') || 't1');
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+    const [ignoredRecs, setIgnoredRecs] = useState<Set<string>>(() => {
+        try { return new Set(JSON.parse(localStorage.getItem('study-buddy-ignored-recs') || '[]')); }
+        catch { return new Set(); }
+    });
+
+    const ignoreRec = (chapterId: string) => {
+        const next = new Set(ignoredRecs).add(chapterId);
+        setIgnoredRecs(next);
+        localStorage.setItem('study-buddy-ignored-recs', JSON.stringify([...next]));
+    };
 
 
 
@@ -261,17 +276,17 @@ export default function Home() {
                     <div className="weekly-stats-grid">
                         <div className="stat-card glass">
                             <Clock size={24} className="stat-icon" />
-                            <div className="stat-value">{weeklyStats.focusTime}m</div>
+                            <div className="stat-value">{animFocusTime}m</div>
                             <div className="stat-label">Focus Time</div>
                         </div>
                         <div className="stat-card glass">
                             <CheckCircle size={24} className="stat-icon" />
-                            <div className="stat-value">{weeklyStats.sessions}</div>
+                            <div className="stat-value">{animSessions}</div>
                             <div className="stat-label">Sessions</div>
                         </div>
                         <div className="stat-card glass">
                             <CalendarDays size={24} className="stat-icon" />
-                            <div className="stat-value">{weeklyStats.activeDays}/7</div>
+                            <div className="stat-value">{animActiveDays}/7</div>
                             <div className="stat-label">Active Days</div>
                         </div>
                         <div className="stat-card glass technique-card-hover"
@@ -363,19 +378,22 @@ export default function Home() {
             )}
 
             {/* Recommendation of the Day */}
-            {recommendations.length > 0 && (
+            {recommendations.filter(r => !ignoredRecs.has(r.chapter.id)).length > 0 && (
                 <div className="glass recommendations-container">
                     <h3 className="recommendations-header">
                         <BookOpen size={18} /> Recommendation of the Day
                     </h3>
-                    <p className="recommendations-desc">These chapters are due for review based on spaced repetition (1→3→5 day intervals).</p>
+                    <p className="recommendations-desc">These chapters are due for review based on your spaced repetition schedule.</p>
                     <div className="recommendations-list">
-                        {recommendations.map(rec => (
+                        {recommendations.filter(r => !ignoredRecs.has(r.chapter.id)).map(rec => (
                             <div key={rec.chapter.id} className={`recommendation-card ${rec.daysOverdue > 3 ? 'danger' : 'warning'}`}>
+                                <button className="recommendation-ignore-btn" onClick={() => ignoreRec(rec.chapter.id)} title="Ignore">
+                                    <X size={13} />
+                                </button>
                                 <div className="recommendation-name">{rec.chapter.name}</div>
                                 <div className="recommendation-subject">{rec.subjectName}</div>
                                 <div className="recommendation-footer">
-                                    <span className="recommendation-count">{rec.chapter.studyCount}/3</span>
+                                    <span className="recommendation-count">Study #{rec.chapter.studyCount + 1}</span>
                                     {rec.daysOverdue > 0 && <span className="recommendation-overdue">({rec.daysOverdue}d overdue)</span>}
                                 </div>
                             </div>

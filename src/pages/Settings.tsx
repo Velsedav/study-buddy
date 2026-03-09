@@ -1,9 +1,10 @@
 import { useSettings } from '../lib/settings';
 import type { Theme, WeekStart } from '../lib/settings';
 import { useState, useEffect } from 'react';
-import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play } from 'lucide-react';
+import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play, Brain } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { deleteAllData } from '../lib/db';
+import { getDefaultSpacing, setDefaultSpacing, parseSpacing, DEFAULT_SPACING } from '../lib/chapters';
 import { CustomSelect } from '../components/CustomSelect';
 import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, stopAllSounds } from '../lib/sounds';
 import type { SoundEffect, VolumeSettings } from '../lib/sounds';
@@ -19,6 +20,19 @@ export default function SettingsTab() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteInput, setDeleteInput] = useState('');
     const [volumeSettings, setVolumeSettings] = useState<VolumeSettings>(loadVolumeSettings);
+    const [defaultSpacing, setDefaultSpacingState] = useState(() => getDefaultSpacing());
+    const [spacingError, setSpacingError] = useState('');
+
+    const handleSpacingChange = (val: string) => {
+        setDefaultSpacingState(val);
+        const parsed = parseSpacing(val);
+        if (parsed.length === 0) {
+            setSpacingError('Enter at least one positive number');
+        } else {
+            setSpacingError('');
+            setDefaultSpacing(val);
+        }
+    };
 
     useEffect(() => {
         saveVolumeSettings(volumeSettings);
@@ -116,6 +130,7 @@ export default function SettingsTab() {
                 </div>
             )}
 
+            {/* ── Appearance ── */}
             <div className="settings-section settings-section-appearance settings-section-base">
                 <div className="settings-header">
                     <Palette size={18} className="text-muted" />
@@ -142,68 +157,110 @@ export default function SettingsTab() {
                 </div>
             </div>
 
-            <div className="settings-section settings-section-preferences settings-section-base">
-                <div className="settings-header">
-                    <Calendar size={18} className="text-muted" />
-                    <h3>{t('settings.preferences')}</h3>
+            {/* ── Preferences + Language side by side ── */}
+            <div className="settings-row">
+                <div className="settings-section settings-section-preferences settings-section-base">
+                    <div className="settings-header">
+                        <Calendar size={18} className="text-muted" />
+                        <h3>{t('settings.preferences')}</h3>
+                    </div>
+                    <div className="form-group">
+                        <label>{t('settings.first_day')}</label>
+                        <CustomSelect
+                            value={weekStart}
+                            onChange={(val) => setWeekStart(val as WeekStart)}
+                            options={[
+                                { value: "monday", label: t('settings.monday') },
+                                { value: "sunday", label: t('settings.sunday') }
+                            ]}
+                        />
+                    </div>
                 </div>
-                <div className="form-group">
-                    <label>{t('settings.first_day')}</label>
-                    <CustomSelect
-                        value={weekStart}
-                        onChange={(val) => setWeekStart(val as WeekStart)}
-                        options={[
-                            { value: "monday", label: t('settings.monday') },
-                            { value: "sunday", label: t('settings.sunday') }
-                        ]}
-                    />
+
+                <div className="settings-section settings-section-language settings-section-base">
+                    <div className="settings-header">
+                        <Globe size={18} className="text-muted" />
+                        <h3>{t('settings.language')}</h3>
+                    </div>
+                    <div className="form-group">
+                        <CustomSelect
+                            value={language}
+                            onChange={(val) => setLanguage(val)}
+                            options={[
+                                { value: "en", label: "English" },
+                                { value: "fr", label: "Français" },
+                                { value: "es", label: "Español" },
+                                { value: "id", label: "Bahasa Indonesia" },
+                                { value: "zh-CN", label: "简体中文 (Simplified Chinese)" },
+                                { value: "zh-TW", label: "繁體中文 (Traditional Chinese)" }
+                            ]}
+                        />
+                    </div>
                 </div>
             </div>
 
-            <div className="settings-section settings-section-language settings-section-base">
-                <div className="settings-header">
-                    <Globe size={18} className="text-muted" />
-                    <h3>{t('settings.language')}</h3>
+            {/* ── Spaced Repetition + Shortcuts side by side ── */}
+            <div className="settings-row">
+                <div className="settings-section settings-section-base">
+                    <div className="settings-header">
+                        <Brain size={18} className="text-muted" />
+                        <h3>Spaced Repetition</h3>
+                    </div>
+                    <p className="settings-desc">
+                        Default review schedule — space-separated days between sessions. The last value repeats forever.
+                    </p>
+                    <div className="form-group">
+                        <label>Review intervals (days)</label>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input
+                                type="text"
+                                value={defaultSpacing}
+                                onChange={e => handleSpacingChange(e.target.value)}
+                                placeholder={DEFAULT_SPACING}
+                                style={{ flex: 1 }}
+                            />
+                            <button
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                onClick={() => handleSpacingChange(DEFAULT_SPACING)}
+                            >
+                                Reset
+                            </button>
+                        </div>
+                        {spacingError
+                            ? <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px' }}>{spacingError}</p>
+                            : <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>
+                                e.g. <code>1 1 2 5 7</code> → next day, next day, 2 days, 5 days, then every 7 days forever
+                            </p>
+                        }
+                    </div>
                 </div>
-                <div className="form-group">
-                    <CustomSelect
-                        value={language}
-                        onChange={(val) => setLanguage(val)}
-                        options={[
-                            { value: "en", label: "English" },
-                            { value: "fr", label: "Français" },
-                            { value: "es", label: "Español" },
-                            { value: "id", label: "Bahasa Indonesia" },
-                            { value: "zh-CN", label: "简体中文 (Simplified Chinese)" },
-                            { value: "zh-TW", label: "繁體中文 (Traditional Chinese)" }
-                        ]}
-                    />
+
+                <div className="settings-section settings-section-shortcuts settings-section-base">
+                    <div className="settings-header">
+                        <Keyboard size={18} className="text-muted" />
+                        <h3>Shortcuts</h3>
+                    </div>
+                    <p className="settings-desc">Manage your keyboard shortcuts.</p>
+                    <div className="shortcut-list">
+                        <div className="shortcut-item">
+                            <span>New Subject</span>
+                            <kbd>Ctrl+N</kbd>
+                        </div>
+                        <div className="shortcut-item">
+                            <span>Search</span>
+                            <kbd>Ctrl+F</kbd>
+                        </div>
+                        <div className="shortcut-item">
+                            <span>Zoom In/Out</span>
+                            <kbd>Ctrl+Scroll</kbd>
+                        </div>
+                    </div>
+                    <button className="btn btn-secondary w-full shortcut-btn">Modify Shortcuts</button>
                 </div>
             </div>
 
-            <div className="settings-section settings-section-shortcuts settings-section-base">
-                <div className="settings-header">
-                    <Keyboard size={18} className="text-muted" />
-                    <h3>Shortcuts</h3>
-                </div>
-                <p className="settings-desc">Manage your keyboard shortcuts.</p>
-                <div className="shortcut-list">
-                    <div className="shortcut-item">
-                        <span>New Subject</span>
-                        <kbd>Ctrl+N</kbd>
-                    </div>
-                    <div className="shortcut-item">
-                        <span>Search</span>
-                        <kbd>Ctrl+F</kbd>
-                    </div>
-                    <div className="shortcut-item">
-                        <span>Zoom In/Out</span>
-                        <kbd>Ctrl+Scroll</kbd>
-                    </div>
-                </div>
-                <button className="btn btn-secondary w-full shortcut-btn">Modify Shortcuts</button>
-            </div>
-
+            {/* ── Audio ── */}
             <div className="settings-section settings-section-audio settings-section-base">
                 <div className="settings-header">
                     <Volume2 size={18} className="text-muted" />
@@ -252,31 +309,34 @@ export default function SettingsTab() {
                 </div>
             </div>
 
-            <div className="settings-section settings-section-data settings-section-base">
-                <div className="settings-header">
-                    <Database size={18} className="text-muted" />
-                    <h3>{t('settings.data_management')}</h3>
+            {/* ── Data Management + Danger Zone side by side ── */}
+            <div className="settings-row">
+                <div className="settings-section settings-section-data settings-section-base">
+                    <div className="settings-header">
+                        <Database size={18} className="text-muted" />
+                        <h3>{t('settings.data_management')}</h3>
+                    </div>
+                    <p className="settings-desc">Backup or restore your Study Buddy database.</p>
+                    <div className="data-actions">
+                        <button className="btn btn-secondary w-full" onClick={handleExport}>{t('settings.export')}</button>
+                        <button className="btn btn-secondary w-full" onClick={handleImport}>{t('settings.import')}</button>
+                    </div>
                 </div>
-                <p className="settings-desc">Backup or restore your Study Buddy database.</p>
-                <div className="data-actions">
-                    <button className="btn btn-secondary w-full" onClick={handleExport}>{t('settings.export')}</button>
-                    <button className="btn btn-secondary w-full" onClick={handleImport}>{t('settings.import')}</button>
-                </div>
-            </div>
 
-            <div className="settings-section settings-section-danger settings-section-base">
-                <div className="settings-header settings-danger-header">
-                    <AlertTriangle size={18} className="settings-danger-icon" />
-                    <h3 className="settings-danger-title">{t('settings.danger_zone')}</h3>
+                <div className="settings-section settings-section-danger settings-section-base">
+                    <div className="settings-header settings-danger-header">
+                        <AlertTriangle size={18} className="settings-danger-icon" />
+                        <h3 className="settings-danger-title">{t('settings.danger_zone')}</h3>
+                    </div>
+                    <p className="settings-desc settings-danger-desc">{t('settings.delete_all_data')}</p>
+                    <button
+                        className="btn btn-danger-outline w-full delete-all-btn"
+                        onClick={() => setShowDeleteModal(true)}
+                    >
+                        <Trash2 size={18} style={{ marginRight: '8px' }} />
+                        {t('settings.delete_all_data')}
+                    </button>
                 </div>
-                <p className="settings-desc settings-danger-desc">{t('settings.delete_all_data')}</p>
-                <button
-                    className="btn btn-danger-outline w-full delete-all-btn"
-                    onClick={() => setShowDeleteModal(true)}
-                >
-                    <Trash2 size={18} style={{ marginRight: '8px' }} />
-                    {t('settings.delete_all_data')}
-                </button>
             </div>
         </div>
     );

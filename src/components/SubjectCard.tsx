@@ -58,8 +58,11 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
         setChapterCount(getChaptersForSubject(subject.id).length);
     }, [subject.id]);
 
+    const isTerminal = theme === 'terminal-orange' || theme === 'terminal-green';
     const hasCover = !!coverUrl;
-    const textColor = hasCover ? (isDarkImage ? '#ffffff' : 'var(--text-dark)') : undefined;
+    const textColor = hasCover
+        ? (isTerminal ? 'var(--primary)' : (isDarkImage ? '#ffffff' : 'var(--text-dark)'))
+        : undefined;
 
     return (
         <div

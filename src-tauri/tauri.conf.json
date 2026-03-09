@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "study-buddy",
-  "version": "0.1.0",
+  "productName": "StudyB",
+  "version": "1.1.0",
   "identifier": "com.studybuddy.app",
   "build": {
     "frontendDist": "../dist",

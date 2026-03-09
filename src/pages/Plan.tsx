@@ -48,6 +48,7 @@ export default function Plan() {
     const [customPrep, setCustomPrep] = useState(5);
     const [repeats, setRepeats] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
+    const [isMouseDownOnSubject, setIsMouseDownOnSubject] = useState(false);
     const [draggingSubjectId, setDraggingSubjectId] = useState<string | null>(null);
     const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
 
@@ -64,9 +65,6 @@ export default function Plan() {
         dragRef.current = { id: blockId, startY: e.clientY, startBlocks: [...blocks], lastDeltaSteps: 0 };
         setResizingBlockId(blockId);
         document.body.style.cursor = 'grabbing';
-
-        const tConfig = TEMPLATES[template] || TEMPLATES['25/5'];
-        const maxWorkTime = tConfig.work;
 
         const pixelsPerStep = PIXELS_PER_MINUTE * 5; // 25 px per 5 minutes
 
@@ -102,20 +100,22 @@ export default function Plan() {
             // Cannot be less than 5 minutes
             if (newMinutes < 5) newMinutes = 5;
 
-            // Cannot exceed the template's max work time
+            // Cap growth at what adjacent WORK blocks can give up
+            // Empty blocks can be fully absorbed; filled blocks keep a 5-min minimum
             if (newMinutes > originalBlock.minutes) {
                 let availableToAbsorb = 0;
                 for (let i = idx + 1; i < startBlocks.length; i++) {
-                    const nextBlock = startBlocks[i];
-                    if (nextBlock.type === 'WORK' && !nextBlock.subject_id) {
-                        availableToAbsorb += nextBlock.minutes;
+                    const next = startBlocks[i];
+                    if (next.type !== 'WORK') break;
+                    if (!next.subject_id) {
+                        availableToAbsorb += next.minutes;
                     } else {
-                        break;
+                        availableToAbsorb += Math.max(0, next.minutes - 5);
+                        break; // only look at the first filled block
                     }
                 }
-                const maxPossibleNewMinutes = Math.min(maxWorkTime, originalBlock.minutes + availableToAbsorb);
-                if (newMinutes > maxPossibleNewMinutes) {
-                    newMinutes = maxPossibleNewMinutes;
+                if (newMinutes > originalBlock.minutes + availableToAbsorb) {
+                    newMinutes = originalBlock.minutes + availableToAbsorb;
                 }
             }
 
@@ -129,8 +129,9 @@ export default function Plan() {
             newBlocks[idx] = { ...originalBlock, minutes: newMinutes };
 
             if (actualDelta < 0) {
+                // Shrinking: give time to the next WORK block (empty or filled)
                 const deficit = Math.abs(actualDelta);
-                if (idx + 1 < newBlocks.length && newBlocks[idx + 1].type === 'WORK' && !newBlocks[idx + 1].subject_id) {
+                if (idx + 1 < newBlocks.length && newBlocks[idx + 1].type === 'WORK') {
                     newBlocks[idx + 1] = { ...newBlocks[idx + 1], minutes: newBlocks[idx + 1].minutes + deficit };
                 } else {
                     newBlocks.splice(idx + 1, 0, {
@@ -144,26 +145,36 @@ export default function Plan() {
                     });
                 }
             } else if (actualDelta > 0) {
+                // Growing: steal from adjacent WORK blocks
                 let remainingToAbsorb = actualDelta;
-                let removeCount = 0;
+                const indicesToRemove: number[] = [];
 
                 for (let i = idx + 1; i < newBlocks.length && remainingToAbsorb > 0; i++) {
-                    const nextBlock = newBlocks[i];
-                    if (nextBlock.type === 'WORK' && !nextBlock.subject_id) {
-                        if (nextBlock.minutes > remainingToAbsorb) {
-                            newBlocks[i] = { ...nextBlock, minutes: nextBlock.minutes - remainingToAbsorb };
+                    const next = newBlocks[i];
+                    if (next.type !== 'WORK') break;
+
+                    if (!next.subject_id) {
+                        // Empty block: can be fully absorbed
+                        if (next.minutes > remainingToAbsorb) {
+                            newBlocks[i] = { ...next, minutes: next.minutes - remainingToAbsorb };
                             remainingToAbsorb = 0;
                         } else {
-                            remainingToAbsorb -= nextBlock.minutes;
-                            removeCount++;
+                            remainingToAbsorb -= next.minutes;
+                            indicesToRemove.push(i);
                         }
                     } else {
+                        // Filled block: steal down to 5 min minimum, then stop
+                        const steal = Math.min(next.minutes - 5, remainingToAbsorb);
+                        if (steal > 0) {
+                            newBlocks[i] = { ...next, minutes: next.minutes - steal };
+                            remainingToAbsorb -= steal;
+                        }
                         break;
                     }
                 }
 
-                if (removeCount > 0) {
-                    newBlocks.splice(idx + 1, removeCount);
+                for (const i of indicesToRemove.reverse()) {
+                    newBlocks.splice(i, 1);
                 }
             }
 
@@ -233,8 +244,20 @@ export default function Plan() {
 
     const handleDragEnd = () => {
         setIsDragging(false);
+        setIsMouseDownOnSubject(false);
         setDraggingSubjectId(null);
         setHoveredBlockId(null);
+    };
+
+    const handleSubjectMouseDown = (subjectId: string) => {
+        setIsMouseDownOnSubject(true);
+        setDraggingSubjectId(subjectId);
+
+        const handleMouseUp = () => {
+            setIsMouseDownOnSubject(false);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+        window.addEventListener('mouseup', handleMouseUp);
     };
 
     const handleDrop = (e: React.DragEvent, blockId: string) => {
@@ -270,14 +293,9 @@ export default function Plan() {
 
     const handleTechniqueSelected = (techId: string) => {
         if (!pickingBlockId) return;
-        const tech = TECHNIQUES.find(t => t.id === techId);
         const newBlocks = blocks.map(b => {
             if (b.id === pickingBlockId) {
-                return {
-                    ...b,
-                    technique_id: techId,
-                    minutes: tech?.defaultMinutes ? tech.defaultMinutes : b.minutes
-                };
+                return { ...b, technique_id: techId };
             }
             return b;
         });
@@ -371,15 +389,15 @@ export default function Plan() {
     const endsText = `${endsAt.getHours().toString().padStart(2, '0')}:${endsAt.getMinutes().toString().padStart(2, '0')}`;
 
     return (
-        <div className={`planner-page fade-in ${isDragging ? 'is-dragging' : ''}`}>
-            <div className="page-header drag-dim">
-                <div>
+        <div className={`planner-page fade-in ${isDragging || (isMouseDownOnSubject && blocks.length > 0) ? 'is-dragging' : ''} ${isMouseDownOnSubject && blocks.length === 0 ? 'is-dragging-empty' : ''} ${resizingBlockId ? 'is-resizing' : ''}`}>
+            <div className="page-header">
+                <div className="drag-dim">
                     <h1>Pomodoro Planner</h1>
                     <p>Ends roughly at {endsText} • {totalWork}m Work, {totalBreak}m Rest</p>
                 </div>
 
                 <div className="planner-controls">
-                    <div className="planner-control-group">
+                    <div className="planner-control-group drag-dim">
                         <label className="planner-control-label">Style</label>
                         <CustomSelect
                             value={template}
@@ -388,7 +406,7 @@ export default function Plan() {
                         />
                     </div>
                     {template === 'Custom' && (
-                        <div className="planner-custom-group">
+                        <div className="planner-custom-group drag-dim">
                             <div className="planner-custom-input-group">
                                 <label className="planner-custom-input-label">Work (m)</label>
                                 <input type="number" min="1" max="300" className="planner-custom-input" value={customWork} onChange={e => setCustomWork(parseInt(e.target.value) || 0)} />
@@ -403,28 +421,42 @@ export default function Plan() {
                             </div>
                         </div>
                     )}
-                    <div className="planner-repeats-group">
+                    <div className="planner-repeats-group drag-dim">
                         <label className="planner-repeats-label">Repeats</label>
                         <div className="planner-repeats-control">
-                            <button className="btn-repeat btn-repeat-minus" onClick={() => setRepeats(Math.max(1, repeats - 1))}>-</button>
+                            <button className="btn-repeat btn-repeat-minus" onClick={() => setRepeats(Math.max(1, repeats - 1))} onMouseEnter={() => playSFX('hover_sound', theme)}>-</button>
                             <span className="planner-repeats-value">{repeats}</span>
-                            <button className="btn-repeat btn-repeat-plus" onClick={() => setRepeats(Math.min(12, repeats + 1))}>+</button>
+                            <button className="btn-repeat btn-repeat-plus" onClick={() => setRepeats(Math.min(12, repeats + 1))} onMouseEnter={() => playSFX('hover_sound', theme)}>+</button>
                         </div>
                     </div>
 
                     <button
-                        className="btn btn-primary btn-holographic"
+                        className={`btn btn-primary btn-holographic ${isMouseDownOnSubject && blocks.length === 0 ? 'btn-pulse-hint' : ''}`}
                         onClick={addBlocks}
+                        onMouseEnter={() => playSFX('hover_sound', theme)}
                     >
                         Add to Timeline
                     </button>
 
-                    <button
-                        className="btn btn-primary btn-start-session"
-                        onClick={startSession}
+                    <div
+                        className={`btn-start-session-wrapper ${blocks.length > 0 ? 'has-blocks' : ''} drag-dim`}
+                        key={blocks.length > 0 ? 'active' : 'inactive'}
+                        onMouseEnter={() => playSFX('hover_sound', theme)}
                     >
-                        Start Session
-                    </button>
+                        <img
+                            src="/assets/images/01_mascot-pop-out.png"
+                            className="btn-start-mascot"
+                            alt=""
+                            aria-hidden="true"
+                        />
+                        <button
+                            className={`btn btn-primary btn-start-session ${blocks.length > 0 ? 'btn-start-session-ready' : ''}`}
+                            onClick={startSession}
+                            disabled={blocks.length === 0}
+                        >
+                            Start Session
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -439,8 +471,10 @@ export default function Plan() {
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, s.id)}
                                 onDragEnd={handleDragEnd}
-                                className={`drag-subject-item ${isDragging && draggingSubjectId === s.id ? 'drag-active' : ''} ${isDragging && draggingSubjectId !== s.id ? 'drag-dim' : ''}`}
+                                onMouseDown={() => handleSubjectMouseDown(s.id)}
+                                className={`drag-subject-item ${((isDragging || isMouseDownOnSubject) && draggingSubjectId === s.id) ? 'drag-active' : ''} ${((isDragging || isMouseDownOnSubject) && draggingSubjectId !== s.id) ? 'drag-dim' : ''}`}
                                 style={{ '--animation-order': idx } as any}
+                                onMouseEnter={() => { if (!isDragging) playSFX('hover_sound', theme); }}
                             >
                                 <strong>{s.name}</strong>
                             </div>
@@ -450,177 +484,188 @@ export default function Plan() {
 
                 {/* Timeline */}
                 <div className="glass planner-timeline">
-                    {(() => {
-                        const groupedBlocks: Block[][] = [];
-                        let currentCycleId: string | null = null;
-                        let currentGroup: Block[] = [];
+                    {blocks.length === 0 ? (
+                        <div className="timeline-empty-state">
+                            <div className="timeline-empty-icon">⏳</div>
+                            <h3>Your timeline is empty</h3>
+                            <p>Configure your Pomodoro style above and click <strong>"Add to Timeline"</strong> to build your study schedule.</p>
+                            {isMouseDownOnSubject && (
+                                <div className="timeline-drag-hint animate-bounce">
+                                    ↑ Build a timeline first!
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        (() => {
+                            const groupedBlocks: Block[][] = [];
+                            let currentCycleId: string | null = null;
+                            let currentGroup: Block[] = [];
 
-                        blocks.forEach(b => {
-                            if (b.type === 'WORK' && b.cycle_id) {
-                                if (b.cycle_id === currentCycleId) {
-                                    currentGroup.push(b);
+                            blocks.forEach(b => {
+                                if (b.type === 'WORK' && b.cycle_id) {
+                                    if (b.cycle_id === currentCycleId) {
+                                        currentGroup.push(b);
+                                    } else {
+                                        if (currentGroup.length > 0) groupedBlocks.push(currentGroup);
+                                        currentCycleId = b.cycle_id;
+                                        currentGroup = [b];
+                                    }
                                 } else {
-                                    if (currentGroup.length > 0) groupedBlocks.push(currentGroup);
-                                    currentCycleId = b.cycle_id;
-                                    currentGroup = [b];
+                                    if (currentGroup.length > 0) {
+                                        groupedBlocks.push(currentGroup);
+                                        currentGroup = [];
+                                        currentCycleId = null;
+                                    }
+                                    groupedBlocks.push([b]);
                                 }
-                            } else {
-                                if (currentGroup.length > 0) {
-                                    groupedBlocks.push(currentGroup);
-                                    currentGroup = [];
-                                    currentCycleId = null;
-                                }
-                                groupedBlocks.push([b]);
-                            }
-                        });
-                        if (currentGroup.length > 0) groupedBlocks.push(currentGroup);
+                            });
+                            if (currentGroup.length > 0) groupedBlocks.push(currentGroup);
 
-                        const renderBlockNode = (block: Block) => {
-                            const isWork = block.type === 'WORK';
-                            const subject = subjects.find(s => s.id === block.subject_id);
-                            const technique = TECHNIQUES.find(t => t.id === block.technique_id);
-                            const isDropTarget = isWork && !block.subject_id;
-                            const isHovered = hoveredBlockId === block.id;
+                            const renderBlockNode = (block: Block) => {
+                                const isWork = block.type === 'WORK';
+                                const subject = subjects.find(s => s.id === block.subject_id);
+                                const technique = TECHNIQUES.find(t => t.id === block.technique_id);
+                                const isDropTarget = isWork && !block.subject_id;
+                                const isHovered = hoveredBlockId === block.id;
 
-                            // Pixel scaling: 5px per minute
-                            const heightPx = block.minutes * PIXELS_PER_MINUTE;
-                            const isSmall = block.minutes < 15;
+                                // Pixel scaling: 5px per minute
+                                const heightPx = block.minutes * PIXELS_PER_MINUTE;
+                                const isSmall = block.minutes < 15;
 
-                            return (
-                                <div
-                                    key={block.id}
-                                    onDrop={isWork ? e => handleDrop(e, block.id) : undefined}
-                                    onDragOver={isWork ? handleDragOver : undefined}
-                                    onDragEnter={isWork ? () => handleBlockDragEnter(block.id) : undefined}
-                                    onDragLeave={isWork ? handleBlockDragLeave : undefined}
-                                    className={`planner-block ${isWork && block.subject_id ? (!isDropTarget ? 'bg-card border-solid' : 'bg-transparent border-dashed') : 'bg-transparent'} ${isDragging && isDropTarget ? 'drop-target' : ''} ${isDragging && !isDropTarget ? 'drag-dim' : ''} ${isHovered ? 'drop-hover' : ''}`}
-                                    onMouseEnter={() => { if (isWork && block.subject_id) playSFX('hover_sound', theme); }}
-                                    style={{
-                                        minHeight: isWork ? `${Math.max(heightPx, 130)}px` : '40px',
-                                    }}
-                                >
-                                    {isWork && block.subject_id && (
-                                        <div
-                                            onMouseDown={(e) => handleResizeStart(e, block.id)}
-                                            className="block-resize-handle"
-                                            style={{
-                                                cursor: resizingBlockId === block.id ? 'grabbing' : 'grab',
-                                            }}
-                                            title="Drag to adjust time"
-                                        >
-                                            <div className="block-resize-dots">
-                                                {[...Array(8)].map((_, i) => (
-                                                    <div key={i} className="block-resize-dot" />
-                                                ))}
+                                return (
+                                    <div
+                                        key={block.id}
+                                        onDrop={isWork ? e => handleDrop(e, block.id) : undefined}
+                                        onDragOver={isWork ? handleDragOver : undefined}
+                                        onDragEnter={isWork ? () => handleBlockDragEnter(block.id) : undefined}
+                                        onDragLeave={isWork ? handleBlockDragLeave : undefined}
+                                        className={`planner-block ${isWork && block.subject_id ? (!isDropTarget ? 'bg-card border-solid' : 'bg-transparent border-dashed') : 'bg-transparent'} ${(isDragging || isMouseDownOnSubject) && isDropTarget ? 'drop-target' : ''} ${(isDragging || isMouseDownOnSubject) && !isDropTarget ? 'drag-dim' : ''} ${isHovered ? 'drop-hover' : ''}`}
+                                        onMouseEnter={() => { if (isWork && block.subject_id) playSFX('hover_sound', theme); }}
+                                        style={{
+                                            minHeight: isWork ? `${Math.max(heightPx, 130)}px` : '40px',
+                                        }}
+                                    >
+                                        {isWork && block.subject_id && (
+                                            <div
+                                                onMouseDown={(e) => handleResizeStart(e, block.id)}
+                                                className="block-resize-handle"
+                                                style={{
+                                                    cursor: resizingBlockId === block.id ? 'grabbing' : 'grab',
+                                                }}
+                                                title="Drag to adjust time"
+                                            >
+                                                <div className="block-resize-dots">
+                                                    {[...Array(8)].map((_, i) => (
+                                                        <div key={i} className="block-resize-dot" />
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                    <div className="block-time-info">
-                                        {isSmall ? (
-                                            <div className="block-time-small">
-                                                <span>{block.minutes}m</span>
-                                                <span className={`block-type-label small ${isWork ? 'work' : ''}`}>{block.type}</span>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                {block.minutes}m<br />
-                                                <span className={`block-type-label ${isWork ? 'work' : ''}`}>{block.type}</span>
-                                            </>
                                         )}
-                                    </div>
-
-                                    {isWork ? (
-                                        <div className="block-content-area">
-                                            {subject ? (
-                                                <div className="block-subject-details" style={{ paddingBottom: isWork ? '32px' : '0' }}>
-                                                    <div className="block-subject-header">
-                                                        <strong className="block-subject-name">{subject.name}</strong>
-                                                        {technique && (
-                                                            <span title={technique.hint} className="block-technique-tag" style={{
-                                                                background: getTierColor(technique.tier),
-                                                                color: technique.tier === 'S' || technique.tier === 'F' ? '#fff' : '#000'
-                                                            }}>
-                                                                {technique.name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {(() => {
-                                                        const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
-                                                        if (subjectChapters.length === 0) {
-                                                            return (
-                                                                <div className="block-no-chapters">
-                                                                    No chapters defined for this subject.
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return (
-                                                            <button
-                                                                onClick={() => setPickingChapterBlockId(block.id)}
-                                                                className={`block-chapter-button ${block.chapter_name ? 'selected' : 'empty'}`}
-                                                            >
-                                                                <span>{block.chapter_name || "Select a chapter..."}</span>
-                                                                <MoreVertical size={14} opacity={0.5} style={{ transform: 'rotate(90deg)' }} />
-                                                            </button>
-                                                        );
-                                                    })()}
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Ambitious objective BUT doable!"
-                                                        value={block.objective}
-                                                        onChange={e => handleObjectiveChange(block.id, e.target.value)}
-                                                        className="block-objective-input"
-                                                    />
+                                        <div className="block-time-info">
+                                            {isSmall ? (
+                                                <div className="block-time-small">
+                                                    <span>{block.minutes}m</span>
+                                                    <span className={`block-type-label small ${isWork ? 'work' : ''}`}>{block.type}</span>
                                                 </div>
                                             ) : (
-                                                <span className="block-drop-prompt">Drop a subject here</span>
+                                                <>
+                                                    {block.minutes}m<br />
+                                                    <span className={`block-type-label ${isWork ? 'work' : ''}`}>{block.type}</span>
+                                                </>
                                             )}
+                                        </div>
 
-                                            <div className="block-menu-container">
-                                                <button className="btn-icon">
-                                                    <MoreVertical size={20} />
-                                                </button>
-                                                <div className="block-menu-dropdown">
-                                                    <button className="block-menu-btn" onClick={() => {
-                                                        const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
-                                                        if (subjectChapters.length > 0 && !block.chapter_name) {
-                                                            alert("Please select a Chapter first. This helps us recommend the best techniques for your specific study focus!");
-                                                        } else {
-                                                            setPickingBlockId(block.id);
-                                                        }
-                                                    }}>Change technique...</button>
-                                                    <button className="block-menu-btn" onClick={() => clearBlock(block.id)}>Clear block</button>
-                                                    <button className="block-menu-btn danger" onClick={() => deleteCycle(block.id)}>Delete cycle</button>
+                                        {isWork ? (
+                                            <div className="block-content-area">
+                                                {subject ? (
+                                                    <div className="block-subject-details" style={{ paddingBottom: isWork ? '32px' : '0' }}>
+                                                        <div className="block-subject-header">
+                                                            <strong className="block-subject-name">{subject.name}</strong>
+                                                            {technique && (
+                                                                <span title={technique.hint} className="block-technique-tag" style={{
+                                                                    background: getTierColor(technique.tier),
+                                                                    color: technique.tier === 'S' || technique.tier === 'F' ? '#fff' : '#000'
+                                                                }}>
+                                                                    {technique.name}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {(() => {
+                                                            const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
+                                                            if (subjectChapters.length === 0) {
+                                                                return (
+                                                                    <div className="block-no-chapters">
+                                                                        No chapters defined for this subject.
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <button
+                                                                    onClick={() => setPickingChapterBlockId(block.id)}
+                                                                    className={`block-chapter-button ${block.chapter_name ? 'selected' : 'empty'}`}
+                                                                >
+                                                                    <span>{block.chapter_name || "Select a chapter..."}</span>
+                                                                    <MoreVertical size={14} opacity={0.5} style={{ transform: 'rotate(90deg)' }} />
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Ambitious objective BUT doable!"
+                                                            value={block.objective}
+                                                            onChange={e => handleObjectiveChange(block.id, e.target.value)}
+                                                            className="block-objective-input"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <span className="block-drop-prompt">Drop a subject here</span>
+                                                )}
+
+                                                <div className="block-menu-container">
+                                                    <button className="btn-icon">
+                                                        <MoreVertical size={20} />
+                                                    </button>
+                                                    <div className="block-menu-dropdown">
+                                                        <button className="block-menu-btn" onClick={() => {
+                                                            const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
+                                                            if (subjectChapters.length > 0 && !block.chapter_name) {
+                                                                alert("Please select a Chapter first. This helps us recommend the best techniques for your specific study focus!");
+                                                            } else {
+                                                                setPickingBlockId(block.id);
+                                                            }
+                                                        }}>Change technique...</button>
+                                                        <button className="block-menu-btn" onClick={() => clearBlock(block.id)}>Clear block</button>
+                                                        <button className="block-menu-btn danger" onClick={() => deleteCycle(block.id)}>Delete cycle</button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="block-break-content">
-                                            {block.type === 'BREAK' ? 'Take a break, maybe stretch a little!' : 'Prepare your materials.'}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        };
-
-                        return groupedBlocks.map((group) => {
-                            const isWorkGroup = group[0].type === 'WORK' && group[0].cycle_id;
-
-                            if (isWorkGroup) {
-                                const totalMinutes = group.reduce((acc, b) => acc + b.minutes, 0);
-                                return (
-                                    <div key={`group-${group[0].cycle_id}`} className="study-block-group">
-                                        <div className="study-block-group-header">
-                                            <div className="study-block-group-dot"></div>
-                                            Study Block ({totalMinutes}m Limit)
-                                        </div>
-                                        {group.map((block) => renderBlockNode(block))}
+                                        ) : (
+                                            <div className="block-break-content">
+                                                {block.type === 'BREAK' ? 'Take a break, maybe stretch a little!' : 'Prepare your materials.'}
+                                            </div>
+                                        )}
                                     </div>
                                 );
-                            } else {
-                                return renderBlockNode(group[0]);
-                            }
-                        });
-                    })()}
+                            };
+
+                            return groupedBlocks.map((group) => {
+                                const isWorkGroup = group[0].type === 'WORK' && group[0].cycle_id;
+
+                                if (isWorkGroup) {
+                                    const totalMinutes = group.reduce((acc, b) => acc + b.minutes, 0);
+                                    return (
+                                        <div key={`group-${group[0].cycle_id}`} className="study-block-group">
+                                            <div className="study-block-group-header">
+                                                <div className="study-block-group-dot"></div>
+                                                Study Block ({totalMinutes}m Limit)
+                                            </div>
+                                            {group.map((block) => renderBlockNode(block))}
+                                        </div>
+                                    );
+                                }
+                            });
+                        })()
+                    )}
                 </div>
             </div>
 

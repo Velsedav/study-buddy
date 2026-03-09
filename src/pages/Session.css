@@ -19,11 +19,17 @@
 }
 
 .session-panel {
-    padding: 60px;
-    text-align: center;
+    padding: 48px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     width: 100%;
     max-width: 600px;
     border-radius: 32px;
+}
+
+.session-panel > * {
+    width: 100%;
 }
 
 .session-block-type {
@@ -37,39 +43,49 @@
 }
 
 .session-info-card {
-    background: var(--card-bg);
+    background: rgba(var(--primary-rgb), 0.06);
+    border: 1px solid rgba(var(--primary-rgb), 0.15);
     padding: 12px 16px;
     border-radius: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     text-align: left;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
 .session-info-label {
-    font-size: 0.75rem;
+    font-size: 18px;
     text-transform: uppercase;
     font-weight: bold;
+    letter-spacing: 0.05em;
     color: var(--text-muted);
     margin-bottom: 4px;
 }
 
 .session-info-value {
     font-size: 1rem;
-    font-weight: bold;
+    color: var(--text-dark);
+    line-height: 1.4;
 }
 
 .session-tech-card {
-    background: var(--card-bg);
-    padding: 12px;
+    background: rgba(var(--primary-rgb), 0.06);
+    border: 1px solid rgba(var(--primary-rgb), 0.15);
+    padding: 14px 18px;
     border-radius: 12px;
-    display: inline-block;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.session-tech-card strong {
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
 }
 
 .session-tech-hint {
-    font-size: 0.9rem;
-    color: var(--text-muted);
+    font-size: 1rem;
+    color: var(--text-dark);
+    line-height: 1.4;
 }
 
 .session-focus-text {
@@ -79,10 +95,7 @@
 .meta-check-card {
     border-radius: 12px;
     padding: 14px 18px;
-    margin-top: 16px;
-    max-width: 420px;
-    margin-left: auto;
-    margin-right: auto;
+    margin-bottom: 12px;
     text-align: left;
 }
 
@@ -97,16 +110,16 @@
 }
 
 .meta-check-label {
-    font-size: 0.7rem;
+    font-size: 18px;
     text-transform: uppercase;
     font-weight: bold;
+    letter-spacing: 0.05em;
     color: var(--text-muted);
     margin-bottom: 8px;
 }
 
 .meta-check-question {
-    font-size: 0.85rem;
-    font-style: italic;
+    font-size: 1rem;
     color: var(--text-dark);
     line-height: 1.4;
 }
@@ -201,6 +214,7 @@
     font-variant-numeric: tabular-nums;
     font-family: monospace;
     margin: 24px 0;
+    text-align: center;
     text-shadow: 2px 4px 12px rgba(var(--primary-rgb), 0.3);
 }
 

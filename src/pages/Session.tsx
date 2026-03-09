@@ -76,23 +76,25 @@ export default function Session() {
         }));
     }, [remaining, paused, session]);
 
-    // Timer loop
+    // Timer loop: only counts down, never triggers side effects
     useEffect(() => {
         if (!session || paused) return;
 
         const interval = setInterval(() => {
-            setRemaining(r => {
-                if (r <= 1) {
-                    handleBlockComplete();
-                    return 0; // Temporary before next block sets it
-                }
-                return r - 1;
-            });
+            setRemaining(r => Math.max(r - 1, 0));
         }, 1000);
 
         return () => clearInterval(interval);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session, paused]);
+
+    // Block completion: fires when the countdown hits 0
+    // Kept separate from the updater to respect React's pure-updater rule
+    useEffect(() => {
+        if (remaining === 0 && session && !paused) {
+            handleBlockComplete();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [remaining]);
 
     // 10s Cooldown Warning Sound
     useEffect(() => {

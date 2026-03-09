@@ -351,10 +351,38 @@
 }
 
 .recommendation-card {
+    position: relative;
     padding: 12px 16px;
     background: rgba(var(--primary-rgb), 0.08);
     border-radius: 12px;
     min-width: 200px;
+}
+
+.recommendation-ignore-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.recommendation-card:hover .recommendation-ignore-btn {
+    opacity: 1;
+}
+
+.recommendation-ignore-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--danger);
 }
 
 .recommendation-card.danger {

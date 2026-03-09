@@ -18,13 +18,16 @@ export interface Chapter {
     id: string;
     subjectId: string;
     name: string;
-    studyCount: number;   // 0–3
+    studyCount: number;
     lastStudiedAt: string | null;
     createdAt: string;
     focusType: FocusType;
+    spacingOverride?: string; // e.g. "1 1 2 5 7", overrides the global default
 }
 
 const LS_KEY = 'study-buddy-chapters';
+const DEFAULT_SPACING_KEY = 'study-buddy-default-spacing';
+export const DEFAULT_SPACING = '1 1 2 5 7';
 
 function loadAll(): Chapter[] {
     try {
@@ -36,6 +39,24 @@ function loadAll(): Chapter[] {
 
 function saveAll(chapters: Chapter[]) {
     localStorage.setItem(LS_KEY, JSON.stringify(chapters));
+}
+
+export function getDefaultSpacing(): string {
+    return localStorage.getItem(DEFAULT_SPACING_KEY) || DEFAULT_SPACING;
+}
+
+export function setDefaultSpacing(schedule: string) {
+    localStorage.setItem(DEFAULT_SPACING_KEY, schedule);
+}
+
+export function parseSpacing(schedule: string): number[] {
+    return schedule.trim().split(/\s+/).map(Number).filter(n => n > 0 && !isNaN(n));
+}
+
+function getIntervalForCount(intervals: number[], studyCount: number): number {
+    if (intervals.length === 0) return 1;
+    const idx = studyCount - 1; // studyCount is 1-based
+    return idx < intervals.length ? intervals[idx] : intervals[intervals.length - 1];
 }
 
 export function getAllChapters(): Chapter[] {
@@ -70,7 +91,7 @@ export function deleteChapter(id: string) {
 export function incrementStudyCount(id: string) {
     const all = loadAll();
     const ch = all.find(c => c.id === id);
-    if (ch && ch.studyCount < 3) {
+    if (ch) {
         ch.studyCount += 1;
         ch.lastStudiedAt = new Date().toISOString();
     }
@@ -86,32 +107,39 @@ export function updateChapterFocusType(id: string, focusType: FocusType) {
     saveAll(all);
 }
 
-/**
- * Spaced repetition recommendation engine.
- * After studyCount=1 → recommend next day (1 day later)
- * After studyCount=2 → recommend 3 days later
- * After studyCount=3 → done (mastered)
- */
-const SPACING_DAYS = [1, 3, 5]; // after 1st study → 1 day, after 2nd → 3 days, after 3rd → 5 days
+export function updateChapterSpacing(id: string, spacingOverride: string | null) {
+    const all = loadAll();
+    const ch = all.find(c => c.id === id);
+    if (ch) {
+        if (spacingOverride) {
+            ch.spacingOverride = spacingOverride;
+        } else {
+            delete ch.spacingOverride;
+        }
+    }
+    saveAll(all);
+}
 
 export interface Recommendation {
     chapter: Chapter;
     subjectName: string;
-    daysOverdue: number; // negative = not yet due
+    daysOverdue: number;
 }
 
 export function getRecommendations(subjectNames: Record<string, string>): Recommendation[] {
     const all = loadAll();
+    const defaultSpacing = getDefaultSpacing();
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
     const recommendations: Recommendation[] = [];
 
     for (const ch of all) {
-        if (ch.studyCount >= 3 || ch.studyCount === 0 || !ch.lastStudiedAt) continue;
+        if (ch.studyCount === 0 || !ch.lastStudiedAt) continue;
 
-        const spacingIndex = ch.studyCount - 1; // 0, 1, or 2
-        const intervalDays = SPACING_DAYS[spacingIndex] ?? 5;
+        const schedule = ch.spacingOverride || defaultSpacing;
+        const intervals = parseSpacing(schedule);
+        const intervalDays = getIntervalForCount(intervals, ch.studyCount);
 
         const lastStudied = new Date(ch.lastStudiedAt);
         lastStudied.setHours(0, 0, 0, 0);
@@ -122,7 +150,6 @@ export function getRecommendations(subjectNames: Record<string, string>): Recomm
         const diffMs = now.getTime() - dueDate.getTime();
         const daysOverdue = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        // Show if due today or overdue
         if (daysOverdue >= 0) {
             recommendations.push({
                 chapter: ch,
@@ -132,7 +159,6 @@ export function getRecommendations(subjectNames: Record<string, string>): Recomm
         }
     }
 
-    // Sort most overdue first
     recommendations.sort((a, b) => b.daysOverdue - a.daysOverdue);
     return recommendations;
 }

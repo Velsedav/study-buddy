@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
@@ -466,6 +466,19 @@ export default function LearningTab() {
             window.scrollTo(0, 0);
         }, 300);
     };
+
+    // Keep a ref to always call the latest handleBackClick from the popstate handler
+    const handleBackClickRef = useRef(handleBackClick);
+    useEffect(() => { handleBackClickRef.current = handleBackClick; });
+
+    // Intercept mouse back button / browser back gesture while inside a lesson
+    useEffect(() => {
+        if (!selectedSection) return;
+        window.history.pushState({ learningSection: true }, '');
+        const handler = () => handleBackClickRef.current();
+        window.addEventListener('popstate', handler);
+        return () => window.removeEventListener('popstate', handler);
+    }, [!!selectedSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleOptionClick = (questionId: number, option: QuizOption) => {
         if (!selectedSection) return;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useCountUp } from '../lib/useCountUp';
 import { useSettings } from '../lib/settings';
 import { getSessions, getSubjects, getAllSessionBlocks } from '../lib/db';
 import type { Session, Subject, SessionBlock } from '../lib/db';
@@ -115,6 +116,12 @@ export default function AnalyticsTab() {
         return { current, best: Math.max(current, best) };
     }, [sessions]);
 
+    const animMinutes = useCountUp(weeklyStats.minutes);
+    const animCount = useCountUp(weeklyStats.count);
+    const animDays = useCountUp(weeklyStats.days);
+    const animCurrentStreak = useCountUp(streaks.current);
+    const animBestStreak = useCountUp(streaks.best);
+
     const pieChart = useMemo(() => {
         const tierMap: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
         const validSessionIds = new Set(sessions.map(s => s.id));
@@ -211,31 +218,31 @@ export default function AnalyticsTab() {
                 <div className="stats-grid">
                     <div className="stat-card">
                         <Clock className="stat-icon" size={20} />
-                        <div className="stat-val">{formatTime(weeklyStats.minutes)}</div>
+                        <div className="stat-val">{formatTime(animMinutes)}</div>
                         <div className="stat-label">Focus Time</div>
                     </div>
 
                     <div className="stat-card">
                         <Activity className="stat-icon" size={20} />
-                        <div className="stat-val">{weeklyStats.count}</div>
+                        <div className="stat-val">{animCount}</div>
                         <div className="stat-label">Sessions</div>
                     </div>
 
                     <div className="stat-card">
                         <Flame className="stat-icon danger-text" size={20} />
-                        <div className="stat-val">{weeklyStats.days} / 7</div>
+                        <div className="stat-val">{animDays} / 7</div>
                         <div className="stat-label">Active Days</div>
                     </div>
 
                     <div className="stat-card">
                         <Zap className="stat-icon" size={20} style={{ color: 'var(--accent)' }} />
-                        <div className="stat-val">{streaks.current} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
+                        <div className="stat-val">{animCurrentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
                         <div className="stat-label">Current Streak</div>
                     </div>
 
                     <div className="stat-card">
                         <Flag className="stat-icon" size={20} style={{ color: 'var(--success)' }} />
-                        <div className="stat-val">{streaks.best} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
+                        <div className="stat-val">{animBestStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
                         <div className="stat-label">Best Streak</div>
                     </div>
                 </div>

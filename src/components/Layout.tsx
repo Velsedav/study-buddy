@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BookOpen, Calendar, Sparkles, Pencil, Lightbulb, BarChart2, Settings as SettingsIcon, Wrench } from 'lucide-react';
-import { getQuotes, addQuote } from '../lib/db';
+import { getQuotes, addQuote, saveSession, updateSubjectStats } from '../lib/db';
 import type { Quote } from '../lib/db';
 import QuoteEditorModal from './QuoteEditorModal';
 import { useTranslation } from '../lib/i18n';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
+import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
 
 const MASCOT_DEFAULT_QUOTE = "The exam is won at home, not on exam day 🏠";
 
 export default function Layout() {
     const location = useLocation();
+    const navigate = useNavigate();
     const { t } = useTranslation();
     const { theme } = useSettings();
     const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -19,6 +21,8 @@ export default function Layout() {
     const [animClass, setAnimClass] = useState('quote-visible');
     const [editorOpen, setEditorOpen] = useState(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [navWarningStep, setNavWarningStep] = useState<'none' | 'confirm-stop' | 'confirm-save'>('none');
+    const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
 
     const navItems = [
         { path: '/', label: t('nav.subjects'), icon: BookOpen },
@@ -104,6 +108,84 @@ export default function Layout() {
         ? quotes[currentIdx % quotes.length]?.text
         : 'Let\'s do our best today! ✨';
 
+    function handleNavClick(e: React.MouseEvent, path: string) {
+        if (localStorage.getItem('activeSession')) {
+            e.preventDefault();
+            setPendingNavPath(path);
+            setNavWarningStep('confirm-stop');
+        }
+    }
+
+    async function finishSessionFromLayout(saveProgress: boolean) {
+        const stored = localStorage.getItem('activeSession');
+        if (!stored) return;
+        const session = JSON.parse(stored);
+
+        if (saveProgress) {
+            const endedAt = new Date().toISOString();
+            const remaining = session.remainingSeconds || 0;
+
+            let actualMins = 0;
+            for (let i = 0; i <= session.nowBlockIdx; i++) {
+                if (i < session.nowBlockIdx) {
+                    actualMins += session.draft[i].minutes;
+                } else {
+                    actualMins += Math.floor((session.draft[i].minutes * 60 - remaining) / 60);
+                }
+            }
+
+            const workBySubject: Record<string, number> = {};
+            for (let i = 0; i <= session.nowBlockIdx; i++) {
+                const block = session.draft[i];
+                if (block.type === 'WORK' && block.subject_id) {
+                    const mins = i < session.nowBlockIdx
+                        ? block.minutes
+                        : Math.floor((block.minutes * 60 - remaining) / 60);
+                    if (mins > 0) {
+                        workBySubject[block.subject_id] = (workBySubject[block.subject_id] || 0) + mins;
+                    }
+                }
+            }
+
+            await saveSession({
+                id: session.sessionId,
+                started_at: session.startedAt,
+                ended_at: endedAt,
+                template: session.template,
+                repeats: session.repeats,
+                planned_minutes: session.plannedMinutes,
+                actual_minutes: actualMins
+            }, session.draft);
+
+            for (const [subjId, mins] of Object.entries(workBySubject)) {
+                await updateSubjectStats(subjId, mins as number, endedAt);
+            }
+
+            const completedChapterIds = new Set<string>();
+            for (let i = 0; i <= session.nowBlockIdx; i++) {
+                const block = session.draft[i];
+                if (block.type === 'WORK' && block.subject_id && block.chapter_name) {
+                    const mins = i < session.nowBlockIdx
+                        ? block.minutes
+                        : Math.floor((block.minutes * 60 - remaining) / 60);
+                    if (mins > 0) {
+                        const chaps = getChaptersForSubject(block.subject_id);
+                        const ch = chaps.find((c: any) => c.name === block.chapter_name);
+                        if (ch) completedChapterIds.add(ch.id);
+                    }
+                }
+            }
+            for (const id of completedChapterIds) {
+                incrementStudyCount(id);
+            }
+        }
+
+        localStorage.removeItem('activeSession');
+        setNavWarningStep('none');
+        navigate(pendingNavPath || '/');
+        setPendingNavPath(null);
+    }
+
     const isTerminal = theme === 'terminal-orange' || theme === 'terminal-green';
 
     // Terminal typing effect
@@ -133,7 +215,11 @@ export default function Layout() {
             {/* Sidebar Navigation */}
             <nav className="glass sidebar">
                 <div className="logo">
-                    <Sparkles className="icon-gold" size={32} />
+                    {isTerminal ? (
+                        <span className="logo-code-icon">{'</>'}</span>
+                    ) : (
+                        <Sparkles className="icon-gold" size={32} />
+                    )}
                     <h2>Study Buddy</h2>
                 </div>
 
@@ -147,6 +233,7 @@ export default function Layout() {
                                     to={item.path}
                                     className={`nav-link ${active ? 'active' : ''}`}
                                     onMouseEnter={() => playSFX('hover_sound', theme)}
+                                    onClick={(e) => handleNavClick(e, item.path)}
                                 >
                                     <Icon size={20} />
                                     <span>{item.label}</span>
@@ -201,6 +288,45 @@ export default function Layout() {
                     onClose={() => setEditorOpen(false)}
                     onChanged={loadQuotes}
                 />
+            )}
+
+            {navWarningStep !== 'none' && (
+                <div className="modal-overlay" onClick={() => { setNavWarningStep('none'); setPendingNavPath(null); }}>
+                    <div className="modal-content confirm-modal-content" onClick={e => e.stopPropagation()}>
+                        {navWarningStep === 'confirm-stop' && (
+                            <>
+                                <h2 className="confirm-modal-title">⏸️ Stop studying?</h2>
+                                <p className="confirm-modal-text">
+                                    Are you sure you want to end this session early?
+                                </p>
+                                <div className="confirm-modal-actions">
+                                    <button className="btn btn-primary" onClick={() => { setNavWarningStep('none'); setPendingNavPath(null); }}>
+                                        Keep studying
+                                    </button>
+                                    <button className="btn btn-secondary confirm-btn-danger" onClick={() => setNavWarningStep('confirm-save')}>
+                                        Yes, stop
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                        {navWarningStep === 'confirm-save' && (
+                            <>
+                                <h2 className="confirm-modal-title">💾 Save your progress?</h2>
+                                <p className="confirm-modal-text">
+                                    Do you want to record the time you studied so far during this session?
+                                </p>
+                                <div className="confirm-modal-actions">
+                                    <button className="btn btn-primary" onClick={() => finishSessionFromLayout(true)}>
+                                        Save progress
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={() => finishSessionFromLayout(false)}>
+                                        Discard
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -367,10 +367,73 @@
 [data-theme="terminal-green"] input,
 [data-theme="terminal-green"] select,
 [data-theme="terminal-green"] textarea {
-  border: 1px solid var(--primary);
   background: #000;
   color: var(--primary);
   border-radius: 0;
+}
+
+/* ── Terminal Theme Component Overrides ── */
+[data-theme^="terminal-"] .tag-picker-input-area:focus-within {
+  background: #000 !important;
+}
+
+[data-theme^="terminal-"] .tag-picker-dropdown {
+  background: #000 !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.3) !important;
+}
+
+[data-theme^="terminal-"] .tag-chip,
+[data-theme^="terminal-"] .tag-chip-preview {
+  background: var(--primary) !important;
+  color: #000 !important;
+  text-shadow: none !important;
+}
+
+[data-theme^="terminal-"] .tag-picker-option-label {
+  color: var(--primary) !important;
+}
+
+[data-theme^="terminal-"] .tag-picker-option.highlighted,
+[data-theme^="terminal-"] .tag-picker-option:hover {
+  background: rgba(var(--primary-rgb), 0.2) !important;
+}
+
+[data-theme^="terminal-"] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent !important;
+  border: 2px solid var(--primary) !important;
+  border-radius: 2px !important;
+  width: 18px !important;
+  height: 18px !important;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+[data-theme^="terminal-"] input[type="checkbox"]:checked {
+  background: var(--primary) !important;
+}
+
+[data-theme^="terminal-"] input[type="checkbox"]:checked::after {
+  content: "X";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #000 !important;
+  font-size: 14px;
+  font-weight: 900;
+  text-shadow: none !important;
+}
+
+[data-theme^="terminal-"] .tag-chip-remove {
+  color: #000 !important;
+}
+
+[data-theme^="terminal-"] .tag-chip-remove:hover {
+  background: rgba(0, 0, 0, 0.2) !important;
 }
 
 
@@ -623,6 +686,38 @@ h2 {
   animation-delay: calc(var(--i, 0) * 60ms);
 }
 
+.paste-frame:focus {
+  border-color: var(--primary) !important;
+  border-style: solid !important;
+  box-shadow: 0 0 0 4px var(--input-focus-ring), inset 0 0 20px rgba(var(--primary-rgb), 0.1) !important;
+  background: rgba(var(--primary-rgb), 0.08) !important;
+}
+
+.paste-frame:hover {
+  background: rgba(var(--primary-rgb), 0.05) !important;
+  border-color: var(--primary) !important;
+  transform: translateY(-2px);
+}
+
+.paste-frame:hover .hover-overlay {
+  opacity: 1 !important;
+}
+
+/* Terminal Glow Effect */
+[data-theme="terminal-orange"] .subject-card:hover,
+[data-theme="terminal-green"] .subject-card:hover {
+  box-shadow: 0 0 20px var(--primary), inset 0 0 8px var(--primary);
+  border-color: var(--primary) !important;
+  transform: translateY(-8px) scale(1.02);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+[data-theme="terminal-orange"] .subject-card:hover .subject-name,
+[data-theme="terminal-green"] .subject-card:hover .subject-name {
+  text-shadow: 0 0 12px var(--primary), 0 0 20px var(--primary);
+  transition: text-shadow 0.3s ease;
+}
+
 .anim-enter-left {
   animation: staggerFadeInLeft 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--i, 0) * 60ms);
@@ -763,7 +858,7 @@ h2 {
 input,
 select {
   width: 100%;
-  padding: 12px 16px;
+  padding: 8px 12px;
   border: 2px solid var(--input-border);
   border-radius: var(--border-radius-sm);
   background: var(--card-bg);
@@ -832,6 +927,14 @@ input[type="checkbox"] {
   z-index: 10;
   border-radius: 0px;
   /* background drawn by body linear-gradient */
+  transition: all 0.2s ease;
+}
+
+.layout:has(.planner-page.is-dragging) .sidebar,
+.layout:has(.planner-page.is-dragging-empty) .sidebar {
+  opacity: 0.15;
+  filter: grayscale(0.5);
+  pointer-events: none;
 }
 
 .right-panel {
@@ -983,52 +1086,47 @@ input[type="checkbox"] {
   border-radius: var(--border-radius);
 }
 
-/* --- Heatmap Rainbow Animation --- */
-@keyframes rainbowPulse {
+/* --- Heatmap Streak Animations --- */
+@keyframes streakRainbowGlow {
   0% {
-    box-shadow: 0 0 8px #ff0000;
-    border-color: #ff0000;
+    box-shadow: 0 0 0 2px hsl(0, 100%, 60%), 0 0 10px hsl(0, 100%, 60%);
   }
 
   14% {
-    box-shadow: 0 0 8px #ff7f00;
-    border-color: #ff7f00;
+    box-shadow: 0 0 0 2px hsl(51, 100%, 55%), 0 0 10px hsl(51, 100%, 55%);
   }
 
   28% {
-    box-shadow: 0 0 8px #ffff00;
-    border-color: #ffff00;
+    box-shadow: 0 0 0 2px hsl(120, 100%, 45%), 0 0 10px hsl(120, 100%, 45%);
   }
 
   42% {
-    box-shadow: 0 0 8px #00ff00;
-    border-color: #00ff00;
+    box-shadow: 0 0 0 2px hsl(180, 100%, 45%), 0 0 10px hsl(180, 100%, 45%);
   }
 
   57% {
-    box-shadow: 0 0 8px #0000ff;
-    border-color: #0000ff;
+    box-shadow: 0 0 0 2px hsl(240, 100%, 65%), 0 0 10px hsl(240, 100%, 65%);
   }
 
   71% {
-    box-shadow: 0 0 8px #4b0082;
-    border-color: #4b0082;
+    box-shadow: 0 0 0 2px hsl(270, 100%, 60%), 0 0 10px hsl(270, 100%, 60%);
   }
 
   85% {
-    box-shadow: 0 0 8px #9400d3;
-    border-color: #9400d3;
+    box-shadow: 0 0 0 2px hsl(300, 100%, 60%), 0 0 10px hsl(300, 100%, 60%);
   }
 
   100% {
-    box-shadow: 0 0 8px #ff0000;
-    border-color: #ff0000;
+    box-shadow: 0 0 0 2px hsl(0, 100%, 60%), 0 0 10px hsl(0, 100%, 60%);
   }
 }
 
-.rainbow-pulse {
-  animation: rainbowPulse 2s linear infinite !important;
-  z-index: 10;
+.streak-rainbow {
+  animation: streakRainbowGlow 2s linear infinite;
+}
+
+.streak-flame {
+  box-shadow: 0 0 0 2px #f97316, 0 0 8px #f97316;
 }
 
 .tab-pane {
@@ -1389,6 +1487,20 @@ input[type="checkbox"] {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-width: 80%;
+  margin: 0 auto;
+  min-width: 600px;
+}
+
+.settings-row {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.settings-row .settings-section {
+  flex: 1;
+  min-width: 0;
 }
 
 .settings-section {
@@ -1399,9 +1511,6 @@ input[type="checkbox"] {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 80%;
-  margin: 0 auto;
-  min-width: 600px;
 }
 
 .settings-header {
@@ -1488,8 +1597,8 @@ input[type="checkbox"] {
 }
 
 .audio-individual-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 8px;
 }
@@ -2127,7 +2236,7 @@ input[type="checkbox"] {
 }
 
 .subject-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-6px) scale(1.01);
   box-shadow: var(--shadow-md);
 }
 
@@ -2255,12 +2364,12 @@ input[type="checkbox"] {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 2px solid rgba(var(--primary-rgb), 0.3);
   border-radius: var(--border-radius-sm);
   background: var(--card-bg);
   cursor: text;
-  min-height: 44px;
+  min-height: 38px;
   align-items: center;
   transition: var(--transition);
 }
@@ -2524,6 +2633,114 @@ input[type="checkbox"] {
   animation: terminalBlink 0.8s step-end infinite !important;
 }
 
+/* ── Terminal: zero border-radius everywhere ── */
+[data-theme^="terminal-"] *,
+[data-theme^="terminal-"] *::before,
+[data-theme^="terminal-"] *::after {
+  border-radius: 0 !important;
+}
+
+/* ── Terminal: hide mascot, use code logo, Sixtyfour font ── */
+[data-theme^="terminal-"] .btn-start-mascot {
+  display: none !important;
+}
+
+[data-theme^="terminal-"] .logo h2 {
+  font-family: 'Sixtyfour', monospace;
+  font-size: 28px;
+  font-weight: 400;
+  font-variation-settings: 'SCAN' -48;
+  letter-spacing: 0;
+}
+
+.logo-code-icon {
+  font-family: monospace;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--primary);
+  user-select: none;
+}
+
+@keyframes terminalOutlineBlink {
+
+  0%,
+  100% {
+    outline-color: currentColor;
+  }
+
+  50% {
+    outline-color: transparent;
+  }
+}
+
+/* Kill transform/box-shadow transitions so hover-out doesn't animate the lift */
+[data-theme^="terminal-"] .drag-subject-item {
+  transition: opacity 0.3s ease !important;
+}
+
+[data-theme^="terminal-"] .drag-subject-item:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  outline: 2px solid;
+  outline-color: currentColor;
+  animation: terminalOutlineBlink 0.4s step-end infinite;
+}
+
+/* ── Terminal theme: subject card cover image ── */
+[data-theme^="terminal-"] .cover-image {
+  overflow: hidden;
+}
+
+/* Heavier dark overlay so text is always legible */
+[data-theme^="terminal-"] .cover-overlay {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+/* Static CRT scanlines */
+[data-theme^="terminal-"] .cover-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.22) 2px,
+      rgba(0, 0, 0, 0.22) 4px);
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Moving bright scanline travelling bottom → top */
+[data-theme^="terminal-"] .cover-image::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  height: 3px;
+  background: rgba(var(--primary-rgb), 0.35);
+  z-index: 3;
+  pointer-events: none;
+  animation: crtMovingScanline 5s linear infinite;
+}
+
+@keyframes crtMovingScanline {
+  from {
+    top: 100%;
+  }
+
+  to {
+    top: -3px;
+  }
+}
+
+/* Force tag style in terminal+cover context */
+[data-theme^="terminal-"] .subject-card:has(.cover-image) .tag {
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--primary);
+}
+
 /* ── Drag & Drop visual feedback ── */
 .drag-subject-item {
   padding: 18px;
@@ -2533,6 +2750,11 @@ input[type="checkbox"] {
   cursor: grab;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: opacity 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.drag-subject-item:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .drag-subject-item:active {

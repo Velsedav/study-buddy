@@ -306,7 +306,7 @@ export default function CalendarPanel({
                             return (
                                 <div
                                     key={i}
-                                    className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'rainbow-pulse' : ''} ${goal ? 'goal-cell' : ''}`}
+                                    className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'streak-rainbow' : isFlame ? 'streak-flame' : ''} ${goal ? 'goal-cell' : ''}`}
                                     title={goal ? `🏁 ${goal.label} • ${d.tooltip}` : d.tooltip}
                                     style={{ cursor: d.mins > 0 || goal ? 'pointer' : 'default' }}
                                     onMouseEnter={() => { if (d.mins > 0 || goal) playSFX('hover_sound', theme); }}
@@ -314,8 +314,6 @@ export default function CalendarPanel({
                                 >
                                     {d.date.getDate()}
                                     {goal && <span className="goal-flag" title={goal.label}>🏁</span>}
-                                    {!goal && isFlame && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>🔥</span>}
-                                    {!goal && isRainbow && <span style={{ fontSize: '10px', pointerEvents: 'none', position: 'absolute', right: '4px', bottom: '2px' }}>✨</span>}
                                 </div>
                             );
                         })}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';

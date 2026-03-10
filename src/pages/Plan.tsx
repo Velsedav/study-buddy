@@ -662,6 +662,8 @@ export default function Plan() {
                                             {group.map((block) => renderBlockNode(block))}
                                         </div>
                                     );
+                                } else {
+                                    return renderBlockNode(group[0]);
                                 }
                             });
                         })()

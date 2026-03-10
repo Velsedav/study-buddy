@@ -208,6 +208,23 @@
     font-size: 0.85rem;
 }
 
+.break-checklist-card {
+    text-align: left;
+    margin: 16px auto;
+    max-width: 380px;
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 20px 24px;
+}
+
+.break-checklist-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
 .timer-display {
     font-size: 7rem;
     font-weight: 700;

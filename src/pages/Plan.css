@@ -221,10 +221,14 @@
 
 .planner-subjects-panel {
     width: 250px;
+    flex-shrink: 0;
     padding: 16px;
     border-radius: var(--border-radius-sm);
-    max-height: 70vh;
+    max-height: 80vh;
     overflow-y: auto;
+    position: sticky;
+    top: 24px;
+    align-self: flex-start;
 }
 
 .planner-subjects-panel h3 {

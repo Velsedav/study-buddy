@@ -42,6 +42,27 @@ function saveCustomPrepItems(items: PrepItem[]) {
     localStorage.setItem(CUSTOM_PREP_KEY, JSON.stringify(items));
 }
 
+const BREAK_CHECKLIST: PrepItem[] = [
+    { emoji: '💧', label: 'Drink water' },
+    { emoji: '🚶', label: 'Walk around' },
+    { emoji: '🧘', label: 'Stretch' },
+    { emoji: '💪', label: 'Quick exercise' },
+];
+
+const CUSTOM_BREAK_KEY = 'study-buddy-custom-break';
+
+function loadCustomBreakItems(): PrepItem[] {
+    try {
+        const saved = localStorage.getItem(CUSTOM_BREAK_KEY);
+        if (saved) return JSON.parse(saved);
+    } catch { }
+    return [];
+}
+
+function saveCustomBreakItems(items: PrepItem[]) {
+    localStorage.setItem(CUSTOM_BREAK_KEY, JSON.stringify(items));
+}
+
 export default function Session() {
     const navigate = useNavigate();
     const [session, setSession] = useState<any>(null);
@@ -51,9 +72,13 @@ export default function Session() {
     const [customPrepItems, setCustomPrepItems] = useState<PrepItem[]>(loadCustomPrepItems);
     const allPrepItems = [...PREP_CHECKLIST, ...customPrepItems];
     const [checkedItems, setCheckedItems] = useState<boolean[]>(allPrepItems.map(() => false));
+    const [customBreakItems, setCustomBreakItems] = useState<PrepItem[]>(loadCustomBreakItems);
+    const allBreakItems = [...BREAK_CHECKLIST, ...customBreakItems];
+    const [breakCheckedItems, setBreakCheckedItems] = useState<boolean[]>(allBreakItems.map(() => false));
     const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'total-rest'>('none');
     const [restCountdown, setRestCountdown] = useState(600); // 10 minutes in seconds
     const [newCustomItem, setNewCustomItem] = useState('');
+    const [newCustomBreakItem, setNewCustomBreakItem] = useState('');
     const { theme } = useSettings();
 
     useEffect(() => {
@@ -95,6 +120,14 @@ export default function Session() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [remaining]);
+
+    // Reset break checklist whenever we enter a new BREAK block
+    useEffect(() => {
+        if (session && session.draft[session.nowBlockIdx]?.type === 'BREAK') {
+            setBreakCheckedItems(allBreakItems.map(() => false));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [session?.nowBlockIdx]);
 
     // 10s Cooldown Warning Sound
     useEffect(() => {
@@ -355,6 +388,96 @@ export default function Session() {
                                         saveCustomPrepItems(newCustom);
                                         setCheckedItems([...checkedItems, false]);
                                         setNewCustomItem('');
+                                    }
+                                }}
+                            >
+                                + Add
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {currentBlock.type === 'BREAK' && (
+                    <div className="break-checklist-card">
+                        <div className="break-checklist-title">☕ Break Checklist</div>
+                        {allBreakItems.map((item, idx) => (
+                            <label
+                                key={idx}
+                                className={`prep-item-label ${idx < allBreakItems.length - 1 ? 'bordered' : ''} ${breakCheckedItems[idx] ? 'checked' : ''}`}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={breakCheckedItems[idx] || false}
+                                    onChange={() => {
+                                        const next = [...breakCheckedItems];
+                                        next[idx] = !next[idx];
+                                        setBreakCheckedItems(next);
+                                        if (next[idx]) {
+                                            playSFX('checklist_sound', theme);
+                                        }
+                                    }}
+                                    className="prep-item-checkbox"
+                                />
+                                <span className="prep-item-text">
+                                    {item.emoji} {item.url ? (
+                                        <a
+                                            href="#"
+                                            onClick={e => { e.preventDefault(); e.stopPropagation(); openExternal(item.url!); }}
+                                            className="prep-item-link"
+                                        >
+                                            {item.label}
+                                        </a>
+                                    ) : item.label}
+                                </span>
+                                {idx >= BREAK_CHECKLIST.length && (
+                                    <button
+                                        className="prep-item-remove-btn"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            const customIdx = idx - BREAK_CHECKLIST.length;
+                                            const newCustom = customBreakItems.filter((_, i) => i !== customIdx);
+                                            setCustomBreakItems(newCustom);
+                                            saveCustomBreakItems(newCustom);
+                                            const newChecked = [...breakCheckedItems];
+                                            newChecked.splice(idx, 1);
+                                            setBreakCheckedItems(newChecked);
+                                        }}
+                                        title="Remove custom item"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </label>
+                        ))}
+                        <div className="prep-custom-container">
+                            <input
+                                type="text"
+                                placeholder="Add custom item..."
+                                value={newCustomBreakItem}
+                                onChange={e => setNewCustomBreakItem(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && newCustomBreakItem.trim()) {
+                                        const newItem: PrepItem = { emoji: '📌', label: newCustomBreakItem.trim() };
+                                        const newCustom = [...customBreakItems, newItem];
+                                        setCustomBreakItems(newCustom);
+                                        saveCustomBreakItems(newCustom);
+                                        setBreakCheckedItems([...breakCheckedItems, false]);
+                                        setNewCustomBreakItem('');
+                                    }
+                                }}
+                                className="prep-custom-input"
+                            />
+                            <button
+                                className="btn btn-secondary prep-custom-btn"
+                                onClick={() => {
+                                    if (newCustomBreakItem.trim()) {
+                                        const newItem: PrepItem = { emoji: '📌', label: newCustomBreakItem.trim() };
+                                        const newCustom = [...customBreakItems, newItem];
+                                        setCustomBreakItems(newCustom);
+                                        saveCustomBreakItems(newCustom);
+                                        setBreakCheckedItems([...breakCheckedItems, false]);
+                                        setNewCustomBreakItem('');
                                     }
                                 }}
                             >

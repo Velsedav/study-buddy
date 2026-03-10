@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useSettings } from '../lib/settings';
-import { getChaptersForSubject, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS } from '../lib/chapters';
+import { getChaptersForSubject, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS, getRecommendations, type Recommendation } from '../lib/chapters';
 import { playSFX } from '../lib/sounds';
 
 interface ChapterPickerModalProps {
@@ -13,6 +13,13 @@ interface ChapterPickerModalProps {
 export default function ChapterPickerModal({ subjectId, onClose, onSelect, currentSelection }: ChapterPickerModalProps) {
     const { theme } = useSettings();
     const chapters = getChaptersForSubject(subjectId).sort((a, b) => a.studyCount - b.studyCount);
+
+    const recommendations = getRecommendations({});
+    const ignoredRecs = (() => {
+        try { return new Set(JSON.parse(localStorage.getItem('study-buddy-ignored-recs') || '[]')); }
+        catch { return new Set(); }
+    })();
+    const recommendedIds = new Set(recommendations.filter((r: Recommendation) => !ignoredRecs.has(r.chapter.id)).map((r: Recommendation) => r.chapter.id));
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -32,11 +39,12 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                     ) : (
                         chapters.map(ch => {
                             const isSelected = currentSelection === ch.name;
+                            const isRecommended = recommendedIds.has(ch.id);
                             const isSubChapter = /^\s+[A-Z]\./.test(ch.name);
                             return (
                                 <div
                                     key={ch.id}
-                                    className={`glass ${isSelected ? 'selected' : ''}`}
+                                    className={`glass ${isSelected ? 'selected' : ''} ${isRecommended ? 'recommendation-highlight' : ''}`}
                                     onClick={() => {
                                         onSelect(ch.name);
                                     }}
@@ -44,19 +52,25 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                                     style={{
                                         padding: isSubChapter ? '10px 14px' : '16px',
                                         cursor: 'pointer',
-                                        border: isSelected ? '2px solid var(--primary)' : '2px solid transparent',
+                                        border: isSelected ? '2px solid var(--primary)' : (isRecommended ? '2px solid #8b5cf6' : '2px solid transparent'),
                                         transition: 'all 0.2s ease',
                                         borderRadius: 'var(--border-radius)',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         gap: '6px',
                                         marginLeft: isSubChapter ? '24px' : '0',
-                                        borderLeft: isSubChapter ? '3px solid var(--glass-border)' : undefined,
+                                        borderLeft: isSubChapter ? (isRecommended ? '4px solid #8b5cf6' : '3px solid var(--glass-border)') : undefined,
+                                        position: 'relative'
                                     }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                                             <span style={{ fontWeight: isSubChapter ? 400 : 600, fontSize: isSubChapter ? '0.95rem' : '1.05rem' }}>{ch.name}</span>
+                                            {isRecommended && (
+                                                <span className="recommendation-badge">
+                                                    ✨ Recommended
+                                                </span>
+                                            )}
                                             {ch.focusType && (
                                                 <span style={{
                                                     background: FOCUS_TYPE_COLORS[ch.focusType],

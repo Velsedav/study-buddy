@@ -6,7 +6,7 @@ import { useUndoRedo } from '../lib/undo';
 import TechniquePickerModal from '../components/TechniquePickerModal';
 import ChapterPickerModal from '../components/ChapterPickerModal';
 import { TECHNIQUES, getTierColor, type TechCategory } from '../lib/techniques';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Calendar } from 'lucide-react';
 import { CustomSelect } from '../components/CustomSelect';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
@@ -392,7 +392,10 @@ export default function Plan() {
         <div className={`planner-page fade-in ${isDragging || (isMouseDownOnSubject && blocks.length > 0) ? 'is-dragging' : ''} ${isMouseDownOnSubject && blocks.length === 0 ? 'is-dragging-empty' : ''} ${resizingBlockId ? 'is-resizing' : ''}`}>
             <div className="page-header">
                 <div className="drag-dim">
-                    <h1>Pomodoro Planner</h1>
+                    <div className="page-title-group">
+                        <div className="icon-wrapper bg-purple"><Calendar size={20} /></div>
+                        <h1>Pomodoro Planner</h1>
+                    </div>
                     <p>Ends roughly at {endsText} • {totalWork}m Work, {totalBreak}m Rest</p>
                 </div>
 
@@ -614,7 +617,7 @@ export default function Plan() {
                                                             placeholder="Ambitious objective BUT doable!"
                                                             value={block.objective}
                                                             onChange={e => handleObjectiveChange(block.id, e.target.value)}
-                                                            className="block-objective-input"
+                                                            className={`block-objective-input${!block.objective ? ' empty' : ''}`}
                                                         />
                                                     </div>
                                                 ) : (

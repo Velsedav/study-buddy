@@ -459,5 +459,110 @@ export const curriculum: Section[] = [
                 ]
             }
         ]
+    },
+    {
+        id: "section-7",
+        icon: "🥗",
+        title: "Section 7: Nutrition & Performance Cognitive",
+        description: "Ce que vous mangez influence directement la qualité de votre concentration, de votre mémoire et de votre motivation. Découvrez les mécanismes biologiques qui relient l'assiette au cerveau.",
+        color: "var(--success)",
+        chapters: [
+            {
+                id: "chapter-7-1",
+                title: "Chapter 7.1: Glycémie & Lipides Cérébraux",
+                lessons: [
+                    {
+                        id: "lesson-7-1-a",
+                        title: "Leçon 1 : La Glycémie et l'Énergie Stable",
+                        content: "Le cerveau consomme environ 20 % de l'énergie totale du corps. Contrairement aux muscles, il ne peut pas stocker le glucose et dépend d'un apport sanguin constant. Les sucres raffinés provoquent une sécrétion massive d'insuline, suivie d'une hypoglycémie réactionnelle qui déclenche brouillard mental, irritabilité et chute de concentration. Pour lisser cette courbe, il faut consommer les fibres, graisses et protéines AVANT les glucides lors d'un repas afin de ralentir la vidange gastrique.",
+                        question: {
+                            id: 22,
+                            question: "Lequel de ces mécanismes explique pourquoi l'ordre de consommation des aliments influence la concentration de l'après-midi ?",
+                            options: [
+                                { id: "a", text: "Les fibres captent les molécules de glucose pour les transporter directement vers le cortex préfrontal.", isCorrect: false },
+                                { id: "b", text: "La structure « fibres-graisses-protéines » crée un obstacle physique et chimique qui ralentit l'absorption des glucides, évitant ainsi un pic d'insuline dévastateur.", isCorrect: true },
+                                { id: "c", text: "Manger des glucides en dernier permet de saturer les récepteurs d'adénosine, empêchant le « coup de barre » post-prandial.", isCorrect: false }
+                            ]
+                        }
+                    },
+                    {
+                        id: "lesson-7-1-b",
+                        title: "Leçon 2 : Le Hack de l'Amidon Résistant",
+                        content: "La structure moléculaire des féculents change selon leur préparation. En faisant cuire, puis refroidir (au moins 24h au frigo) des aliments comme le riz, les pâtes ou les pommes de terre, une partie de l'amidon se transforme en amidon résistant par un processus de rétrogradation. Cela réduit l'index glycémique (IG) de l'aliment jusqu'à 40 %. L'amidon ainsi modifié n'est plus digéré dans l'intestin grêle mais fermente dans le côlon, fournissant une énergie beaucoup plus stable au cerveau.",
+                        question: {
+                            id: 23,
+                            question: "Pour un étudiant cherchant à éviter le « crash » d'énergie pendant un examen de 4 heures, quelle préparation de pain blanc est scientifiquement la plus efficace pour stabiliser la glycémie ?",
+                            options: [
+                                { id: "a", text: "Du pain blanc frais, riche en glucides simples immédiatement biodisponibles.", isCorrect: false },
+                                { id: "b", text: "Du pain blanc qui a été congelé, décongelé, puis grillé au grille-pain.", isCorrect: true },
+                                { id: "c", text: "Du pain blanc grillé directement après l'achat sans passage au froid.", isCorrect: false }
+                            ]
+                        }
+                    },
+                    {
+                        id: "lesson-7-1-c",
+                        title: "Leçon 4 : Lipides Structuraux et Préparation des Graines",
+                        content: "Le cerveau sec est composé à 60 % de graisses. Le DHA (Oméga-3) est un constituant majeur des membranes neuronales ; il influence la fluidité synaptique et la vitesse de transmission des signaux. Les sources marines (saumon, sardines) sont prioritaires car la conversion des sources végétales (lin, chia) en DHA est très inefficace chez l'humain. De plus, les graines de chia et de lin doivent être moulues, sinon leur enveloppe protectrice empêche toute absorption des nutriments.",
+                        question: {
+                            id: 25,
+                            question: "Pourquoi la consommation de graines de lin entières saupoudrées sur un yaourt est-elle considérée comme un geste nutritionnel « neutre » pour le cerveau ?",
+                            options: [
+                                { id: "a", text: "Parce que les enzymes digestives humaines sont incapables de briser l'enveloppe externe de la graine, qui est évacuée intacte.", isCorrect: true },
+                                { id: "b", text: "Parce que le calcium du yaourt neutralise les acides gras ALA avant leur absorption.", isCorrect: false },
+                                { id: "c", text: "Parce que les Oméga-3 végétaux s'oxydent instantanément au contact de l'air une fois la graine sortie de son emballage.", isCorrect: false }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: "chapter-7-2",
+                title: "Chapter 7.2: Synergie, Toxicologie & Dopamine",
+                lessons: [
+                    {
+                        id: "lesson-7-2-a",
+                        title: "Leçon 3 : Synergies et Bloqueurs de Nutriments",
+                        content: "L'efficacité d'un aliment ne dépend pas seulement de ce qu'il contient, mais de ce avec quoi il est consommé.\n\n- **Fer** : Le café et le thé consommés pendant un repas réduisent l'absorption du fer de 39 % à 64 % à cause des polyphénols.\n- **Curcuma** : Sa curcumine est 2000 % mieux absorbée si elle est associée à la pipérine du poivre noir.\n- **Vitamines A, D, E, K** : Elles sont liposolubles et ne peuvent être absorbées qu'en présence de graisses (huile d'olive, avocat, œufs).",
+                        question: {
+                            id: 24,
+                            question: "Une étudiante carencée en fer (cofacteur essentiel de la dopamine) souhaite optimiser son déjeuner pour sa concentration. Quelle combinaison est à éviter absolument ?",
+                            options: [
+                                { id: "a", text: "Un steak de bœuf accompagné d'un verre de jus d'orange (vitamine C).", isCorrect: false },
+                                { id: "b", text: "Une salade de lentilles (fer non-héminique) consommée avec un thé vert brûlant.", isCorrect: true },
+                                { id: "c", text: "Des œufs au plat (fer + lipides) suivis d'une marche de 15 minutes.", isCorrect: false }
+                            ]
+                        }
+                    },
+                    {
+                        id: "lesson-7-2-b",
+                        title: "Leçon 5 : Neuro-Toxicologie et Matériel de Cuisson",
+                        content: "Les performances cognitives peuvent être « parasitées » par l'environnement culinaire. Les revêtements antiadhésifs (Téflon) peuvent libérer des PFAS (produits chimiques éternels) neurotoxiques à haute température. Il est recommandé d'utiliser l'acier inoxydable ou la fonte. De plus, pour éviter le brouillard cérébral lié à l'histamine (molécule qui augmente dans les restes conservés trop longtemps au frigo), il est impératif de congeler rapidement les plats préparés à l'avance.",
+                        question: {
+                            id: 26,
+                            question: "Quel est le risque cognitif majeur associé à l'utilisation répétée de contenants en plastique chauffés au micro-ondes pour le « meal prep » étudiant ?",
+                            options: [
+                                { id: "a", text: "La dénaturation des protéines qui deviennent alors impossibles à convertir en tyrosine.", isCorrect: false },
+                                { id: "b", text: "La migration de bisphénols et de phtalates qui miment les hormones et perturbent l'équilibre neuro-chimique.", isCorrect: true },
+                                { id: "c", text: "La destruction des antioxydants (baies, légumes) par les ondes électromagnétiques.", isCorrect: false }
+                            ]
+                        }
+                    },
+                    {
+                        id: "lesson-7-2-c",
+                        title: "Leçon 6 : Le Petit-Déjeuner de la Dopamine",
+                        content: "Pour maintenir la motivation et l'alerte dès le matin, le cerveau a besoin de tyrosine, un acide aminé précurseur de la dopamine et de la noradrénaline. L'objectif est de consommer environ 30 grammes de protéines dès le réveil (œufs, skyr, dinde, soja). Cela prévient le « brouillard mental » de 10h00. Enfin, attendez 90 à 120 minutes après le réveil avant votre premier café pour laisser le pic de cortisol naturel agir sans créer de dépendance ou de crash brutal.",
+                        question: {
+                            id: 27,
+                            question: "Pourquoi un petit-déjeuner composé uniquement de céréales sucrées et de jus d'orange est-il le pire choix pour un étudiant ayant un examen à 10h00 ?",
+                            options: [
+                                { id: "a", text: "Il sature les récepteurs de sérotonine, provoquant une envie de dormir immédiate.", isCorrect: false },
+                                { id: "b", text: "Il ne fournit aucun acide aminé pour la synthèse de dopamine et provoque une hypoglycémie réactionnelle pile au moment de l'examen.", isCorrect: true },
+                                { id: "c", text: "Le sucre empêche physiquement l'oxygène d'atteindre les mitochondries des neurones.", isCorrect: false }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
     }
 ];

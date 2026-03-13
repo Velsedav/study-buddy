@@ -57,7 +57,7 @@ export default function Home() {
     const animFocusTime = useCountUp(weeklyStats.focusTime);
     const animSessions = useCountUp(weeklyStats.sessions);
     const animActiveDays = useCountUp(weeklyStats.activeDays);
-    const [techniqueOfWeek, setTechniqueOfWeek] = useState(() => localStorage.getItem('study-buddy-technique-week') || 't1');
+    const [techniqueOfWeek, setTechniqueOfWeek] = useState<string | null>(() => localStorage.getItem('study-buddy-technique-week'));
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [ignoredRecs, setIgnoredRecs] = useState<Set<string>>(() => {
         try { return new Set(JSON.parse(localStorage.getItem('study-buddy-ignored-recs') || '[]')); }
@@ -255,7 +255,10 @@ export default function Home() {
         <div className="home-page fade-in">
             <div className="page-header">
                 <div className="page-header-controls">
-                    <h1 className="page-header-title">{t('home.dashboard')}</h1>
+                    <div className="page-title-group">
+                        <div className="icon-wrapper bg-blue"><BookOpen size={20} /></div>
+                        <h1 className="page-header-title">{t('home.dashboard')}</h1>
+                    </div>
                     <button
                         className="btn btn-secondary"
                         style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -276,7 +279,7 @@ export default function Home() {
                     <div className="weekly-stats-grid">
                         <div className="stat-card glass">
                             <Clock size={24} className="stat-icon" />
-                            <div className="stat-value">{animFocusTime}m</div>
+                            <div className="stat-value">{animFocusTime >= 60 ? `${Math.floor(animFocusTime / 60)}h ${animFocusTime % 60}m` : `${animFocusTime}m`}</div>
                             <div className="stat-label">Focus Time</div>
                         </div>
                         <div className="stat-card glass">
@@ -289,12 +292,12 @@ export default function Home() {
                             <div className="stat-value">{animActiveDays}/7</div>
                             <div className="stat-label">Active Days</div>
                         </div>
-                        <div className="stat-card glass technique-card-hover"
+                        <div className={`stat-card glass technique-card-hover${!techniqueOfWeek ? ' technique-unset' : ''}`}
                             onMouseEnter={() => playSFX('hover_sound', theme)}
                         >
                             <Lightbulb size={24} className="stat-icon" />
                             <div className="stat-value-sm">
-                                {TECHNIQUES.find(t => t.id === techniqueOfWeek)?.name || 'None'}
+                                {techniqueOfWeek ? (TECHNIQUES.find(t => t.id === techniqueOfWeek)?.name || 'None') : '—'}
                             </div>
                             <div className="stat-label-technique">Tech. of Week</div>
                             <div className="stat-card-edit-mask" onClick={() => setShowTechniqueModal(true)}>

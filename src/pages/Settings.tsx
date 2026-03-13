@@ -1,10 +1,11 @@
 import { useSettings } from '../lib/settings';
 import type { Theme, WeekStart } from '../lib/settings';
 import { useState, useEffect } from 'react';
-import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play, Brain } from 'lucide-react';
+import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play, Brain, Power, Settings as SettingsIcon } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { deleteAllData } from '../lib/db';
 import { getDefaultSpacing, setDefaultSpacing, parseSpacing, DEFAULT_SPACING } from '../lib/chapters';
+import { getAutostart, setAutostart } from '../lib/autostart';
 import { CustomSelect } from '../components/CustomSelect';
 import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, stopAllSounds } from '../lib/sounds';
 import type { SoundEffect, VolumeSettings } from '../lib/sounds';
@@ -22,6 +23,11 @@ export default function SettingsTab() {
     const [volumeSettings, setVolumeSettings] = useState<VolumeSettings>(loadVolumeSettings);
     const [defaultSpacing, setDefaultSpacingState] = useState(() => getDefaultSpacing());
     const [spacingError, setSpacingError] = useState('');
+    const [autostartEnabled, setAutostartEnabled] = useState(false);
+
+    useEffect(() => {
+        getAutostart().then(setAutostartEnabled);
+    }, []);
 
     const handleSpacingChange = (val: string) => {
         setDefaultSpacingState(val);
@@ -54,22 +60,46 @@ export default function SettingsTab() {
         }));
     };
 
-    const THEMES = [
-        { id: 'pastel', name: 'Pastel Baseline', color: '#f08cb8' },
-        { id: 'neumorphism', name: 'Neumorphism', color: '#9baec8' },
-        { id: 'neobrutalism', name: 'Neobrutalism', color: '#ffde59' },
-        { id: 'terminal-orange', name: 'Orange Terminal', color: '#ff8c00' },
-        { id: 'terminal-green', name: 'Green Terminal', color: '#00ff00' },
-        { id: 'classic-uniform', name: 'Classic Uniform', color: '#1c3272' },
-        { id: 'cosmic-manicure', name: 'Cosmic Manicure', color: '#9024f2' },
-        { id: 'chibi-moon', name: 'Chibi Moon', color: '#ffb3e1' },
-        { id: 'transformation-ribbon', name: 'Transformation Ribbon', color: '#9d5ceb', background: 'linear-gradient(120deg, #b08dd9 0%, #63ccd4 100%)' },
+    interface ThemeOption {
+        id: Theme;
+        name: string;
+        color: string;
+        background?: string;
+    }
+
+    const THEME_GROUPS: { name: string; themes: ThemeOption[] }[] = [
+        {
+            name: 'Sailor Moon',
+            themes: [
+                { id: 'classic-uniform', name: 'Classic Uniform', color: '#1c3272' },
+                { id: 'cosmic-manicure', name: 'Cosmic Manicure', color: '#9024f2' },
+                { id: 'chibi-moon', name: 'Chibi Moon', color: '#ffb3e1' },
+                { id: 'transformation-ribbon', name: 'Transformation Ribbon', color: '#9d5ceb', background: 'linear-gradient(120deg, #b08dd9 0%, #63ccd4 100%)' },
+            ]
+        },
+        {
+            name: 'Terminal',
+            themes: [
+                { id: 'terminal-orange', name: 'Orange Terminal', color: '#ff8c00' },
+                { id: 'terminal-green', name: 'Green Terminal', color: '#00ff00' },
+            ]
+        },
+        {
+            name: 'Modern & Experimental',
+            themes: [
+                { id: 'pastel', name: 'Pastel Baseline', color: '#f08cb8' },
+                { id: 'neumorphism', name: 'Neumorphism', color: '#9baec8' },
+                { id: 'neobrutalism', name: 'Neobrutalism', color: '#ffde59' },
+                { id: 'honey-lemon', name: 'Honey Lemon', color: '#ffeb3b' },
+            ]
+        }
     ] as const;
 
-    const activeTheme = THEMES.find(t => t.id === theme) || THEMES[0];
-    const activeThemeColor = activeTheme.color;
-    const activeThemeBackground = ('background' in activeTheme ? activeTheme.background : null) || activeThemeColor;
-    const activeThemeName = activeTheme.name;
+    const ALL_THEMES = THEME_GROUPS.flatMap(g => g.themes);
+    const activeThemeObj = ALL_THEMES.find(t => t.id === theme) || ALL_THEMES[0];
+    const activeThemeColor = activeThemeObj.color;
+    const activeThemeBackground = ('background' in activeThemeObj ? activeThemeObj.background : null) || activeThemeColor;
+    const activeThemeName = activeThemeObj.name;
 
     const handleExport = () => {
         // Simple placeholder for export
@@ -93,6 +123,12 @@ export default function SettingsTab() {
 
     return (
         <div className="settings-tab fade-in">
+            <div className="page-header">
+                <div className="page-title-group">
+                    <div className="icon-wrapper bg-orange"><SettingsIcon size={20} /></div>
+                    <h1>{t('nav.settings')}</h1>
+                </div>
+            </div>
             {showDeleteModal && (
                 <div className="modal-overlay">
                     <div className="modal-content danger-modal">
@@ -130,6 +166,7 @@ export default function SettingsTab() {
                 </div>
             )}
 
+            <div className="settings-content">
             {/* ── Appearance ── */}
             <div className="settings-section settings-section-appearance settings-section-base">
                 <div className="settings-header">
@@ -141,16 +178,23 @@ export default function SettingsTab() {
                         <div className="card-select-theme-title" style={{ background: activeThemeBackground }}>
                             <p>Select the <strong>{activeThemeName}</strong></p>
                         </div>
-                        <div className="card-select-theme-colors">
-                            {THEMES.map((t) => (
-                                <button
-                                    key={t.id}
-                                    className={`theme-color-select ${theme === t.id ? 'active' : ''}`}
-                                    style={{ background: ('background' in t ? t.background : null) || t.color }}
-                                    onClick={() => setTheme(t.id as Theme)}
-                                    title={t.name}
-                                    aria-label={t.name}
-                                />
+                        <div className="card-select-theme-colors grouped-themes">
+                            {THEME_GROUPS.map((group) => (
+                                <div key={group.name} className="theme-group">
+                                    <h4 className="theme-group-title">{group.name}</h4>
+                                    <div className="theme-group-grid">
+                                        {group.themes.map((t) => (
+                                            <button
+                                                key={t.id}
+                                                className={`theme-color-select ${theme === t.id ? 'active' : ''}`}
+                                                style={{ background: t.background || t.color }}
+                                                onClick={() => setTheme(t.id)}
+                                                title={t.name}
+                                                aria-label={t.name}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -174,6 +218,22 @@ export default function SettingsTab() {
                                 { value: "sunday", label: t('settings.sunday') }
                             ]}
                         />
+                    </div>
+                    <div className="form-group" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--glass-border)' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                            <Power size={15} className="text-muted" />
+                            Launch at login
+                            <input
+                                type="checkbox"
+                                checked={autostartEnabled}
+                                onChange={async (e) => {
+                                    const val = e.target.checked;
+                                    setAutostartEnabled(val);
+                                    await setAutostart(val);
+                                }}
+                                style={{ marginLeft: 'auto', width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
+                            />
+                        </label>
                     </div>
                 </div>
 
@@ -337,6 +397,7 @@ export default function SettingsTab() {
                         {t('settings.delete_all_data')}
                     </button>
                 </div>
+            </div>
             </div>
         </div>
     );

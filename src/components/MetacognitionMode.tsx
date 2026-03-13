@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Wrench, Timer, Play } from 'lucide-react';
-import { saveMetacognitionLog } from '../lib/db';
+import { saveMetacognitionLog, getSubjects } from '../lib/db';
 import { formatSecondsMMSS } from '../lib/time';
+import { getAllChapters } from '../lib/chapters';
+import './MetacognitionMode.css';
 const STEPS = [
     { id: 1, label: 'Le Recul' },
     { id: 2, label: 'Priorités' },
@@ -36,6 +38,86 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
 
     // Step 5 fields
     const [redChapters, setRedChapters] = useState('');
+
+    // Mention autocomplete
+    const [allMentions, setAllMentions] = useState<string[]>([]);
+    const [mentionQuery, setMentionQuery] = useState('');
+    const [mentionStart, setMentionStart] = useState(0);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [dropdownVisible, setDropdownVisible] = useState(false);
+    const [selectedSuggestionIdx, setSelectedSuggestionIdx] = useState(0);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        async function loadMentions() {
+            const subjects = await getSubjects();
+            const chapters = getAllChapters();
+            const names = [
+                ...subjects.map(s => s.name),
+                ...chapters.map(c => c.name),
+            ];
+            setAllMentions([...new Set(names)]);
+        }
+        loadMentions();
+    }, []);
+
+    function handleRedChaptersChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+        const val = e.target.value;
+        const cursor = e.target.selectionStart ?? val.length;
+        setRedChapters(val);
+
+        const textBeforeCursor = val.slice(0, cursor);
+        const match = textBeforeCursor.match(/#([^\n]*)$/);
+        if (match) {
+            const query = match[1].toLowerCase();
+            const start = cursor - match[0].length;
+            setMentionStart(start);
+            setMentionQuery(match[1]);
+            const filtered = allMentions.filter(m => m.toLowerCase().includes(query));
+            setSuggestions(filtered.slice(0, 8));
+            setDropdownVisible(filtered.length > 0);
+            setSelectedSuggestionIdx(0);
+        } else {
+            setDropdownVisible(false);
+            setSuggestions([]);
+        }
+    }
+
+    function insertMention(name: string) {
+        const cursor = textareaRef.current?.selectionStart ?? (mentionStart + 1 + mentionQuery.length);
+        const before = redChapters.slice(0, mentionStart);
+        const after = redChapters.slice(cursor);
+        const newVal = before + name + after;
+        setRedChapters(newVal);
+        setDropdownVisible(false);
+        setSuggestions([]);
+        setTimeout(() => {
+            const ta = textareaRef.current;
+            if (ta) {
+                const pos = mentionStart + name.length;
+                ta.focus();
+                ta.setSelectionRange(pos, pos);
+            }
+        }, 0);
+    }
+
+    function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+        if (!dropdownVisible) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setSelectedSuggestionIdx(i => Math.min(i + 1, suggestions.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setSelectedSuggestionIdx(i => Math.max(i - 1, 0));
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (suggestions[selectedSuggestionIdx]) {
+                e.preventDefault();
+                insertMention(suggestions[selectedSuggestionIdx]);
+            }
+        } else if (e.key === 'Escape') {
+            setDropdownVisible(false);
+        }
+    }
 
     useEffect(() => {
         if (!timerStarted || timeLeft <= 0) return;
@@ -116,7 +198,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                         <Wrench size={28} />
                     </div>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700 }}>Pit Stop Métacognitif</h1>
+                        <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700 }}>Prise de recul Métacognitif</h1>
                         <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
                             Étudier comment tu étudies · 15 min
                         </p>
@@ -150,15 +232,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                     <button
                         key={s.id}
                         onClick={() => goToStep(s.id)}
-                        style={{
-                            flex: 1, maxWidth: '120px', padding: '10px 8px', borderRadius: '12px',
-                            border: step === s.id ? '2px solid var(--primary)' : '2px solid var(--glass-border)',
-                            background: step === s.id ? 'rgba(var(--primary-rgb), 0.12)' : 'var(--card-bg)',
-                            color: step === s.id ? 'var(--primary)' : 'var(--text-muted)',
-                            fontWeight: step === s.id ? 700 : 500, fontSize: '0.85rem',
-                            cursor: 'pointer', transition: 'all 0.2s ease',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
-                        }}
+                        className={`mc-step-pill${step === s.id ? ' active' : ''}`}
                     >
                         <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>Étape {s.id}</span>
                         <span>{s.label}</span>
@@ -176,12 +250,12 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                             <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🛑</div>
                             <h2 style={{ fontSize: '1.8rem', marginBottom: '16px' }}>Le Recul</h2>
                             <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '24px', lineHeight: 1.6, maxWidth: '500px', margin: '0 auto 24px auto' }}>
-                                C'est la fin de la semaine. Pas plus de travail aujourd'hui !<br />
+                                C'est la fin de la semaine. On stop tout un instant !<br />
                                 Prenons 15 minutes pour évaluer ton système et préparer la semaine prochaine.
                             </p>
                             <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: '12px', padding: '24px', marginBottom: '32px', lineHeight: 1.75, textAlign: 'left' }}>
                                 <p style={{ margin: 0 }}>
-                                    <strong>Instruction :</strong> Déconnecte-toi totalement de tes cours pendant 15 minutes. Ferme tes livres, tes notes, ton téléphone. Tu ne révises plus une matière ; <strong>tu analyses ton système.</strong>
+                                    <strong>Instruction :</strong> Déconnecte-toi totalement de tes cours pendant 15 minutes. Ferme tes livres, tes notes, ton téléphone. Tu ne révises plus de matière ; <strong>tu analyses ton système.</strong>
                                 </p>
                             </div>
                             {!timerStarted ? (
@@ -222,7 +296,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
 
                             <div className="form-group">
                                 <label style={{ fontWeight: 600, marginBottom: '16px', display: 'block' }}>Type d'évaluation attendu :</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+                                <div className="mc-exam-type-grid">
                                     {[
                                         { id: 'memorisation', icon: '🧠', label: 'Mémorisation Pure', desc: 'QCM, Dates, Vocabulaire' },
                                         { id: 'comprehension', icon: '💡', label: 'Compréhension', desc: 'Concepts, Liens logiques, Théorie' },
@@ -231,12 +305,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                                         <div
                                             key={type.id}
                                             onClick={() => setExamType(type.id as any)}
-                                            style={{
-                                                padding: '24px 16px', borderRadius: '16px', cursor: 'pointer',
-                                                border: examType === type.id ? '2px solid var(--primary)' : '2px solid transparent',
-                                                background: examType === type.id ? 'rgba(var(--primary-rgb), 0.08)' : 'var(--bg)',
-                                                transition: 'all 0.2s ease', textAlign: 'center'
-                                            }}
+                                            className={`mc-exam-type-card${examType === type.id ? ' active' : ''}`}
                                         >
                                             <div style={{ fontSize: '2.4rem', marginBottom: '12px' }}>{type.icon}</div>
                                             <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: '6px' }}>{type.label}</div>
@@ -334,14 +403,30 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                                 <label style={{ fontWeight: 600, marginBottom: '16px', display: 'block' }}>
                                     ✍️ Quels chapitres ou objectifs sont actuellement en "Rouge" (non maîtrisés) ?
                                 </label>
-                                <textarea
-                                    className="mc-input"
-                                    rows={8}
-                                    value={redChapters}
-                                    onChange={e => setRedChapters(e.target.value)}
-                                    placeholder="Liste tes zones de danger ici..."
-                                    style={{ resize: 'vertical', width: '100%', fontSize: '1rem', padding: '16px' }}
-                                />
+                                <div className="mc-mention-wrapper">
+                                    <textarea
+                                        ref={textareaRef}
+                                        className="mc-input mc-boussole-textarea"
+                                        rows={8}
+                                        value={redChapters}
+                                        onChange={handleRedChaptersChange}
+                                        onKeyDown={handleTextareaKeyDown}
+                                        placeholder="Liste tes zones de danger ici... (tape # pour mentionner une matière ou un chapitre)"
+                                    />
+                                    {dropdownVisible && suggestions.length > 0 && (
+                                        <div className="mc-mention-dropdown">
+                                            {suggestions.map((name, i) => (
+                                                <button
+                                                    key={name}
+                                                    className={`mc-mention-item${i === selectedSuggestionIdx ? ' mc-mention-item--active' : ''}`}
+                                                    onMouseDown={e => { e.preventDefault(); insertMention(name); }}
+                                                >
+                                                    {name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px' }}>

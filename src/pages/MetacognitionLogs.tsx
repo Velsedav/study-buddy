@@ -62,12 +62,13 @@ export default function MetacognitionLogs() {
     return (
         <div className="metacognition-logs-page fade-in">
             <div className="page-header metacognition-logs-header">
-                <h1 className="metacognition-logs-title">
-                    <div className="icon-wrapper bg-orange"><Wrench size={24} /></div>
-                    {t('nav.metacognition_logs')}
-                </h1>
+                <div className="page-title-group">
+                    <div className="icon-wrapper bg-orange"><Wrench size={20} /></div>
+                    <h1>{t('nav.metacognition_logs')}</h1>
+                </div>
             </div>
 
+            <div className="metacognition-logs-content">
             {logs.length === 0 ? (
                 <div className="glass metacognition-logs-empty">
                     <Wrench size={48} className="text-muted empty-wrench-icon" />
@@ -206,6 +207,7 @@ export default function MetacognitionLogs() {
                     )}
                 </>
             )}
+            </div>
         </div>
     );
 }

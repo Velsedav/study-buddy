@@ -4,6 +4,7 @@ import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { curriculum } from '../lib/learningContent';
 import type { Section, QuizOption } from '../lib/learningContent';
+import { isDevMode, isDevNavUnlocked } from '../lib/devMode';
 import './Learning.css';
 
 // ── Spaced Repetition Types & Constants ──
@@ -66,6 +67,7 @@ function isSectionDue(srsEntry: SRSEntry | undefined): boolean {
 }
 
 function isSectionLocked(srsEntry: SRSEntry | undefined): boolean {
+    if (isDevMode()) return false;
     if (!srsEntry?.lockedUntil) return false;
     return new Date().getTime() < new Date(srsEntry.lockedUntil).getTime();
 }
@@ -363,6 +365,11 @@ export default function LearningTab() {
     const [quizState, setQuizState] = useState<Record<number, Record<string, boolean>>>(loadQuizState);
     const [srsState, setSRSState] = useState<SRSState>(loadSRSState);
 
+    function handleDevReset() {
+        setSRSState({});
+        setQuizState({});
+    }
+
     useEffect(() => {
         localStorage.setItem('study-buddy-quiz-state', JSON.stringify(quizState));
     }, [quizState]);
@@ -400,9 +407,11 @@ export default function LearningTab() {
         const entry = srsState[section.id];
         if (isSectionLocked(entry)) return;
 
-        // Only clear quiz if the section is due AND it was previously completed.
-        // This ensures resuming a partially completed due section doesn't reset progress.
-        if (isSectionDue(entry) && entry?.lastCompleted) {
+        if (isDevMode()) {
+            clearSectionQuiz(section);
+        } else if (isSectionDue(entry) && entry?.lastCompleted) {
+            // Only clear quiz if the section is due AND it was previously completed.
+            // This ensures resuming a partially completed due section doesn't reset progress.
             const isPerfect = isSectionPerfect(section, quizState);
             if (isPerfect) clearSectionQuiz(section);
         }
@@ -742,11 +751,20 @@ export default function LearningTab() {
     return (
         <div className={`learning-tab ${animating ? 'fade-out' : 'fade-in'}`}>
             <div className="learning-tab-header">
-                <h1 className="learning-tab-title">
-                    <Sparkles className="icon-gold" size={32} />
-                    Learning Track
-                </h1>
+                <div className="page-title-group">
+                    <div className="icon-wrapper bg-accent"><Sparkles size={20} /></div>
+                    <h1 className="learning-tab-title">Learning Track</h1>
+                </div>
                 <p className="learning-tab-desc">Master the science of learning to study smarter, not harder.</p>
+                {isDevNavUnlocked() && (
+                    <button
+                        className="btn btn-secondary"
+                        style={{ marginTop: 8, fontSize: '0.8rem', background: '#ff444422', borderColor: '#ff4444', color: '#ff4444' }}
+                        onClick={handleDevReset}
+                    >
+                        🛠 DEV: Reset all lessons
+                    </button>
+                )}
             </div>
 
             <div className="learning-grid">

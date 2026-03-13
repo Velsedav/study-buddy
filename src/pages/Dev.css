@@ -1,0 +1,127 @@
+.dev-page {
+    padding-bottom: 40px;
+}
+
+.dev-content {
+    max-width: 640px;
+}
+
+
+.dev-section {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dev-section-title {
+    margin: 0 0 4px 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.dev-section-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* ── Toggle row ── */
+
+.dev-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dev-toggle-info {
+    flex: 1;
+}
+
+.dev-toggle-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.dev-toggle-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.dev-toggle-btn {
+    flex-shrink: 0;
+    min-width: 52px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 2px solid var(--glass-border);
+    background: var(--bg-color);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+}
+
+.dev-toggle-btn:hover {
+    background: rgba(var(--primary-rgb), 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.dev-toggle-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #000;
+}
+
+.dev-toggle-btn.active:hover {
+    background: var(--primary);
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+/* ── Muscle grid ── */
+
+.dev-category-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 12px 0 6px;
+}
+
+.dev-muscle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+}
+
+.dev-muscle-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    font-size: 0.85rem;
+    color: var(--text-dark);
+}
+
+.dev-muscle-chip.resting {
+    opacity: 0.45;
+}
+
+.dev-muscle-rest {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}

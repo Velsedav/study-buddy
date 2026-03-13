@@ -421,6 +421,10 @@
     min-height: auto;
 }
 
+.block-objective-input.empty {
+    animation: glow-rainbow 3s linear infinite;
+}
+
 .block-drop-prompt {
     color: var(--text-muted);
     font-style: italic;

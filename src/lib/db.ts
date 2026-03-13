@@ -269,4 +269,22 @@ export async function deleteAllData() {
     await db.execute(`DELETE FROM subjects`);
     await db.execute(`DELETE FROM quotes WHERE id NOT LIKE 'default_%'`);
     await db.execute(`DELETE FROM metacognition_logs`);
+
+    const keysToRemove = [
+        'study-buddy-technique-week',
+        'study-buddy-weekly-technique',
+        'study-buddy-srs-state',
+        'study-buddy-quiz-state',
+        'study-buddy-ignored-recs',
+        'study-buddy-metacognition-last',
+        'study-buddy-learned-techs',
+        'study-buddy-technique-link-date',
+        'study-buddy-workout-log',
+        'study-buddy-goal-dates',
+        'study-buddy-chapters',
+        'study-buddy-custom-prep',
+        'study-buddy-custom-break',
+        'activeSession',
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
 }

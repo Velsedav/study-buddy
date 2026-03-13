@@ -15,13 +15,36 @@ import Learning from './pages/Learning.tsx'
 import Analytics from './pages/Analytics.tsx'
 import Settings from './pages/Settings.tsx'
 import MetacognitionLogs from './pages/MetacognitionLogs.tsx'
+import DevPage from './pages/Dev.tsx'
 
-// Prevent Chrome/browser from zooming with CTRL + MouseWheel globally
+// CTRL+Scroll: scale font-size instead of applying zoom (which breaks layout)
+let rootFontScale = 1.0;
+
 document.addEventListener('wheel', (e) => {
   if (e.ctrlKey) {
     e.preventDefault();
+    const direction = e.deltaY < 0 ? 1 : -1;
+    rootFontScale = Math.max(0.7, Math.min(1.5, rootFontScale + direction * 0.05));
+    document.documentElement.style.fontSize = `${rootFontScale * 100}%`;
   }
 }, { passive: false });
+
+// CTRL+0: reset font scale to default
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === '0') {
+    e.preventDefault();
+    rootFontScale = 1.0;
+    document.documentElement.style.removeProperty('font-size');
+  }
+});
+
+// Strip any native WebView zoom property if it gets applied
+const clearNativeZoom = () => {
+  if (document.documentElement.style.zoom) document.documentElement.style.removeProperty('zoom');
+  if (document.body?.style.zoom) document.body.style.removeProperty('zoom');
+};
+new MutationObserver(clearNativeZoom).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+new MutationObserver(clearNativeZoom).observe(document.body, { attributes: true, attributeFilter: ['style'] });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -37,6 +60,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="analytics" element={<Analytics />} />
             <Route path="metacognition-logs" element={<MetacognitionLogs />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="dev" element={<DevPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

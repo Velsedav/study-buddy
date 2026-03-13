@@ -3,7 +3,7 @@ import { useCountUp } from '../lib/useCountUp';
 import { useSettings } from '../lib/settings';
 import { getSessions, getSubjects, getAllSessionBlocks } from '../lib/db';
 import type { Session, Subject, SessionBlock } from '../lib/db';
-import { Activity, Clock, Flame, Flag, PieChart as PieChartIcon, Zap } from 'lucide-react';
+import { Activity, Clock, Flame, Flag, PieChart as PieChartIcon, Zap, BarChart2 } from 'lucide-react';
 import { TECHNIQUES, getTierColor } from '../lib/techniques';
 import { getAllChapters } from '../lib/chapters';
 import type { Chapter } from '../lib/chapters';
@@ -210,6 +210,12 @@ export default function AnalyticsTab() {
 
     return (
         <div className="analytics-tab">
+            <div className="page-header">
+                <div className="page-title-group">
+                    <div className="icon-wrapper bg-green"><BarChart2 size={20} /></div>
+                    <h1>Analytics</h1>
+                </div>
+            </div>
             <div className="analytics-summary">
                 <div className="analytics-header">
                     <h3>This Week</h3>

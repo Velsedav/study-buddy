@@ -126,6 +126,11 @@
     overflow: hidden;
 }
 
+.stat-card.technique-unset {
+    overflow: visible;
+    animation: glow-rainbow 3s linear infinite;
+}
+
 .stat-icon {
     margin-bottom: 8px;
 }

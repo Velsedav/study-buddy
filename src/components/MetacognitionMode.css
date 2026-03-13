@@ -1,0 +1,110 @@
+/* ── Step navigation pills ── */
+
+.mc-step-pill {
+    flex: 1;
+    max-width: 120px;
+    padding: 10px 8px;
+    border-radius: 12px;
+    border: 2px solid var(--glass-border);
+    background: var(--card-bg);
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.mc-step-pill:hover:not(.active) {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.06);
+    transform: translateY(-1px);
+}
+
+.mc-step-pill.active {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* ── Exam type cards ── */
+
+.mc-exam-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.mc-exam-type-card {
+    padding: 24px 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background: transparent;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.mc-exam-type-card:hover:not(.active) {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.04);
+    transform: translateY(-2px);
+}
+
+.mc-exam-type-card.active {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+/* ── Mention autocomplete ── */
+
+.mc-mention-wrapper {
+    position: relative;
+}
+
+.mc-boussole-textarea {
+    resize: vertical;
+    width: 100%;
+    font-size: 1rem;
+    padding: 16px;
+}
+
+.mc-mention-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: var(--bg-color);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    margin-top: 4px;
+    overflow: hidden;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.mc-mention-item {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    text-align: left;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    transition: background 0.15s;
+}
+
+.mc-mention-item:hover,
+.mc-mention-item--active {
+    background: rgba(var(--primary-rgb), 0.12);
+    color: var(--primary);
+}

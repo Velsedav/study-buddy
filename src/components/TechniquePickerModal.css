@@ -1,0 +1,219 @@
+
+.tech-picker-modal {
+    max-width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.tech-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.tech-picker-header h2 {
+    margin: 0;
+}
+
+.tech-picker-close {
+    padding: 4px;
+}
+
+.tech-picker-scroll {
+    overflow-y: auto;
+    padding: 8px 12px 8px 8px;
+    flex: 1;
+}
+
+/* ── Tier group ── */
+
+.tech-tier-group {
+    margin-bottom: 24px;
+}
+
+.tech-tier-heading {
+    position: relative;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    color: var(--text-dark);
+}
+
+.tech-tier-underline {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--tier-color);
+}
+
+.tech-df-warning {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: rgba(var(--danger-rgb), 0.1);
+    border-left: 3px solid var(--danger);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-dark);
+}
+
+.tech-tier-techniques {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ── Technique card ── */
+
+.tech-card {
+    padding: 16px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    border-radius: var(--border-radius);
+}
+
+.tech-card.selected {
+    border-color: var(--primary);
+}
+
+.tech-card.recommended-technique {
+    animation: glow-rainbow 3s linear infinite;
+    border: 2px solid;
+}
+
+.tech-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.tech-card-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.tech-card-hint {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.tech-category-tag {
+    background: var(--category-color);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 0.3px;
+}
+
+/* ── Advantage pill ── */
+
+.tech-advantage-pill {
+    margin-top: 8px;
+    display: inline-block;
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+/* ── Learn button group ── */
+
+.tech-learn-btn-group {
+    margin-top: 8px;
+    display: inline-block;
+    margin-left: 8px;
+}
+
+.tech-link-tooltip-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* Learn more (first time, subject to daily limit) */
+.btn-learn-more {
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-learn-more.blocked {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Learnt more (already visited — styled like advantage pill) */
+.btn-learnt-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-learnt-more:hover {
+    background: rgba(34, 197, 94, 0.22);
+}
+
+/* Set as Technique of the Week */
+.btn-set-weekly {
+    padding: 3px 10px;
+    font-size: 0.75rem;
+}
+
+/* Already set as Technique of the Week */
+.btn-is-weekly {
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* Blocked tooltip */
+.tech-link-tooltip {
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text-dark);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 100;
+    max-width: 300px;
+    text-align: center;
+    line-height: 1.3;
+    box-shadow: var(--shadow-md);
+    pointer-events: none;
+}
+
+.tech-link-tooltip-arrow {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--text-dark);
+}

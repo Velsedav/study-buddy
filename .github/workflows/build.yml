@@ -48,6 +48,11 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
+      # macOS: install create-dmg for DMG bundling
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install create-dmg
+
       # Linux: install system dependencies
       - name: Install Linux dependencies
         if: runner.os == 'Linux'

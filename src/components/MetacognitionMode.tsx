@@ -165,6 +165,8 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
             focus_drop: focusDropValue,
             memorization_align: memorizationAlignValue,
             mechanical_fix: systemRule,
+            free_time_hours: null,
+            priority_subject_ids: null,
         });
 
         // Reset state

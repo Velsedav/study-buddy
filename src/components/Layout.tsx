@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Calendar, Sparkles, Pencil, Lightbulb, BarChart2, Settings as SettingsIcon, Wrench } from 'lucide-react';
+import { BookOpen, Calendar, Sparkles, Pencil, Lightbulb, BarChart2, Settings as SettingsIcon, Wrench, FlaskConical } from 'lucide-react';
 import { getQuotes, addQuote, saveSession, updateSubjectStats } from '../lib/db';
 import type { Quote } from '../lib/db';
 import QuoteEditorModal from './QuoteEditorModal';
@@ -8,8 +8,10 @@ import { useTranslation } from '../lib/i18n';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
+import { isDevNavUnlocked, toggleDevNav } from '../lib/devMode';
 
 const MASCOT_DEFAULT_QUOTE = "The exam is won at home, not on exam day 🏠";
+const DEV_NAV_CLICKS = 10;
 
 export default function Layout() {
     const location = useLocation();
@@ -23,8 +25,26 @@ export default function Layout() {
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [navWarningStep, setNavWarningStep] = useState<'none' | 'confirm-stop' | 'confirm-save'>('none');
     const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
+    const [devNavVisible, setDevNavVisible] = useState(isDevNavUnlocked);
+    const [mascotClickCount, setMascotClickCount] = useState(0);
+    const mascotClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [learningReviewDue, setLearningReviewDue] = useState(false);
 
-    const navItems = [
+    function handleMascotClick() {
+        const next = mascotClickCount + 1;
+        if (next >= DEV_NAV_CLICKS) {
+            const visible = toggleDevNav();
+            setDevNavVisible(visible);
+            setMascotClickCount(0);
+            if (mascotClickTimerRef.current) clearTimeout(mascotClickTimerRef.current);
+        } else {
+            setMascotClickCount(next);
+            if (mascotClickTimerRef.current) clearTimeout(mascotClickTimerRef.current);
+            mascotClickTimerRef.current = setTimeout(() => setMascotClickCount(0), 2000);
+        }
+    }
+
+    const baseNavItems = [
         { path: '/', label: t('nav.subjects'), icon: BookOpen },
         { path: '/plan', label: t('nav.planner'), icon: Calendar },
         { path: '/learning', label: t('nav.learning'), icon: Lightbulb },
@@ -32,6 +52,27 @@ export default function Layout() {
         { path: '/metacognition-logs', label: t('nav.metacognition_logs'), icon: Wrench },
         { path: '/settings', label: t('nav.settings'), icon: SettingsIcon },
     ];
+    const navItems = devNavVisible
+        ? [...baseNavItems, { path: '/dev', label: 'Dev', icon: FlaskConical }]
+        : baseNavItems;
+
+    useEffect(() => {
+        const check = () => {
+            try {
+                const raw = localStorage.getItem('study-buddy-srs-state');
+                if (!raw) return;
+                const srs = JSON.parse(raw);
+                const now = Date.now();
+                const due = Object.values(srs).some((e: any) =>
+                    e.level > 0 && !e.lockedUntil && new Date(e.nextReviewAt).getTime() <= now
+                );
+                setLearningReviewDue(due);
+            } catch { /* ignore */ }
+        };
+        check();
+        const id = setInterval(check, 60_000);
+        return () => clearInterval(id);
+    }, []);
 
     const loadQuotes = useCallback(async () => {
         try {
@@ -232,11 +273,15 @@ export default function Layout() {
                                 <Link
                                     to={item.path}
                                     className={`nav-link ${active ? 'active' : ''}`}
+                                    aria-current={active ? 'page' : undefined}
                                     onMouseEnter={() => playSFX('hover_sound', theme)}
                                     onClick={(e) => handleNavClick(e, item.path)}
                                 >
                                     <Icon size={20} />
                                     <span>{item.label}</span>
+                                    {item.path === '/learning' && learningReviewDue && (
+                                        <span className="nav-review-dot" aria-label="Review available" />
+                                    )}
                                 </Link>
                             </li>
                         );
@@ -272,7 +317,12 @@ export default function Layout() {
                                 <Pencil size={12} />
                             </button>
                         </div>
-                        <img src="/mascot.png" alt="Study Buddy Mascot" className="mascot-img" />
+                        <img
+                            src="/mascot.png"
+                            alt="Study Buddy Mascot"
+                            className="mascot-img"
+                            onClick={handleMascotClick}
+                        />
                     </div>
                 )}
             </nav>
@@ -292,10 +342,10 @@ export default function Layout() {
 
             {navWarningStep !== 'none' && (
                 <div className="modal-overlay" onClick={() => { setNavWarningStep('none'); setPendingNavPath(null); }}>
-                    <div className="modal-content confirm-modal-content" onClick={e => e.stopPropagation()}>
+                    <div className="modal-content confirm-modal-content" role="dialog" aria-modal="true" aria-labelledby="nav-confirm-title" onClick={e => e.stopPropagation()}>
                         {navWarningStep === 'confirm-stop' && (
                             <>
-                                <h2 className="confirm-modal-title">⏸️ Stop studying?</h2>
+                                <h2 id="nav-confirm-title" className="confirm-modal-title">⏸️ Stop studying?</h2>
                                 <p className="confirm-modal-text">
                                     Are you sure you want to end this session early?
                                 </p>

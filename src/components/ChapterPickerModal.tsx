@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useSettings } from '../lib/settings';
 import { getChaptersForSubject, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS, getRecommendations, type Recommendation } from '../lib/chapters';
 import { playSFX } from '../lib/sounds';
+import { useTranslation } from '../lib/i18n';
+import './ChapterPickerModal.css';
 
 interface ChapterPickerModalProps {
     subjectId: string;
@@ -12,7 +15,14 @@ interface ChapterPickerModalProps {
 
 export default function ChapterPickerModal({ subjectId, onClose, onSelect, currentSelection }: ChapterPickerModalProps) {
     const { theme } = useSettings();
+    const { t } = useTranslation();
     const chapters = getChaptersForSubject(subjectId).sort((a, b) => a.studyCount - b.studyCount);
+
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [onClose]);
 
     const recommendations = getRecommendations({});
     const ignoredRecs = (() => {
@@ -23,17 +33,23 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                    <h2 style={{ margin: 0 }}>Select a chapter</h2>
-                    <button className="btn btn-secondary" style={{ padding: '4px' }} onClick={onClose}>
+            <div
+                className="modal-content chapter-picker-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="chapter-picker-title"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="chapter-picker-header">
+                    <h2 id="chapter-picker-title">{t('chapter_picker.title')}</h2>
+                    <button className="btn-icon" aria-label={t('chapter_picker.close')} onClick={onClose}>
                         <X size={20} />
                     </button>
                 </div>
 
-                <div style={{ overflowY: 'auto', paddingRight: '12px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="chapter-picker-list">
                     {chapters.length === 0 ? (
-                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        <div className="chapter-picker-empty">
                             No chapters defined for this subject.
                         </div>
                     ) : (
@@ -44,57 +60,34 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                             return (
                                 <div
                                     key={ch.id}
-                                    className={`glass ${isSelected ? 'selected' : ''} ${isRecommended ? 'recommendation-highlight' : ''}`}
-                                    onClick={() => {
-                                        onSelect(ch.name);
-                                    }}
+                                    className={`glass chapter-picker-item${isSelected ? ' selected' : ''}${isRecommended ? ' recommendation-highlight recommended' : ''}${isSubChapter ? ' sub-chapter' : ''}`}
+                                    onClick={() => { onSelect(ch.name); }}
                                     onMouseEnter={() => playSFX('hover_sound', theme)}
-                                    style={{
-                                        padding: isSubChapter ? '10px 14px' : '16px',
-                                        cursor: 'pointer',
-                                        border: isSelected ? '2px solid var(--primary)' : (isRecommended ? '2px solid #8b5cf6' : '2px solid transparent'),
-                                        transition: 'all 0.2s ease',
-                                        borderRadius: 'var(--border-radius)',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '6px',
-                                        marginLeft: isSubChapter ? '24px' : '0',
-                                        borderLeft: isSubChapter ? (isRecommended ? '4px solid #8b5cf6' : '3px solid var(--glass-border)') : undefined,
-                                        position: 'relative'
-                                    }}
                                 >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                            <span style={{ fontWeight: isSubChapter ? 400 : 600, fontSize: isSubChapter ? '0.95rem' : '1.05rem' }}>{ch.name}</span>
+                                    <div className="chapter-picker-item-header">
+                                        <div className="chapter-picker-item-labels">
+                                            <span className={`chapter-picker-item-name${isSubChapter ? ' sub-chapter' : ''}`}>{ch.name}</span>
                                             {isRecommended && (
                                                 <span className="recommendation-badge">
                                                     ✨ Recommended
                                                 </span>
                                             )}
                                             {ch.focusType && (
-                                                <span style={{
-                                                    background: FOCUS_TYPE_COLORS[ch.focusType],
-                                                    color: '#fff',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '10px',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 'bold',
-                                                    letterSpacing: '0.3px',
-                                                }}>
+                                                <span
+                                                    className="chapter-picker-focus-badge"
+                                                    style={{ '--badge-bg': FOCUS_TYPE_COLORS[ch.focusType] } as React.CSSProperties}
+                                                >
                                                     {FOCUS_TYPE_LABELS[ch.focusType]}
                                                 </span>
                                             )}
                                         </div>
-                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                        <div className="chapter-picker-dots">
                                             {[0, 1, 2].map(i => (
-                                                <div key={i} style={{
-                                                    width: '10px', height: '10px', borderRadius: '50%',
-                                                    background: i < ch.studyCount ? 'var(--success)' : 'rgba(0,0,0,0.1)',
-                                                }} />
+                                                <div key={i} className={`chapter-picker-dot${i < ch.studyCount ? ' filled' : ''}`} />
                                             ))}
                                         </div>
                                     </div>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                    <div className="chapter-picker-study-count">
                                         Studied {ch.studyCount} {ch.studyCount === 1 ? 'time' : 'times'}
                                     </div>
                                 </div>

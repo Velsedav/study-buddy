@@ -3,7 +3,9 @@
 }
 
 .dev-content {
-    max-width: 640px;
+    max-width: 900px;
+    min-width: 700px;
+    margin: auto;
 }
 
 

@@ -83,7 +83,11 @@ jobs:
             - **macOS**: Download the `.dmg`, open it, and drag Study Buddy to Applications
             - **Linux**: Download the `.AppImage` (chmod +x, then run) or install the `.deb` with `sudo dpkg -i`
 
-            > ⚠️ **macOS**: If you see *"app is damaged and can't be opened"*, open Terminal and run: `xattr -cr /Applications/study-buddy.app` — then try again. This happens because the app isn't signed with an Apple Developer certificate.
+            > ⚠️ **macOS**: If you see *"app is damaged and can't be opened"*, open Terminal and run:
+            > ```
+            > xattr -cr /Applications/StudyB.app
+            > ```
+            > Then try again. This happens because the app isn't signed with an Apple Developer certificate.
           releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}

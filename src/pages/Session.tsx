@@ -6,8 +6,12 @@ import { TECHNIQUES } from '../lib/techniques';
 import { open as openExternal } from '@tauri-apps/plugin-shell';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
+import { useTranslation } from '../lib/i18n';
 import { METACOGNITION_QUESTIONS } from '../lib/metacognitionQuestions';
 import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
+import { isWorkoutMode } from '../lib/devMode';
+import { MUSCLE_GROUPS, CATEGORY_LABELS, loadWorkoutLog, markMuscleWorked, isMuscleEligible } from '../lib/workout';
+import type { WorkoutLog } from '../lib/workout';
 import './Session.css';
 
 interface PrepItem {
@@ -43,10 +47,10 @@ function saveCustomPrepItems(items: PrepItem[]) {
 }
 
 const BREAK_CHECKLIST: PrepItem[] = [
-    { emoji: '💧', label: 'Drink water' },
-    { emoji: '🚶', label: 'Walk around' },
-    { emoji: '🧘', label: 'Stretch' },
-    { emoji: '💪', label: 'Quick exercise' },
+    { emoji: '💧', label: "Boire de l'eau" },
+    { emoji: '🚶', label: 'Se lever et marcher' },
+    { emoji: '🧘', label: "S'étirer" },
+    { emoji: '💪', label: 'Exercice rapide' },
 ];
 
 const CUSTOM_BREAK_KEY = 'study-buddy-custom-break';
@@ -75,11 +79,13 @@ export default function Session() {
     const [customBreakItems, setCustomBreakItems] = useState<PrepItem[]>(loadCustomBreakItems);
     const allBreakItems = [...BREAK_CHECKLIST, ...customBreakItems];
     const [breakCheckedItems, setBreakCheckedItems] = useState<boolean[]>(allBreakItems.map(() => false));
+    const [workoutLog, setWorkoutLog] = useState<WorkoutLog>(loadWorkoutLog);
     const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'total-rest'>('none');
     const [restCountdown, setRestCountdown] = useState(600); // 10 minutes in seconds
     const [newCustomItem, setNewCustomItem] = useState('');
     const [newCustomBreakItem, setNewCustomBreakItem] = useState('');
     const { theme } = useSettings();
+    const { t } = useTranslation();
 
     useEffect(() => {
         const stored = localStorage.getItem('activeSession');
@@ -91,7 +97,7 @@ export default function Session() {
         }
     }, []);
 
-    // Sync remaining/paused back to localStorage 
+    // Sync remaining/paused back to localStorage
     useEffect(() => {
         if (!session) return;
         localStorage.setItem('activeSession', JSON.stringify({
@@ -152,7 +158,7 @@ export default function Session() {
         if (nextIdx >= session.draft.length) {
             handleSessionComplete();
         } else {
-            playSFX('10sec-cooldown', theme); // Sound for switching task into a block
+            playSFX('switch-task', theme);
             const newSession = {
                 ...session,
                 nowBlockIdx: nextIdx,
@@ -172,8 +178,8 @@ export default function Session() {
     useEffect(() => {
         if (endConfirmStep !== 'total-rest') return;
         if (restCountdown <= 0) return;
-        const t = setTimeout(() => setRestCountdown(r => r - 1), 1000);
-        return () => clearTimeout(t);
+        const timer = setTimeout(() => setRestCountdown(r => r - 1), 1000);
+        return () => clearTimeout(timer);
     }, [endConfirmStep, restCountdown]);
 
     async function finishSession(completedAll = false, saveProgress = true) {
@@ -250,9 +256,9 @@ export default function Session() {
     if (!session) {
         return (
             <div className="session-page session-page-container">
-                <h2>No Active Session</h2>
-                <p className="session-no-active-text">Draft a plan in the Planner to start studying!</p>
-                <Link to="/plan" className="btn btn-primary">Open Planner</Link>
+                <h2>{t('session.no_active')}</h2>
+                <p className="session-no-active-text">{t('session.draft_plan')}</p>
+                <Link to="/plan" className="btn btn-primary">{t('session.open_planner')}</Link>
             </div>
         );
     }
@@ -271,13 +277,13 @@ export default function Session() {
                     <div className="session-work-container">
                         {currentBlock.chapter_name && (
                             <div className="session-info-card">
-                                <div className="session-info-label">📖 Chapter</div>
+                                <div className="session-info-label">📖 {t('session.chapter')}</div>
                                 <div className="session-info-value">{currentBlock.chapter_name}</div>
                             </div>
                         )}
                         {currentBlock.objective && (
                             <div className="session-info-card">
-                                <div className="session-info-label">🎯 Objective</div>
+                                <div className="session-info-label">🎯 {t('session.objective')}</div>
                                 <div className="session-info-value">{currentBlock.objective}</div>
                             </div>
                         )}
@@ -287,13 +293,13 @@ export default function Session() {
                                 <div className="session-tech-hint">{tech.hint}</div>
                             </div>
                         ) : (
-                            <span className="session-focus-text">Focus time</span>
+                            <span className="session-focus-text">{t('session.focus_time')}</span>
                         )}
 
                         {/* Metacognition Reminder */}
                         {currentBlock.technique_id && METACOGNITION_QUESTIONS[currentBlock.technique_id] && (
                             <div className={`meta-check-card ${METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'F' || METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'D' ? 'warning' : 'normal'}`}>
-                                <div className="meta-check-label">🧠 Metacognition Check</div>
+                                <div className="meta-check-label">🧠 {t('session.meta_check')}</div>
                                 {METACOGNITION_QUESTIONS[currentBlock.technique_id].questions.map((q, qi) => (
                                     <div key={qi} className={`meta-check-question ${qi < METACOGNITION_QUESTIONS[currentBlock.technique_id].questions.length - 1 ? 'spaced' : ''}`}>
                                         {q}
@@ -306,7 +312,7 @@ export default function Session() {
 
                 {currentBlock.type === 'PREP' && (
                     <div className="prep-checklist-card">
-                        <div className="prep-checklist-title">✨ Checklist de préparation</div>
+                        <div className="prep-checklist-title">{t('session.prep_checklist')}</div>
                         {allPrepItems.map((item, idx) => (
                             <label
                                 key={idx}
@@ -351,7 +357,7 @@ export default function Session() {
                                             newChecked.splice(idx, 1);
                                             setCheckedItems(newChecked);
                                         }}
-                                        title="Remove custom item"
+                                        title={t('session.remove_item')}
                                     >
                                         ✕
                                     </button>
@@ -363,7 +369,7 @@ export default function Session() {
                         <div className="prep-custom-container">
                             <input
                                 type="text"
-                                placeholder="Add custom item..."
+                                placeholder={t('session.add_custom')}
                                 value={newCustomItem}
                                 onChange={e => setNewCustomItem(e.target.value)}
                                 onKeyDown={e => {
@@ -391,7 +397,7 @@ export default function Session() {
                                     }
                                 }}
                             >
-                                + Add
+                                {t('session.add')}
                             </button>
                         </div>
                     </div>
@@ -399,7 +405,7 @@ export default function Session() {
 
                 {currentBlock.type === 'BREAK' && (
                     <div className="break-checklist-card">
-                        <div className="break-checklist-title">☕ Break Checklist</div>
+                        <div className="break-checklist-title">{t('session.break_checklist')}</div>
                         {allBreakItems.map((item, idx) => (
                             <label
                                 key={idx}
@@ -443,7 +449,7 @@ export default function Session() {
                                             newChecked.splice(idx, 1);
                                             setBreakCheckedItems(newChecked);
                                         }}
-                                        title="Remove custom item"
+                                        title={t('session.remove_item')}
                                     >
                                         ✕
                                     </button>
@@ -453,7 +459,7 @@ export default function Session() {
                         <div className="prep-custom-container">
                             <input
                                 type="text"
-                                placeholder="Add custom item..."
+                                placeholder={t('session.add_custom')}
                                 value={newCustomBreakItem}
                                 onChange={e => setNewCustomBreakItem(e.target.value)}
                                 onKeyDown={e => {
@@ -481,11 +487,41 @@ export default function Session() {
                                     }
                                 }}
                             >
-                                + Add
+                                {t('session.add')}
                             </button>
                         </div>
                     </div>
                 )}
+
+                {currentBlock.type === 'BREAK' && isWorkoutMode() && (() => {
+                    const categories = (['upper', 'lower', 'core', 'stretch'] as const).map(cat => ({
+                        cat,
+                        muscles: MUSCLE_GROUPS.filter(m => m.category === cat && isMuscleEligible(m.id, workoutLog)),
+                    })).filter(g => g.muscles.length > 0);
+                    if (categories.length === 0) return null;
+                    return (
+                        <div className="workout-card">
+                            <div className="workout-card-title">💪 Musculation</div>
+                            {categories.map(({ cat, muscles }) => (
+                                <div key={cat} className="workout-section">
+                                    <div className="workout-section-label">{CATEGORY_LABELS[cat]}</div>
+                                    <div className="workout-muscle-list">
+                                        {muscles.map(m => (
+                                            <button
+                                                key={m.id}
+                                                className="workout-muscle-btn"
+                                                onClick={() => setWorkoutLog(markMuscleWorked(m.id, workoutLog))}
+                                            >
+                                                {m.emoji} {m.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                            <p className="workout-card-hint">Tape sur un muscle pour le marquer comme fait — il disparaîtra pendant 2 jours.</p>
+                        </div>
+                    );
+                })()}
 
                 <div className={`timer-display ${paused ? 'paused' : 'running'}`}>
                     {formatSecondsMMSS(remaining)}
@@ -494,21 +530,22 @@ export default function Session() {
                 <div className="session-controls">
                     <button
                         className={`btn pause-resume-btn ${paused ? 'btn-primary' : 'btn-secondary'}`}
-                        onClick={() => setPaused(!paused)}
+                        onClick={() => { playSFX('pause_theme', theme); setPaused(!paused); }}
                     >
-                        {paused ? 'Resume' : 'Pause'}
+                        {paused ? t('session.resume') : t('session.pause')}
                     </button>
-                    <button className="btn btn-secondary" onClick={() => handleBlockComplete()}>
-                        Skip Block
+                    <button className="btn btn-secondary" onClick={() => { playSFX('cancelling', theme); handleBlockComplete(); }}>
+                        {t('session.skip_block')}
                     </button>
                     <button
                         className="btn end-session-btn"
                         onClick={() => {
+                            playSFX('cancelling', theme);
                             setPaused(true);
                             setEndConfirmStep('confirm-stop');
                         }}
                     >
-                        End Session
+                        {t('session.end_session')}
                     </button>
                 </div>
             </div>
@@ -538,16 +575,16 @@ export default function Session() {
                     <div className="modal-content confirm-modal-content" onClick={e => e.stopPropagation()}>
                         {endConfirmStep === 'confirm-stop' && (
                             <>
-                                <h2 className="confirm-modal-title">⏸️ Stop studying?</h2>
+                                <h2 className="confirm-modal-title">{t('session.stop_title')}</h2>
                                 <p className="confirm-modal-text">
-                                    Are you sure you want to end this session early?
+                                    {t('session.stop_text')}
                                 </p>
                                 <div className="confirm-modal-actions">
                                     <button className="btn btn-primary" onClick={() => { setEndConfirmStep('none'); setPaused(false); }}>
-                                        Keep studying
+                                        {t('session.keep_studying')}
                                     </button>
                                     <button className="btn btn-secondary confirm-btn-danger" onClick={() => setEndConfirmStep('confirm-save')}>
-                                        Yes, stop
+                                        {t('session.yes_stop')}
                                     </button>
                                 </div>
                             </>
@@ -555,16 +592,16 @@ export default function Session() {
 
                         {endConfirmStep === 'confirm-save' && (
                             <>
-                                <h2 className="confirm-modal-title">💾 Save your progress?</h2>
+                                <h2 className="confirm-modal-title">{t('session.save_title')}</h2>
                                 <p className="confirm-modal-text">
-                                    Do you want to record the time you studied so far during this session?
+                                    {t('session.save_text')}
                                 </p>
                                 <div className="confirm-modal-actions">
                                     <button className="btn btn-primary" onClick={() => finishSession(false, true)}>
-                                        Save progress
+                                        {t('session.save_progress')}
                                     </button>
                                     <button className="btn btn-secondary" onClick={() => finishSession(false, false)}>
-                                        Discard
+                                        {t('session.discard')}
                                     </button>
                                 </div>
                             </>
@@ -572,9 +609,9 @@ export default function Session() {
 
                         {endConfirmStep === 'total-rest' && (
                             <div className="total-rest-container">
-                                <h2 className="total-rest-title">🛑 TOTAL REST!</h2>
+                                <h2 className="total-rest-title">{t('session.total_rest')}</h2>
                                 <p className="total-rest-subtitle">
-                                    Session Complete.
+                                    {t('session.session_complete')}
                                 </p>
 
                                 <img
@@ -584,9 +621,9 @@ export default function Session() {
                                 />
 
                                 <p className="total-rest-desc">
-                                    Recommendation: Lie down for 10 minutes.<br />
-                                    Do absolutely NOTHING right now. No phone, no scrolling, no planning.<br /><br />
-                                    Let your mind process what you just learned.
+                                    {t('session.rest_desc').split('\n').map((line, i) => (
+                                        <span key={i}>{line}{i < t('session.rest_desc').split('\n').length - 1 && <br />}</span>
+                                    ))}
                                 </p>
 
                                 {/* Countdown */}
@@ -596,7 +633,7 @@ export default function Session() {
 
                                 <div className="total-rest-actions">
                                     <button className="btn btn-primary btn-holographic total-rest-btn" onClick={() => finishSession(true, true)}>
-                                        {restCountdown === 0 ? '✓ I am rested. Close session.' : 'Skip rest & close'}
+                                        {restCountdown === 0 ? t('session.rested') : t('session.skip_rest')}
                                     </button>
                                 </div>
                             </div>

@@ -4,15 +4,17 @@ import { copyFile, mkdir, BaseDirectory, exists, readFile } from '@tauri-apps/pl
 import { createSubject, updateSubject } from '../lib/db';
 import type { Subject, Tag } from '../lib/db';
 import TagPicker from './TagPicker';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
+import { useTranslation } from '../lib/i18n';
 import {
     getChaptersForSubject, addChapter, deleteChapter,
     incrementStudyCount, updateChapterFocusType, updateChapterSpacing,
     getDefaultSpacing, parseSpacing,
     type Chapter, type FocusType, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS
 } from '../lib/chapters';
+import './SubjectEditorModal.css';
 
 interface SubjectEditorModalProps {
     onClose: () => void;
@@ -22,6 +24,7 @@ interface SubjectEditorModalProps {
 
 export default function SubjectEditorModal({ onClose, onSaved, editingSubject }: SubjectEditorModalProps) {
     const { theme } = useSettings();
+    const { t } = useTranslation();
     const isEditing = !!editingSubject;
     const [name, setName] = useState(editingSubject?.name ?? '');
     const [selectedTags, setSelectedTags] = useState<string[]>(
@@ -32,6 +35,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     const [deadline, setDeadline] = useState<string>(editingSubject?.deadline ?? '');
     const [result, setResult] = useState<string>(editingSubject?.result ?? '');
     const [archived, setArchived] = useState<boolean>(editingSubject?.archived ?? false);
+    const [coverExpanded, setCoverExpanded] = useState<boolean>(!!editingSubject?.cover_path);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     // Convert bytes to data URL (helper similar to Home.tsx)
@@ -54,9 +58,12 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     }, [coverPath]);
 
     // Chapter management
+    const [newSubjectId] = useState(() => crypto.randomUUID());
+    const effectiveSubjectId = editingSubject?.id ?? newSubjectId;
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [newChapterName, setNewChapterName] = useState('');
     const [editingSpacingId, setEditingSpacingId] = useState<string | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const chaptersPreview = useMemo(() => {
         const val = newChapterName.trim();
@@ -102,16 +109,14 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                 });
             }
         } else {
-            preview.push(val);
+            preview.push(`Chapt. ${existingMain + 1} ${val}`);
         }
         return preview;
     }, [newChapterName, chapters]);
 
     useEffect(() => {
-        if (editingSubject) {
-            setChapters(getChaptersForSubject(editingSubject.id));
-        }
-    }, [editingSubject]);
+        setChapters(getChaptersForSubject(effectiveSubjectId));
+    }, [effectiveSubjectId]);
 
     async function handlePickCover() {
         const selected = await open({
@@ -149,7 +154,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
             setCoverPath(newFileName);
         } catch (e) {
             console.error('Failed to save cover', e);
-            alert('Failed to save cover image.');
+            setSaveError(t('subject_editor.cover_save_error'));
         }
     }
 
@@ -165,6 +170,14 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
         }
     };
 
+    function handleClose() {
+        if (!isEditing) {
+            // Clean up any chapters added before saving
+            getChaptersForSubject(newSubjectId).forEach(c => deleteChapter(c.id));
+        }
+        onClose();
+    }
+
     async function handleSave() {
         if (!name.trim()) return;
         try {
@@ -172,7 +185,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                 await updateSubject(editingSubject!.id, name.trim(), coverPath, selectedTags, deadline || null, result || null, archived);
             } else {
                 const newSubj = {
-                    id: crypto.randomUUID(),
+                    id: newSubjectId,
                     name: name.trim(),
                     cover_path: coverPath,
                     pinned,
@@ -186,17 +199,17 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                 };
                 await createSubject(newSubj, selectedTags);
             }
+            playSFX('checklist_sound', theme);
             onSaved();
             onClose();
         } catch (e) {
             console.error(e);
-            alert('Failed to save subject.');
+            setSaveError(t('subject_editor.save_error'));
         }
     }
 
     // ── Chapter handlers ──
     const handleAddChapter = () => {
-        if (!editingSubject) return;
         const val = newChapterName.trim();
         if (!val) return;
 
@@ -206,7 +219,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
         if (!isNaN(parsed) && parsed.toString() === val && parsed > 0 && parsed <= 50) {
             const newChaps = [];
             for (let i = 1; i <= parsed; i++) {
-                newChaps.push(addChapter(editingSubject.id, `Chapt. ${existingMain + i}`));
+                newChaps.push(addChapter(effectiveSubjectId, `Chapt. ${existingMain + i}`));
             }
             setChapters([...chapters, ...newChaps]);
         } else if (val.includes('(')) {
@@ -235,15 +248,15 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
             let chapterNum = existingMain;
             for (const group of groups) {
                 chapterNum++;
-                newChaps.push(addChapter(editingSubject.id, `Chapt. ${chapterNum} ${group.name}`));
+                newChaps.push(addChapter(effectiveSubjectId, `Chapt. ${chapterNum} ${group.name}`));
                 group.subs.forEach((sub, idx) => {
                     const letter = idx < LETTERS.length ? LETTERS[idx] : `${idx + 1}`;
-                    newChaps.push(addChapter(editingSubject.id, `  ${letter}. ${sub}`));
+                    newChaps.push(addChapter(effectiveSubjectId, `  ${letter}. ${sub}`));
                 });
             }
             setChapters([...chapters, ...newChaps]);
         } else {
-            const ch = addChapter(editingSubject.id, val);
+            const ch = addChapter(effectiveSubjectId, `Chapt. ${existingMain + 1} ${val}`);
             setChapters([...chapters, ch]);
         }
         setNewChapterName('');
@@ -276,62 +289,54 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     };
 
     const handleStudyChapter = (id: string) => {
-        if (!editingSubject) return;
         incrementStudyCount(id);
-        setChapters(getChaptersForSubject(editingSubject.id));
+        setChapters(getChaptersForSubject(effectiveSubjectId));
         playSFX('checklist_sound', theme);
     };
 
     const handleFocusTypeChange = (id: string, focusType: FocusType) => {
-        if (!editingSubject) return;
         updateChapterFocusType(id, focusType);
-        setChapters(getChaptersForSubject(editingSubject.id));
+        setChapters(getChaptersForSubject(effectiveSubjectId));
     };
 
     const handleSpacingCommit = (id: string, val: string) => {
         const trimmed = val.trim();
         const parsed = parseSpacing(trimmed);
         updateChapterSpacing(id, parsed.length > 0 ? trimmed : null);
-        setChapters(getChaptersForSubject(editingSubject!.id));
+        setChapters(getChaptersForSubject(effectiveSubjectId));
         setEditingSpacingId(null);
     };
 
+    const mainChapterCount = chapters.filter(c => !/^\s+[A-Z]\./.test(c.name)).length;
+    const subChapterCount = chapters.filter(c => /^\s+[A-Z]\./.test(c.name)).length;
+
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay" onClick={handleClose}>
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="subject-editor-title"
+                className="subject-editor-panel"
                 onClick={e => e.stopPropagation()}
-                style={{
-                    position: 'fixed', top: 0, right: 0, bottom: 0,
-                    width: '520px', maxWidth: '90vw',
-                    background: 'var(--card-bg, #fff)',
-                    boxShadow: '-8px 0 32px rgba(0,0,0,0.2)',
-                    display: 'flex', flexDirection: 'column',
-                    animation: 'slideInRight 0.3s ease',
-                    zIndex: 1000,
-                    overflow: 'hidden',
-                }}
             >
                 {/* Header */}
-                <div style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '20px 24px', borderBottom: '1px solid var(--glass-border)',
-                }}>
-                    <h2 style={{ margin: 0, fontSize: '1.3rem' }}>{isEditing ? 'Edit Subject' : 'New Subject'}</h2>
-                    <button className="btn-icon" onClick={onClose} style={{ padding: '4px' }}>
+                <div className="subject-editor-header">
+                    <h2 id="subject-editor-title">{isEditing ? t('subject_editor.edit_title') : t('subject_editor.new_title')}</h2>
+                    <button className="btn-icon" onClick={handleClose}>
                         <X size={22} />
                     </button>
                 </div>
 
                 {/* Scrollable body */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+                <div className="subject-editor-body">
                     {/* ── Subject Details ── */}
                     <div className="form-group">
-                        <label>Name</label>
-                        <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Mathematics" autoFocus />
+                        <label>{t('subject_editor.name')}</label>
+                        <input value={name} onChange={e => setName(e.target.value)} placeholder={t('subject_editor.name_placeholder')} autoFocus />
                     </div>
 
                     <div className="form-group">
-                        <label>Tags</label>
+                        <label>{t('subject_editor.tags')}</label>
                         <TagPicker selectedTags={selectedTags} onChange={setSelectedTags} />
                     </div>
 
@@ -339,256 +344,214 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                         <div className="form-group">
                             <label className="checkbox-label">
                                 <input type="checkbox" checked={pinned} onChange={e => setPinned(e.target.checked)} />
-                                Pin this subject
+                                {t('subject_editor.pin')}
                             </label>
                         </div>
                     )}
 
                     <div className="form-group">
-                        <label>Deadline (Optional)</label>
+                        <label>{t('subject_editor.deadline')}</label>
                         <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
                     </div>
 
                     <div className="form-group">
-                        <label>Result / Grade (Optional)</label>
-                        <input type="text" value={result} onChange={e => setResult(e.target.value)} placeholder="e.g. 18/20, A+, Passed" />
+                        <label>{t('subject_editor.result')}</label>
+                        <input type="text" value={result} onChange={e => setResult(e.target.value)} placeholder={t('subject_editor.result_placeholder')} />
                     </div>
 
                     <div className="form-group">
                         <label className="checkbox-label">
                             <input type="checkbox" checked={archived} onChange={e => setArchived(e.target.checked)} />
-                            Archived
+                            {t('subject_editor.archived')}
                         </label>
                     </div>
 
                     {/* ── CHAPTERS SECTION ── */}
-                    {isEditing && (
-                        <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--glass-border)' }}>
-                            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem' }}>
-                                📖 Chapitres ({chapters.filter(c => /^Chapt\.\s*\d+/.test(c.name)).length}),
-                                Sous-chapitres ({chapters.filter(c => /^\s+[A-Z]\./.test(c.name)).length})
-                            </h3>
+                    <div className="chapters-section">
+                        <h3>
+                            {t('subject_editor.chapters_section')
+                                .replace('{main}', String(mainChapterCount))
+                                .replace('{sub}', String(subChapterCount))}
+                        </h3>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
-                                {chapters.map(ch => {
-                                    const isSubChapter = /^\s+[A-Z]\./.test(ch.name);
-                                    return (
-                                        <div key={ch.id} style={{
-                                            padding: '10px 12px', borderRadius: '10px',
-                                            background: isSubChapter ? 'rgba(0,0,0,0.02)' : 'rgba(0,0,0,0.04)',
-                                            marginLeft: isSubChapter ? '20px' : '0',
-                                            borderLeft: isSubChapter ? '2px solid var(--glass-border)' : 'none',
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{
-                                                    flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                                    fontWeight: isSubChapter ? 400 : 600, fontSize: isSubChapter ? '0.85rem' : '0.9rem'
-                                                }}>{ch.name}</span>
-                                                <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                                                    {ch.studyCount > 0 && (
-                                                        <span style={{ fontSize: '0.7rem', color: 'var(--success)', fontWeight: 700, marginRight: '2px' }}>
-                                                            ×{ch.studyCount}
-                                                        </span>
-                                                    )}
-                                                    {[0, 1, 2].map(i => (
-                                                        <div key={i} style={{
-                                                            width: '8px', height: '8px', borderRadius: '50%',
-                                                            background: i < Math.min(ch.studyCount, 3) ? 'var(--success)' : 'rgba(0,0,0,0.1)',
-                                                        }} />
-                                                    ))}
-                                                </div>
-                                                <button
-                                                    onClick={() => handleStudyChapter(ch.id)}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success)', fontSize: '0.75rem', fontWeight: 'bold', padding: '2px 4px' }}
-                                                    title="Mark as studied"
-                                                >+1</button>
-                                                <button
-                                                    onClick={() => handleDeleteChapter(ch.id)}
-                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '2px' }}
-                                                    title="Delete chapter"
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
-                                            </div>
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                                                {(['skill', 'comprehension', 'memorisation'] as const).map(ft => {
-                                                    const isActive = ch.focusType === ft;
-                                                    return (
-                                                        <button
-                                                            key={ft}
-                                                            onClick={() => handleFocusTypeChange(ch.id, isActive ? null : ft)}
-                                                            style={{
-                                                                background: isActive ? FOCUS_TYPE_COLORS[ft] : 'rgba(0,0,0,0.06)',
-                                                                color: isActive ? '#fff' : 'var(--text-muted)',
-                                                                border: 'none', borderRadius: '6px',
-                                                                padding: '2px 7px', fontSize: '0.7rem',
-                                                                fontWeight: isActive ? 700 : 500,
-                                                                cursor: 'pointer', transition: 'all 0.15s ease',
-                                                                whiteSpace: 'nowrap',
-                                                            }}
-                                                            title={FOCUS_TYPE_LABELS[ft]}
-                                                        >
-                                                            {FOCUS_TYPE_LABELS[ft]}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-                                                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>📅 Schedule:</span>
-                                                {editingSpacingId === ch.id ? (
-                                                    <input
-                                                        type="text"
-                                                        defaultValue={ch.spacingOverride || ''}
-                                                        placeholder={getDefaultSpacing()}
-                                                        autoFocus
-                                                        style={{ fontSize: '0.75rem', padding: '1px 5px', borderRadius: '4px', width: '110px' }}
-                                                        onBlur={e => handleSpacingCommit(ch.id, e.target.value)}
-                                                        onKeyDown={e => {
-                                                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                                                            if (e.key === 'Escape') setEditingSpacingId(null);
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <button
-                                                        onClick={() => setEditingSpacingId(ch.id)}
-                                                        style={{
-                                                            background: 'none', border: 'none', cursor: 'pointer', padding: '1px 5px',
-                                                            fontSize: '0.75rem', borderRadius: '4px',
-                                                            color: ch.spacingOverride ? 'var(--primary)' : 'var(--text-muted)',
-                                                            textDecoration: 'underline dotted',
-                                                        }}
-                                                        title="Click to set a custom review schedule for this chapter"
-                                                    >
-                                                        {ch.spacingOverride || 'Default'}
-                                                    </button>
+                        <div className="chapter-list">
+                            {chapters.map(ch => {
+                                const isSubChapter = /^\s+[A-Z]\./.test(ch.name);
+                                return (
+                                    <div key={ch.id} className={`chapter-item${isSubChapter ? ' sub-chapter' : ''}`}>
+                                        <div className="chapter-item-header">
+                                            <span className={`chapter-item-name${isSubChapter ? ' sub-chapter' : ''}`}>{ch.name}</span>
+                                            <div className="chapter-item-dots">
+                                                {ch.studyCount > 0 && (
+                                                    <span className="chapter-study-count-badge">
+                                                        ×{ch.studyCount}
+                                                    </span>
                                                 )}
+                                                {[0, 1, 2].map(i => (
+                                                    <div key={i} className={`chapter-dot${i < Math.min(ch.studyCount, 3) ? ' filled' : ''}`} />
+                                                ))}
                                             </div>
+                                            <button
+                                                onClick={() => handleStudyChapter(ch.id)}
+                                                className="chapter-study-btn"
+                                                title={t('subject_editor.mark_studied')}
+                                            >+1</button>
+                                            <button
+                                                onClick={() => handleDeleteChapter(ch.id)}
+                                                className="chapter-delete-btn"
+                                                title={t('subject_editor.delete_chapter')}
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
                                         </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Add chapter input */}
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                                <input
-                                    type="text"
-                                    placeholder="Topic (sub1, sub2), Topic2... or # for bulk"
-                                    value={newChapterName}
-                                    onChange={e => setNewChapterName(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') handleAddChapter(); }}
-                                    style={{ flex: 1, padding: '6px 10px', fontSize: '0.85rem', borderRadius: '8px' }}
-                                />
-                                <button
-                                    onClick={handleAddChapter}
-                                    style={{
-                                        background: 'var(--primary)', color: '#fff', border: 'none',
-                                        borderRadius: '8px', cursor: 'pointer', padding: '6px 10px',
-                                        display: 'flex', alignItems: 'center',
-                                    }}
-                                >
-                                    <Plus size={16} />
-                                </button>
-                            </div>
-
-                            {/* Chapter Preview */}
-                            {chaptersPreview.length > 0 && (
-                                <div style={{
-                                    marginTop: '8px',
-                                    padding: '12px',
-                                    background: 'rgba(var(--primary-rgb), 0.05)',
-                                    borderRadius: '12px',
-                                    border: '1px solid rgba(var(--primary-rgb), 0.1)',
-                                    animation: 'fadeIn 0.2s ease-out'
-                                }}>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Aperçu des nouveaux chapitres :
+                                        <div className="chapter-focus-types">
+                                            {(['skill', 'comprehension', 'memorisation'] as const).map(ft => {
+                                                const isActive = ch.focusType === ft;
+                                                return (
+                                                    <button
+                                                        key={ft}
+                                                        onClick={() => handleFocusTypeChange(ch.id, isActive ? null : ft)}
+                                                        className={`chapter-focus-btn${isActive ? ' active' : ''}`}
+                                                        style={{ '--focus-color': FOCUS_TYPE_COLORS[ft] } as React.CSSProperties}
+                                                        title={FOCUS_TYPE_LABELS[ft]}
+                                                    >
+                                                        {FOCUS_TYPE_LABELS[ft]}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="chapter-spacing-row">
+                                            <span className="chapter-spacing-label">{t('subject_editor.schedule')}</span>
+                                            {editingSpacingId === ch.id ? (
+                                                <input
+                                                    type="text"
+                                                    defaultValue={ch.spacingOverride || ''}
+                                                    placeholder={getDefaultSpacing()}
+                                                    autoFocus
+                                                    className="chapter-spacing-input"
+                                                    onBlur={e => handleSpacingCommit(ch.id, e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                                        if (e.key === 'Escape') setEditingSpacingId(null);
+                                                    }}
+                                                />
+                                            ) : (
+                                                <button
+                                                    onClick={() => setEditingSpacingId(ch.id)}
+                                                    className={`chapter-spacing-btn${ch.spacingOverride ? ' has-override' : ''}`}
+                                                    title={t('subject_editor.chapter_spacing_hint')}
+                                                >
+                                                    {ch.spacingOverride || t('subject_editor.chapter_default')}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                        {chaptersPreview.map((p, i) => (
-                                            <div key={i} style={{
-                                                fontSize: '0.8rem',
-                                                color: 'var(--text-dark)',
-                                                paddingLeft: p.startsWith('  ') ? '12px' : '0',
-                                                opacity: 0.8
-                                            }}>
-                                                {p}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                                );
+                            })}
                         </div>
-                    )}
+
+                        {/* Add chapter input */}
+                        <div className="chapter-add-row">
+                            <input
+                                type="text"
+                                placeholder={t('subject_editor.chapter_input_placeholder')}
+                                value={newChapterName}
+                                onChange={e => setNewChapterName(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleAddChapter(); }}
+                                aria-describedby="chapter-input-help"
+                            />
+                            <button
+                                onClick={handleAddChapter}
+                                className="chapter-add-btn"
+                            >
+                                <Plus size={16} />
+                            </button>
+                        </div>
+                        <p id="chapter-input-help" className="chapter-input-help">
+                            {t('subject_editor.chapter_help')}
+                        </p>
+
+                        {/* Chapter Preview */}
+                        {chaptersPreview.length > 0 && (
+                            <div className="chapter-preview">
+                                <div className="chapter-preview-label">
+                                    {t('subject_editor.chapter_preview_label')}
+                                </div>
+                                <div className="chapter-preview-list">
+                                    {chaptersPreview.map((p, i) => (
+                                        <div key={i} className={`chapter-preview-item${p.startsWith('  ') ? ' sub-chapter' : ''}`}>
+                                            {p}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* ── COVER IMAGE SECTION ── */}
-                    <div className="form-group" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--glass-border)' }}>
-                        <label style={{ display: 'block', marginBottom: '12px', fontWeight: 600 }}>Cover Image</label>
+                    <div className="form-group cover-section">
+                        <button
+                            type="button"
+                            onClick={() => setCoverExpanded(v => !v)}
+                            className={`cover-toggle-btn${coverExpanded ? ' expanded' : ''}`}
+                        >
+                            {coverExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            {t('subject_editor.cover_image')}
+                        </button>
+                        {coverExpanded && <>
                         <div
-                            className="paste-frame"
+                            className="paste-frame cover-paste-frame"
                             tabIndex={0}
                             onPaste={handlePaste}
                             onClick={(e) => {
-                                // Default click to pick cover if empty, otherwise just focus
                                 if (!coverPath) handlePickCover();
                                 else (e.currentTarget as HTMLElement).focus();
                             }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Delete' || e.key === 'Backspace') setCoverPath(null);
                             }}
-                            style={{
-                                width: '100%',
-                                height: '200px',
-                                borderRadius: '16px',
-                                border: '2px dashed var(--primary)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                overflow: 'hidden',
-                                position: 'relative',
-                                background: 'rgba(var(--primary-rgb), 0.03)',
-                                outline: 'none',
-                                boxShadow: 'inset 0 0 12px rgba(0,0,0,0.02)'
-                            }}
                         >
                             {previewUrl ? (
                                 <>
-                                    <img src={previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Cover preview" />
-                                    <div style={{
-                                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)',
-                                        opacity: 0, transition: 'opacity 0.2s', display: 'flex',
-                                        alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.9rem'
-                                    }} className="hover-overlay">
-                                        Click to change or Paste to replace
+                                    <img src={previewUrl} className="cover-frame-img" alt="Cover preview" />
+                                    <div className="cover-hover-overlay">
+                                        {t('subject_editor.cover_change_hint')}
                                     </div>
                                 </>
                             ) : (
-                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
-                                    <Plus size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
-                                    <div style={{ fontWeight: 500 }}>Click to choose or Paste image</div>
-                                    <div style={{ fontSize: '0.75rem', marginTop: '4px' }}>Supports shortcuts & right-click paste</div>
+                                <div className="cover-empty-placeholder">
+                                    <Plus size={32} className="cover-empty-placeholder-icon" />
+                                    <div className="cover-empty-placeholder-text">{t('subject_editor.cover_choose')}</div>
+                                    <div className="cover-paste-hint">
+                                        <span className="cover-hint-word cover-hint-middle">{t('subject_editor.cover_middle_click')}</span>
+                                        <span className="cover-hint-sep">{t('subject_editor.cover_then')}</span>
+                                        <span className="cover-hint-word cover-hint-paste">{t('subject_editor.cover_paste')}</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
                         {coverPath && (
-                            <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
-                                <button className="btn btn-secondary" onClick={() => setCoverPath(null)} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-                                    Remove Image
+                            <div className="cover-remove-row">
+                                <button className="btn btn-secondary cover-remove-btn" onClick={() => setCoverPath(null)}>
+                                    {t('subject_editor.remove_image')}
                                 </button>
                             </div>
                         )}
+                        </>}
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div style={{
-                    padding: '16px 24px', borderTop: '1px solid var(--glass-border)',
-                    display: 'flex', justifyContent: 'flex-end', gap: '8px',
-                }}>
-                    <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                    <button className="btn btn-primary" onClick={handleSave}>{isEditing ? 'Update' : 'Save'}</button>
+                <div className="subject-editor-footer">
+                    {saveError && (
+                        <p role="alert" className="subject-editor-error">
+                            {saveError}
+                        </p>
+                    )}
+                    <div className="subject-editor-footer-actions">
+                        <button className="btn btn-secondary" onClick={handleClose}>{t('subject_editor.cancel')}</button>
+                        <button className="btn btn-primary" onClick={handleSave}>{isEditing ? t('subject_editor.save') : t('subject_editor.create')}</button>
+                    </div>
                 </div>
             </div>
         </div>

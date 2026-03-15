@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCountUp } from '../lib/useCountUp';
 import { useSettings } from '../lib/settings';
-import { getSessions, getSubjects, getAllSessionBlocks } from '../lib/db';
-import type { Session, Subject, SessionBlock } from '../lib/db';
-import { Activity, Clock, Flame, Flag, PieChart as PieChartIcon, Zap, BarChart2 } from 'lucide-react';
+import { useTranslation } from '../lib/i18n';
+import { getSessions, getSubjects, getAllSessionBlocks, getMetacognitionLogs } from '../lib/db';
+import type { Session, Subject, SessionBlock, MetacognitionLog } from '../lib/db';
+import { Activity, Clock, Flame, Flag, PieChart as PieChartIcon, Zap, BarChart2, Target } from 'lucide-react';
 import { TECHNIQUES, getTierColor } from '../lib/techniques';
 import { getAllChapters } from '../lib/chapters';
 import type { Chapter } from '../lib/chapters';
@@ -25,12 +26,22 @@ function getStartOfWeek(date: Date, weekStart: 'monday' | 'sunday') {
     return new Date(d.setDate(diff));
 }
 
+function getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
 export default function AnalyticsTab() {
     const { weekStart } = useSettings();
+    const { t } = useTranslation();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [blocks, setBlocks] = useState<SessionBlock[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [allChapters, setAllChapters] = useState<Chapter[]>([]);
+    const [metacogLogs, setMetacogLogs] = useState<MetacognitionLog[]>([]);
     const [hoveredBarIdx, setHoveredBarIdx] = useState<number | null>(null);
     const [timelineFilter, setTimelineFilter] = useState<number>(1);
 
@@ -47,6 +58,9 @@ export default function AnalyticsTab() {
                 setSubjects(subs);
 
                 setAllChapters(getAllChapters());
+
+                const logs = await getMetacognitionLogs();
+                setMetacogLogs(logs);
             } catch (e) {
                 console.error("Failed to load analytics data", e);
             }
@@ -116,11 +130,125 @@ export default function AnalyticsTab() {
         return { current, best: Math.max(current, best) };
     }, [sessions]);
 
+    const monthlyStats = useMemo(() => {
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        let monthMinutes = 0;
+        let monthSessionsCount = 0;
+        const monthDaysActive = new Set<string>();
+
+        sessions.forEach(s => {
+            const sd = new Date(s.started_at);
+            if (sd >= startOfMonth) {
+                monthMinutes += s.actual_minutes;
+                monthSessionsCount++;
+                monthDaysActive.add(toLocalDateStr(sd));
+            }
+        });
+
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+        return {
+            minutes: monthMinutes,
+            count: monthSessionsCount,
+            days: monthDaysActive.size,
+            daysInMonth,
+        };
+    }, [sessions]);
+
+    const totalStats = useMemo(() => {
+        const totalDays = new Set(sessions.filter(s => s.actual_minutes > 0).map(s => toLocalDateStr(new Date(s.started_at)))).size;
+        return {
+            minutes: sessions.reduce((sum, s) => sum + (s.actual_minutes || 0), 0),
+            count: sessions.length,
+            days: totalDays,
+        };
+    }, [sessions]);
+
+    const weekFreeTimePercent = useMemo((): number | null => {
+        const today = new Date();
+        const wkStart = getWeekStart(today);
+        const weekEnd = new Date(wkStart);
+        weekEnd.setDate(wkStart.getDate() + 7);
+
+        const weekSessions = sessions.filter(s => {
+            const sd = new Date(s.started_at);
+            return sd >= wkStart && sd < weekEnd;
+        });
+        const weekStudyMinutes = weekSessions.reduce((sum, s) => sum + (s.actual_minutes || 0), 0);
+
+        const logsThisWeek = metacogLogs.filter(log => {
+            const ld = new Date(log.created_at);
+            return ld >= wkStart && ld < weekEnd && (log.free_time_hours ?? 0) > 0;
+        });
+        if (logsThisWeek.length === 0) return null;
+
+        const mostRecent = logsThisWeek[0];
+        return Math.round((weekStudyMinutes / 60) / mostRecent.free_time_hours! * 100);
+    }, [sessions, metacogLogs]);
+
+    const monthFreeTimePercent = useMemo((): number | null => {
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+        const logsThisMonth = metacogLogs.filter(log => {
+            const ld = new Date(log.created_at);
+            return ld >= startOfMonth && ld < endOfMonth && (log.free_time_hours ?? 0) > 0;
+        });
+        if (logsThisMonth.length === 0) return null;
+
+        const percentages = logsThisMonth.map(log => {
+            const logWeekStart = getWeekStart(new Date(log.created_at));
+            const logWeekEnd = new Date(logWeekStart);
+            logWeekEnd.setDate(logWeekStart.getDate() + 7);
+            const weekStudyMinutes = sessions
+                .filter(s => {
+                    const sd = new Date(s.started_at);
+                    return sd >= logWeekStart && sd < logWeekEnd;
+                })
+                .reduce((sum, s) => sum + (s.actual_minutes || 0), 0);
+            return (weekStudyMinutes / 60) / log.free_time_hours! * 100;
+        });
+        return Math.round(percentages.reduce((a, b) => a + b, 0) / percentages.length);
+    }, [sessions, metacogLogs]);
+
+    const totalFreeTimePercent = useMemo((): number | null => {
+        const logsWithFreeTime = metacogLogs.filter(log => (log.free_time_hours ?? 0) > 0);
+        if (logsWithFreeTime.length === 0) return null;
+
+        const percentages = logsWithFreeTime.map(log => {
+            const logWeekStart = getWeekStart(new Date(log.created_at));
+            const logWeekEnd = new Date(logWeekStart);
+            logWeekEnd.setDate(logWeekStart.getDate() + 7);
+            const weekStudyMinutes = sessions
+                .filter(s => {
+                    const sd = new Date(s.started_at);
+                    return sd >= logWeekStart && sd < logWeekEnd;
+                })
+                .reduce((sum, s) => sum + (s.actual_minutes || 0), 0);
+            return (weekStudyMinutes / 60) / log.free_time_hours! * 100;
+        });
+        return Math.round(percentages.reduce((a, b) => a + b, 0) / percentages.length);
+    }, [sessions, metacogLogs]);
+
     const animMinutes = useCountUp(weeklyStats.minutes);
     const animCount = useCountUp(weeklyStats.count);
     const animDays = useCountUp(weeklyStats.days);
     const animCurrentStreak = useCountUp(streaks.current);
     const animBestStreak = useCountUp(streaks.best);
+    const animMonthMinutes = useCountUp(monthlyStats.minutes);
+    const animMonthCount = useCountUp(monthlyStats.count);
+    const animMonthDays = useCountUp(monthlyStats.days);
+    const animTotalMinutes = useCountUp(totalStats.minutes);
+    const animTotalCount = useCountUp(totalStats.count);
+    const animTotalDays = useCountUp(totalStats.days);
+    const animWeekFreeTime = useCountUp(weekFreeTimePercent ?? 0);
+    const animMonthFreeTime = useCountUp(monthFreeTimePercent ?? 0);
+    const animTotalFreeTime = useCountUp(totalFreeTimePercent ?? 0);
 
     const pieChart = useMemo(() => {
         const tierMap: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
@@ -208,50 +336,139 @@ export default function AnalyticsTab() {
         return { data, maxMins, studiedDays, totalPeriodMinutes };
     }, [sessions, timelineFilter]);
 
+    // Build dropdown options for timeline filter
+    const timelineOptions = [
+        { value: 0.25, label: t('analytics.last_week') },
+        { value: 0.5, label: t('analytics.last_2_weeks') },
+        { value: 1, label: t('analytics.last_month') },
+        ...([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => ({
+            value: n,
+            label: t('analytics.last_n_months').replace('{n}', String(n))
+        })))
+    ];
+
     return (
-        <div className="analytics-tab">
+        <div className="analytics-tab fade-in">
             <div className="page-header">
                 <div className="page-title-group">
                     <div className="icon-wrapper bg-green"><BarChart2 size={20} /></div>
-                    <h1>Analytics</h1>
+                    <h1>{t('analytics.title')}</h1>
                 </div>
             </div>
+            <div className="analytics-summaries-row">
             <div className="analytics-summary">
                 <div className="analytics-header">
-                    <h3>This Week</h3>
+                    <h3>{t('analytics.this_week')}</h3>
                 </div>
 
                 <div className="stats-grid">
                     <div className="stat-card">
                         <Clock className="stat-icon" size={20} />
                         <div className="stat-val">{formatTime(animMinutes)}</div>
-                        <div className="stat-label">Focus Time</div>
+                        <div className="stat-label">{t('analytics.focus_time')}</div>
                     </div>
 
                     <div className="stat-card">
                         <Activity className="stat-icon" size={20} />
                         <div className="stat-val">{animCount}</div>
-                        <div className="stat-label">Sessions</div>
+                        <div className="stat-label">{t('analytics.sessions')}</div>
                     </div>
 
                     <div className="stat-card">
                         <Flame className="stat-icon danger-text" size={20} />
                         <div className="stat-val">{animDays} / 7</div>
-                        <div className="stat-label">Active Days</div>
+                        <div className="stat-label">{t('analytics.active_days')}</div>
                     </div>
 
                     <div className="stat-card">
                         <Zap className="stat-icon" size={20} style={{ color: 'var(--accent)' }} />
-                        <div className="stat-val">{animCurrentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
-                        <div className="stat-label">Current Streak</div>
+                        <div className="stat-val">{animCurrentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>{t('analytics.days')}</span></div>
+                        <div className="stat-label">{t('analytics.current_streak')}</div>
                     </div>
 
                     <div className="stat-card">
                         <Flag className="stat-icon" size={20} style={{ color: 'var(--success)' }} />
-                        <div className="stat-val">{animBestStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>days</span></div>
-                        <div className="stat-label">Best Streak</div>
+                        <div className="stat-val">{animBestStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>{t('analytics.days')}</span></div>
+                        <div className="stat-label">{t('analytics.best_streak')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Target size={20} className="stat-icon" />
+                        <div className="stat-value">{weekFreeTimePercent !== null ? `${animWeekFreeTime}%` : '—'}</div>
+                        <div className="stat-label">{t('analytics.free_time_used')}</div>
                     </div>
                 </div>
+            </div>
+
+            <div className="analytics-summary">
+                <div className="analytics-header">
+                    <h3>{t('analytics.this_month')}</h3>
+                </div>
+
+                <div className="stats-grid">
+                    <div className="stat-card">
+                        <Clock className="stat-icon" size={20} />
+                        <div className="stat-val">{formatTime(animMonthMinutes)}</div>
+                        <div className="stat-label">{t('analytics.focus_time')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Activity className="stat-icon" size={20} />
+                        <div className="stat-val">{animMonthCount}</div>
+                        <div className="stat-label">{t('analytics.sessions')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Flame className="stat-icon danger-text" size={20} />
+                        <div className="stat-val">{animMonthDays} / {monthlyStats.daysInMonth}</div>
+                        <div className="stat-label">{t('analytics.active_days')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Target size={20} className="stat-icon" />
+                        <div className="stat-value">{monthFreeTimePercent !== null ? `${animMonthFreeTime}%` : '—'}</div>
+                        <div className="stat-label">{t('analytics.free_time_used')}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="analytics-summary">
+                <div className="analytics-header">
+                    <h3>{t('analytics.total')}</h3>
+                </div>
+
+                <div className="stats-grid">
+                    <div className="stat-card">
+                        <Clock className="stat-icon" size={20} />
+                        <div className="stat-val">{formatTime(animTotalMinutes)}</div>
+                        <div className="stat-label">{t('analytics.focus_time')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Activity className="stat-icon" size={20} />
+                        <div className="stat-val">{animTotalCount}</div>
+                        <div className="stat-label">{t('analytics.sessions')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Flame className="stat-icon danger-text" size={20} />
+                        <div className="stat-val">{animTotalDays}</div>
+                        <div className="stat-label">{t('analytics.active_days')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Flag className="stat-icon" size={20} style={{ color: 'var(--success)' }} />
+                        <div className="stat-val">{animBestStreak} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('analytics.days')}</span></div>
+                        <div className="stat-label">{t('analytics.best_streak')}</div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Target size={20} className="stat-icon" />
+                        <div className="stat-value">{totalFreeTimePercent !== null ? `${animTotalFreeTime}%` : '—'}</div>
+                        <div className="stat-label">{t('analytics.free_time_used')}</div>
+                    </div>
+                </div>
+            </div>
             </div>
 
             <div className="analytics-panels">
@@ -266,11 +483,11 @@ export default function AnalyticsTab() {
                 {/* ── Technique Pie Chart ── */}
                 <div className="glass pie-chart-panel">
                     <h3 className="panel-header">
-                        <PieChartIcon size={18} /> Technique Tiers
+                        <PieChartIcon size={18} /> {t('analytics.technique_tiers')}
                     </h3>
 
                     {pieChart.total === 0 ? (
-                        <p className="empty-state-text">No techniques logged yet.</p>
+                        <p className="empty-state-text">{t('analytics.no_techniques')}</p>
                     ) : (
                         <div className="pie-chart-container">
                             <div className="pie-chart-circle" style={{
@@ -284,7 +501,7 @@ export default function AnalyticsTab() {
                             }}>
                                 <div className="pie-chart-center">
                                     {pieChart.data[0]?.tier}
-                                    <span className="pie-chart-center-sub">Top Tier</span>
+                                    <span className="pie-chart-center-sub">{t('analytics.top_tier')}</span>
                                 </div>
                             </div>
 
@@ -293,7 +510,7 @@ export default function AnalyticsTab() {
                                     <div key={slice.tier} className="pie-chart-legend-item">
                                         <div className="legend-item-left">
                                             <div className="legend-item-color" style={{ background: slice.color.startsWith('linear-gradient') ? slice.color.split(',')[1].trim() : slice.color }}></div>
-                                            <span className="legend-item-label">Tier {slice.tier}</span>
+                                            <span className="legend-item-label">{t('analytics.tier')} {slice.tier}</span>
                                         </div>
                                         <div className="legend-item-right">
                                             {slice.pct}% <span className="legend-item-mins">({Math.round(slice.mins)}m)</span>
@@ -304,7 +521,7 @@ export default function AnalyticsTab() {
 
                             {pieChart.dfRatio >= 30 && (
                                 <div className="pie-chart-warning">
-                                    <strong>Warning:</strong> {pieChart.dfRatio}% of your study time is spent on highly inefficient D/F techniques. Focus on Active Recall (S/A tier).
+                                    <strong>Warning:</strong> {t('analytics.pie_warning').replace('{pct}', String(pieChart.dfRatio))}
                                 </div>
                             )}
                         </div>
@@ -316,31 +533,22 @@ export default function AnalyticsTab() {
                 <div className="timeline-header">
                     <h3 className="timeline-title">
                         <Activity size={20} className="icon-blue" />
-                        Study Time Graph
+                        {t('analytics.study_graph')}
                     </h3>
                     <div className="timeline-controls">
                         <div className="timeline-stats-text">
-                            I studied {timelineData.studiedDays} days, {formatTime(timelineData.totalPeriodMinutes)} for the last
+                            {t('analytics.studied_summary')
+                                .replace('{days}', String(timelineData.studiedDays))
+                                .replace('{time}', formatTime(timelineData.totalPeriodMinutes))}
                         </div>
                         <select
                             value={timelineFilter}
                             onChange={e => setTimelineFilter(parseFloat(e.target.value))}
                             className="timeline-select"
                         >
-                            <option value={0.25}>Last Week</option>
-                            <option value={0.5}>Last 2 Weeks</option>
-                            <option value={1}>Last Month</option>
-                            <option value={2}>Last 2 Months</option>
-                            <option value={3}>Last 3 Months</option>
-                            <option value={4}>Last 4 Months</option>
-                            <option value={5}>Last 5 Months</option>
-                            <option value={6}>Last 6 Months</option>
-                            <option value={7}>Last 7 Months</option>
-                            <option value={8}>Last 8 Months</option>
-                            <option value={9}>Last 9 Months</option>
-                            <option value={10}>Last 10 Months</option>
-                            <option value={11}>Last 11 Months</option>
-                            <option value={12}>Last 12 Months</option>
+                            {timelineOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
                         </select>
                     </div>
                 </div>

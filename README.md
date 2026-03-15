@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# StudyB — Smart Study Companion
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A desktop study app built with Tauri + React. Manage subjects, run Pomodoro sessions, track spaced repetition reviews, and study interactive lessons — all in one place.
 
-Currently, two official plugins are available:
+## Download
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Grab the latest release for your platform from the [Releases page](../../releases).
 
-## React Compiler
+| Platform | File |
+|---|---|
+| Windows | `.msi` or `.exe` |
+| macOS (Apple Silicon) | `.dmg` |
+| Linux | `.AppImage` or `.deb` |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Installation
 
-## Expanding the ESLint configuration
+### Windows
+Download the `.msi` or `.exe` installer and run it.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### macOS
+1. Download the `.dmg` disk image
+2. Open it and drag **StudyB** to your Applications folder
+3. Launch from Applications
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+> **"App is damaged and can't be opened"?**
+> This happens because the app isn't signed with an Apple Developer certificate. To fix it, open **Terminal** and run:
+> ```bash
+> xattr -cr /Applications/StudyB.app
+> ```
+> Then try launching again.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Linux
+- **AppImage**: Download, make executable, then run:
+  ```bash
+  chmod +x StudyB_*.AppImage
+  ./StudyB_*.AppImage
+  ```
+- **Debian/Ubuntu**: Install with:
+  ```bash
+  sudo dpkg -i StudyB_*.deb
+  ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Features
+
+- **Dashboard** — daily overview, streaks, study stats
+- **Subjects** — organize topics with tags and cover images
+- **Pomodoro Planner** — drag-and-drop session scheduling with priority flags
+- **Learning Center** — interactive lessons with quizzes and spaced repetition (SRS)
+- **Analytics** — heatmaps, session history, technique tracking
+- **Themes** — Sailor Moon, Terminal, Neumorphism, Neobrutalism, Honey Lemon, and more
+- **i18n** — English, French, Spanish, Indonesian, Simplified & Traditional Chinese
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server (hot reload)
+npm run tauri dev
+
+# Build for production
+npm run tauri build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Requires [Node.js 20+](https://nodejs.org) and [Rust stable](https://rustup.rs).

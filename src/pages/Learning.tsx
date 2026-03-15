@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
@@ -361,6 +362,7 @@ export default function LearningTab() {
     const [animating, setAnimating] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
     const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+    const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
 
     const [quizState, setQuizState] = useState<Record<number, Record<string, boolean>>>(loadQuizState);
     const [srsState, setSRSState] = useState<SRSState>(loadSRSState);
@@ -480,6 +482,30 @@ export default function LearningTab() {
     const handleBackClickRef = useRef(handleBackClick);
     useEffect(() => { handleBackClickRef.current = handleBackClick; });
 
+    // Track which lesson is visible for the nav sidebar
+    useEffect(() => {
+        if (!selectedSection) { setActiveLessonId(null); return; }
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visible = entries.filter(e => e.isIntersecting);
+                if (visible.length > 0) {
+                    const topmost = visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+                    setActiveLessonId(topmost.target.id);
+                }
+            },
+            { threshold: 0.15, rootMargin: '-80px 0px -40% 0px' }
+        );
+        const timer = setTimeout(() => {
+            document.querySelectorAll('.lesson-card[id]').forEach(el => observer.observe(el));
+        }, 50);
+        return () => { clearTimeout(timer); observer.disconnect(); };
+    }, [selectedSection?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const scrollToLesson = (lessonId: string) => {
+        const el = document.getElementById(lessonId);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
     // Intercept mouse back button / browser back gesture while inside a lesson
     useEffect(() => {
         if (!selectedSection) return;
@@ -496,6 +522,7 @@ export default function LearningTab() {
 
         const qState = quizState[questionId] || {};
         if (Object.values(qState).some(v => v === true)) return;
+        if (Object.values(qState).some(v => v === false)) return;
         if (qState[option.id] !== undefined) return;
 
         const newQState = { ...qState, [option.id]: option.isCorrect };
@@ -536,6 +563,22 @@ export default function LearningTab() {
             // DON'T lock immediately — just record the wrong answer.
             // The lockout happens on exit (handleBackClick).
         }
+
+        // Auto-scroll to next unanswered question after 1s (only on correct answer)
+        if (!option.isCorrect) return;
+        setTimeout(() => {
+            if (!selectedSection) return;
+            const allLessons = selectedSection.chapters.flatMap(ch => ch.lessons);
+            const currentIdx = allLessons.findIndex(l => l.question.id === questionId);
+            const nextLesson = allLessons.slice(currentIdx + 1).find(l => {
+                const qs = newQuizState[l.question.id] || {};
+                return !Object.values(qs).some(v => v === true);
+            });
+            if (nextLesson) {
+                const el = document.getElementById(nextLesson.id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 1000);
     };
 
     // ── Lesson View ──
@@ -548,23 +591,16 @@ export default function LearningTab() {
         const graduated = isSectionGraduated(entry);
 
         return (
-            <div className={`learning-lesson-view ${animating ? 'fade-out' : 'fade-in'}`}>
+            <>
+                {enlargedImage && createPortal(
+                    <div onClick={() => setEnlargedImage(null)} className="learning-lightbox">
+                        <img src={enlargedImage} alt="Enlarged view" className="learning-lightbox-img" />
+                    </div>,
+                    document.body
+                )}
+                <div className={`learning-lesson-view ${animating ? 'fade-out' : 'fade-in'}`}>
                 {showCelebration && (
                     <CelebrationOverlay onDone={() => setShowCelebration(false)} />
-                )}
-
-                {/* Image lightbox overlay */}
-                {enlargedImage && (
-                    <div
-                        onClick={() => setEnlargedImage(null)}
-                        className="learning-lightbox"
-                    >
-                        <img
-                            src={enlargedImage}
-                            alt="Enlarged view"
-                            className="learning-lightbox-img"
-                        />
-                    </div>
                 )}
 
                 <div className="learning-header">
@@ -620,6 +656,30 @@ export default function LearningTab() {
                     </div>
                 )}
 
+                <div className="lesson-view-layout">
+                <nav className="lesson-nav">
+                    {selectedSection.chapters.map(chapter => (
+                        <div key={chapter.id} className="lesson-nav-chapter">
+                            <div className="lesson-nav-chapter-title">{chapter.title}</div>
+                            {chapter.lessons.map(lesson => {
+                                const qs = quizState[lesson.question.id] || {};
+                                const navSolved = Object.values(qs).some(v => v === true);
+                                const navWrong = !navSolved && Object.values(qs).some(v => v === false);
+                                const statusClass = navSolved ? 'correct' : navWrong ? 'wrong' : 'unanswered';
+                                return (
+                                    <button
+                                        key={lesson.id}
+                                        className={`lesson-nav-item status-${statusClass}${activeLessonId === lesson.id ? ' active' : ''}`}
+                                        onClick={() => { playSFX('hover_sound', theme); scrollToLesson(lesson.id); }}
+                                    >
+                                        <span className="lesson-nav-item-dot" />
+                                        <span className="lesson-nav-item-title">{lesson.title}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </nav>
                 <div className="learning-content">
                     {selectedSection.chapters.map(chapter => (
                         <div key={chapter.id} className="chapter-container">
@@ -632,7 +692,7 @@ export default function LearningTab() {
                                     const isSolved = Object.values(qState).some(v => v === true);
 
                                     return (
-                                        <div key={lesson.id} className={`glass lesson-card ${locked ? 'locked-section' : ''} ${isSolved ? 'solved' : ''}`}>
+                                        <div key={lesson.id} id={lesson.id} className={`glass lesson-card ${locked ? 'locked-section' : ''} ${isSolved ? 'solved' : ''}`}>
                                             <h4 className="lesson-card-title">
                                                 {lesson.title}
                                                 {isSolved && <CheckCircle2 size={20} className="lesson-card-title-icon" />}
@@ -641,7 +701,7 @@ export default function LearningTab() {
                                                 {lesson.content}
                                             </p>
 
-                                            {/* Sleep mascot image */}
+                                            {/* Sleep — memory consolidation */}
                                             {lesson.id === 'lesson-1-1-a' && (
                                                 <div className="lesson-mascot-container">
                                                     <img
@@ -649,11 +709,54 @@ export default function LearningTab() {
                                                         alt="The mascot sleeping — memory consolidation happens during sleep"
                                                         onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-sleep.png')}
                                                         className="lesson-mascot-img"
-                                                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
-                                                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                                                     />
                                                     <p className="lesson-mascot-caption">
                                                         Sleep is when your brain consolidates memories and grows new neural connections. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Exercise — BDNF & brain fertilizer */}
+                                            {lesson.id === 'lesson-1-1-b' && (
+                                                <div className="lesson-mascot-container">
+                                                    <img
+                                                        src="/assets/images/learning center/01_mascot-brainfertilizer.png"
+                                                        alt="The mascot after a workout — BDNF boosts brain connections"
+                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-brainfertilizer.png')}
+                                                        className="lesson-mascot-img"
+                                                    />
+                                                    <p className="lesson-mascot-caption">
+                                                        Exercise releases BDNF — the brain's own fertilizer for growing stronger neural connections. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Nutrition — brain fuel */}
+                                            {lesson.id === 'lesson-1-1-c' && (
+                                                <div className="lesson-mascot-container">
+                                                    <img
+                                                        src="/assets/images/learning center/01_mascot-brain-fuel.png"
+                                                        alt="The mascot fueling up — proper nutrition powers the brain"
+                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-brain-fuel.png')}
+                                                        className="lesson-mascot-img"
+                                                    />
+                                                    <p className="lesson-mascot-caption">
+                                                        Your brain runs on quality fuel — complex carbs, Omega-3s, and antioxidants sustain focus; sugar spikes crash it. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Illusion of Laziness — prefrontal cortex depletion */}
+                                            {lesson.id === 'lesson-1-2-a' && (
+                                                <div className="lesson-mascot-container">
+                                                    <img
+                                                        src="/assets/images/learning center/01_mascot-the-illusion-of-laziness.png"
+                                                        alt="The mascot exhausted in the evening — it's biology, not laziness"
+                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-the-illusion-of-laziness.png')}
+                                                        className="lesson-mascot-img"
+                                                    />
+                                                    <p className="lesson-mascot-caption">
+                                                        Evening brain fog isn't laziness — your prefrontal cortex has simply run out of energy for the day. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
                                                     </p>
                                                 </div>
                                             )}
@@ -672,8 +775,6 @@ export default function LearningTab() {
                                                                     alt={img.label}
                                                                     onClick={() => setEnlargedImage(img.src)}
                                                                     className="lesson-mascot-img full-width"
-                                                                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
-                                                                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                                                                 />
                                                                 <p className="lesson-mascot-caption small">
                                                                     {img.label} <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
@@ -692,8 +793,6 @@ export default function LearningTab() {
                                                         alt="The Forgetting Curve & Spaced Repetition"
                                                         onClick={() => setEnlargedImage('/assets/images/learning center/spaced_repetition.png')}
                                                         className="lesson-mascot-img full-width"
-                                                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.01)')}
-                                                        onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
                                                     />
                                                     <p className="lesson-mascot-caption">
                                                         The Forgetting Curve shows how memory decays without review. Spaced repetition resets the curve each time. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
@@ -742,30 +841,33 @@ export default function LearningTab() {
                         </div>
                     ))}
                 </div>
-            </div>
+                </div>
+                </div>
+            </>
         );
     }
 
     // ── Grid View ──
 
     return (
-        <div className={`learning-tab ${animating ? 'fade-out' : 'fade-in'}`}>
-            <div className="learning-tab-header">
+        <div className={`learning-page ${animating ? 'fade-out' : 'fade-in'}`}>
+            <div className="page-header">
                 <div className="page-title-group">
                     <div className="icon-wrapper bg-accent"><Sparkles size={20} /></div>
-                    <h1 className="learning-tab-title">Learning Track</h1>
+                    <h1>Learning Center</h1>
                 </div>
-                <p className="learning-tab-desc">Master the science of learning to study smarter, not harder.</p>
-                {isDevNavUnlocked() && (
-                    <button
-                        className="btn btn-secondary"
-                        style={{ marginTop: 8, fontSize: '0.8rem', background: '#ff444422', borderColor: '#ff4444', color: '#ff4444' }}
-                        onClick={handleDevReset}
-                    >
-                        🛠 DEV: Reset all lessons
-                    </button>
-                )}
             </div>
+            <div className="learning-tab">
+            <p className="learning-tab-desc">Master the science of learning to study smarter, not harder.</p>
+            {isDevNavUnlocked() && (
+                <button
+                    className="btn btn-secondary"
+                    style={{ marginTop: 8, fontSize: '0.8rem', background: '#ff444422', borderColor: '#ff4444', color: '#ff4444' }}
+                    onClick={handleDevReset}
+                >
+                    🛠 DEV: Reset all lessons
+                </button>
+            )}
 
             <div className="learning-grid">
                 {curriculum.map((section, idx) => {
@@ -828,6 +930,7 @@ export default function LearningTab() {
                         </div>
                     );
                 })}
+            </div>
             </div>
         </div>
     );

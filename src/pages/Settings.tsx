@@ -7,7 +7,7 @@ import { deleteAllData } from '../lib/db';
 import { getDefaultSpacing, setDefaultSpacing, parseSpacing, DEFAULT_SPACING } from '../lib/chapters';
 import { getAutostart, setAutostart } from '../lib/autostart';
 import { CustomSelect } from '../components/CustomSelect';
-import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, stopAllSounds } from '../lib/sounds';
+import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, stopAllSounds, playSFX } from '../lib/sounds';
 import type { SoundEffect, VolumeSettings } from '../lib/sounds';
 import './Settings.css';
 
@@ -33,7 +33,7 @@ export default function SettingsTab() {
         setDefaultSpacingState(val);
         const parsed = parseSpacing(val);
         if (parsed.length === 0) {
-            setSpacingError('Enter at least one positive number');
+            setSpacingError(t('settings.sr_error'));
         } else {
             setSpacingError('');
             setDefaultSpacing(val);
@@ -95,11 +95,24 @@ export default function SettingsTab() {
         }
     ] as const;
 
+    const [previewThemeId, setPreviewThemeId] = useState<Theme | null>(null);
+
     const ALL_THEMES = THEME_GROUPS.flatMap(g => g.themes);
-    const activeThemeObj = ALL_THEMES.find(t => t.id === theme) || ALL_THEMES[0];
+    const displayThemeId = previewThemeId ?? theme;
+    const activeThemeObj = ALL_THEMES.find(t => t.id === displayThemeId) || ALL_THEMES[0];
     const activeThemeColor = activeThemeObj.color;
     const activeThemeBackground = ('background' in activeThemeObj ? activeThemeObj.background : null) || activeThemeColor;
     const activeThemeName = activeThemeObj.name;
+
+    const handleThemeHover = (id: Theme) => {
+        setPreviewThemeId(id);
+        document.documentElement.setAttribute('data-theme', id);
+    };
+
+    const handleThemeLeave = () => {
+        setPreviewThemeId(null);
+        document.documentElement.setAttribute('data-theme', theme);
+    };
 
     const handleExport = () => {
         // Simple placeholder for export
@@ -113,6 +126,7 @@ export default function SettingsTab() {
 
     const handleDeleteAll = async () => {
         if (deleteInput.toLowerCase() === t('settings.delete_keyword').toLowerCase()) {
+            playSFX('cancelling', theme);
             await deleteAllData();
             alert("Database Cleared!");
             window.location.reload();
@@ -152,14 +166,14 @@ export default function SettingsTab() {
                             <button className="btn btn-secondary" onClick={() => {
                                 setShowDeleteModal(false);
                                 setDeleteInput('');
-                            }}>Cancel</button>
+                            }}>{t('settings.cancel')}</button>
                             <button
                                 className="btn btn-danger-outline btn-danger-outline-solid"
                                 disabled={deleteInput.toLowerCase() !== t('settings.delete_keyword').toLowerCase()}
                                 onClick={handleDeleteAll}
                             >
                                 <Trash2 size={18} style={{ marginRight: '8px' }} />
-                                Confirm Delete
+                                {t('settings.confirm_delete')}
                             </button>
                         </div>
                     </div>
@@ -176,21 +190,26 @@ export default function SettingsTab() {
                 <div className="form-group theme-selector-container">
                     <div className="card-select-theme" style={{ borderColor: activeThemeColor }}>
                         <div className="card-select-theme-title" style={{ background: activeThemeBackground }}>
-                            <p>Select the <strong>{activeThemeName}</strong></p>
+                            <p>
+                                {previewThemeId ? t('settings.preview_theme') : t('settings.select_theme')}
+                                {' '}<strong>{activeThemeName}</strong>
+                                {previewThemeId && <span className="theme-preview-hint"> — {t('settings.click_to_apply')}</span>}
+                            </p>
                         </div>
-                        <div className="card-select-theme-colors grouped-themes">
+                        <div className="card-select-theme-colors grouped-themes" onMouseLeave={handleThemeLeave}>
                             {THEME_GROUPS.map((group) => (
                                 <div key={group.name} className="theme-group">
                                     <h4 className="theme-group-title">{group.name}</h4>
                                     <div className="theme-group-grid">
-                                        {group.themes.map((t) => (
+                                        {group.themes.map((th) => (
                                             <button
-                                                key={t.id}
-                                                className={`theme-color-select ${theme === t.id ? 'active' : ''}`}
-                                                style={{ background: t.background || t.color }}
-                                                onClick={() => setTheme(t.id)}
-                                                title={t.name}
-                                                aria-label={t.name}
+                                                key={th.id}
+                                                className={`theme-color-select ${theme === th.id ? 'active' : ''}`}
+                                                style={{ background: th.background || th.color }}
+                                                onMouseEnter={() => handleThemeHover(th.id)}
+                                                onClick={() => setTheme(th.id)}
+                                                title={th.name}
+                                                aria-label={th.name}
                                             />
                                         ))}
                                     </div>
@@ -222,7 +241,7 @@ export default function SettingsTab() {
                     <div className="form-group" style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--glass-border)' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                             <Power size={15} className="text-muted" />
-                            Launch at login
+                            {t('settings.launch_at_login')}
                             <input
                                 type="checkbox"
                                 checked={autostartEnabled}
@@ -264,13 +283,13 @@ export default function SettingsTab() {
                 <div className="settings-section settings-section-base">
                     <div className="settings-header">
                         <Brain size={18} className="text-muted" />
-                        <h3>Spaced Repetition</h3>
+                        <h3>{t('settings.spaced_repetition')}</h3>
                     </div>
                     <p className="settings-desc">
-                        Default review schedule — space-separated days between sessions. The last value repeats forever.
+                        {t('settings.sr_desc')}
                     </p>
                     <div className="form-group">
-                        <label>Review intervals (days)</label>
+                        <label>{t('settings.review_intervals')}</label>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <input
                                 type="text"
@@ -284,13 +303,13 @@ export default function SettingsTab() {
                                 style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}
                                 onClick={() => handleSpacingChange(DEFAULT_SPACING)}
                             >
-                                Reset
+                                {t('settings.reset')}
                             </button>
                         </div>
                         {spacingError
                             ? <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '4px' }}>{spacingError}</p>
                             : <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>
-                                e.g. <code>1 1 2 5 7</code> → next day, next day, 2 days, 5 days, then every 7 days forever
+                                {t('settings.sr_example')}
                             </p>
                         }
                     </div>
@@ -299,24 +318,24 @@ export default function SettingsTab() {
                 <div className="settings-section settings-section-shortcuts settings-section-base">
                     <div className="settings-header">
                         <Keyboard size={18} className="text-muted" />
-                        <h3>Shortcuts</h3>
+                        <h3>{t('settings.shortcuts')}</h3>
                     </div>
-                    <p className="settings-desc">Manage your keyboard shortcuts.</p>
+                    <p className="settings-desc">{t('settings.shortcuts_desc')}</p>
                     <div className="shortcut-list">
                         <div className="shortcut-item">
-                            <span>New Subject</span>
+                            <span>{t('settings.shortcut_new_subject')}</span>
                             <kbd>Ctrl+N</kbd>
                         </div>
                         <div className="shortcut-item">
-                            <span>Search</span>
+                            <span>{t('settings.shortcut_search')}</span>
                             <kbd>Ctrl+F</kbd>
                         </div>
                         <div className="shortcut-item">
-                            <span>Zoom In/Out</span>
+                            <span>{t('settings.shortcut_zoom')}</span>
                             <kbd>Ctrl+Scroll</kbd>
                         </div>
                     </div>
-                    <button className="btn btn-secondary w-full shortcut-btn">Modify Shortcuts</button>
+                    <button className="btn btn-secondary w-full shortcut-btn">{t('settings.modify_shortcuts')}</button>
                 </div>
             </div>
 
@@ -324,11 +343,11 @@ export default function SettingsTab() {
             <div className="settings-section settings-section-audio settings-section-base">
                 <div className="settings-header">
                     <Volume2 size={18} className="text-muted" />
-                    <h3>Audio</h3>
+                    <h3>{t('settings.audio')}</h3>
                 </div>
                 <div className="form-group">
                     <label className="audio-header-label">
-                        <span>Master Volume</span>
+                        <span>{t('settings.master_volume')}</span>
                         <span className="audio-master-val">{volumeSettings.master}%</span>
                     </label>
                     <input
@@ -376,7 +395,7 @@ export default function SettingsTab() {
                         <Database size={18} className="text-muted" />
                         <h3>{t('settings.data_management')}</h3>
                     </div>
-                    <p className="settings-desc">Backup or restore your Study Buddy database.</p>
+                    <p className="settings-desc">{t('settings.backup_desc')}</p>
                     <div className="data-actions">
                         <button className="btn btn-secondary w-full" onClick={handleExport}>{t('settings.export')}</button>
                         <button className="btn btn-secondary w-full" onClick={handleImport}>{t('settings.import')}</button>

@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSubjects } from '../lib/db';
+import { getSubjects, getMetacognitionLogs } from '../lib/db';
 import type { Subject } from '../lib/db';
 import { useUndoRedo } from '../lib/undo';
 import TechniquePickerModal from '../components/TechniquePickerModal';
 import ChapterPickerModal from '../components/ChapterPickerModal';
+import WeeklyCompass from '../components/WeeklyCompass';
 import { TECHNIQUES, getTierColor, type TechCategory } from '../lib/techniques';
-import { MoreVertical, Calendar } from 'lucide-react';
+import { ChevronDown, MoreVertical, Calendar } from 'lucide-react';
 import { CustomSelect } from '../components/CustomSelect';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
-import { getChaptersForSubject } from '../lib/chapters';
+import { useTranslation } from '../lib/i18n';
+import { getChaptersForSubject, getAllChapters } from '../lib/chapters';
 import './Plan.css';
 
 type BlockType = 'PREP' | 'WORK' | 'BREAK';
@@ -41,7 +43,9 @@ const PIXELS_PER_MINUTE = 16;
 export default function Plan() {
     const navigate = useNavigate();
     const { theme } = useSettings();
+    const { t } = useTranslation();
     const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [prioritySubjectIds, setPrioritySubjectIds] = useState<Set<string>>(new Set());
     const [template, setTemplate] = useState('25/5');
     const [customWork, setCustomWork] = useState(25);
     const [customBreak, setCustomBreak] = useState(5);
@@ -57,6 +61,8 @@ export default function Plan() {
     const [pickingBlockId, setPickingBlockId] = useState<string | null>(null);
     const [pickingChapterBlockId, setPickingChapterBlockId] = useState<string | null>(null);
     const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
+    const [openMenuBlockId, setOpenMenuBlockId] = useState<string | null>(null);
+    const [chapterGateBlockId, setChapterGateBlockId] = useState<string | null>(null);
 
     const dragRef = useRef<{ id: string, startY: number, startBlocks: Block[], lastDeltaSteps: number } | null>(null);
 
@@ -197,6 +203,25 @@ export default function Plan() {
         getSubjects().then(subs => {
             // sort unpinned first, then pinned
             setSubjects(subs.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? 1 : -1)));
+        });
+        getMetacognitionLogs().then(logs => {
+            const latest = logs[0];
+            if (latest?.priority_subject_ids) {
+                try {
+                    const parsed = JSON.parse(latest.priority_subject_ids);
+                    if (Array.isArray(parsed)) {
+                        const selectedIds = new Set(parsed.map((p: unknown) =>
+                            typeof p === 'string' ? p : (p as { id: string }).id
+                        ));
+                        // Also mark parent subjects of any selected chapters
+                        const allChapters = getAllChapters();
+                        allChapters.forEach(c => {
+                            if (selectedIds.has(c.id)) selectedIds.add(c.subjectId);
+                        });
+                        setPrioritySubjectIds(selectedIds);
+                    }
+                } catch { /* ignore parse errors */ }
+            }
         });
     }, []);
 
@@ -375,10 +400,21 @@ export default function Plan() {
                 if (e.shiftKey && canRedo) redo();
                 else if (!e.shiftKey && canUndo) undo();
             }
+            if (e.key === 'Escape') {
+                setOpenMenuBlockId(null);
+                setChapterGateBlockId(null);
+            }
         };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
     }, [undo, redo, canUndo, canRedo]);
+
+    useEffect(() => {
+        if (!openMenuBlockId) return;
+        const handleClickOutside = () => { setOpenMenuBlockId(null); setChapterGateBlockId(null); };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [openMenuBlockId]);
 
     // Summarize times
     const totalWork = blocks.filter(b => b.type === 'WORK').reduce((acc, b) => acc + b.minutes, 0);
@@ -391,17 +427,17 @@ export default function Plan() {
     return (
         <div className={`planner-page fade-in ${isDragging || (isMouseDownOnSubject && blocks.length > 0) ? 'is-dragging' : ''} ${isMouseDownOnSubject && blocks.length === 0 ? 'is-dragging-empty' : ''} ${resizingBlockId ? 'is-resizing' : ''}`}>
             <div className="page-header">
-                <div className="drag-dim">
-                    <div className="page-title-group">
-                        <div className="icon-wrapper bg-purple"><Calendar size={20} /></div>
-                        <h1>Pomodoro Planner</h1>
-                    </div>
-                    <p>Ends roughly at {endsText} • {totalWork}m Work, {totalBreak}m Rest</p>
+                <div className="page-title-group">
+                    <div className="icon-wrapper bg-purple"><Calendar size={20} /></div>
+                    <h1>{t('plan.title')}</h1>
                 </div>
+            </div>
 
+            <div className="planner-toolbar">
+                <p className="drag-dim planner-session-info">{t('plan.ends_at')} {endsText} • {totalWork}m {t('plan.work')}, {totalBreak}m {t('plan.rest')}</p>
                 <div className="planner-controls">
                     <div className="planner-control-group drag-dim">
-                        <label className="planner-control-label">Style</label>
+                        <label className="planner-control-label">{t('plan.style')}</label>
                         <CustomSelect
                             value={template}
                             onChange={(val) => setTemplate(val)}
@@ -411,21 +447,21 @@ export default function Plan() {
                     {template === 'Custom' && (
                         <div className="planner-custom-group drag-dim">
                             <div className="planner-custom-input-group">
-                                <label className="planner-custom-input-label">Work (m)</label>
+                                <label className="planner-custom-input-label">{t('plan.work_m')}</label>
                                 <input type="number" min="1" max="300" className="planner-custom-input" value={customWork} onChange={e => setCustomWork(parseInt(e.target.value) || 0)} />
                             </div>
                             <div className="planner-custom-input-group">
-                                <label className="planner-custom-input-label">Break (m)</label>
+                                <label className="planner-custom-input-label">{t('plan.break_m')}</label>
                                 <input type="number" min="1" max="180" className="planner-custom-input" value={customBreak} onChange={e => setCustomBreak(parseInt(e.target.value) || 0)} />
                             </div>
                             <div className="planner-custom-input-group">
-                                <label className="planner-custom-input-label">Prep (m)</label>
+                                <label className="planner-custom-input-label">{t('plan.prep_m')}</label>
                                 <input type="number" min="0" max="60" className="planner-custom-input" value={customPrep} onChange={e => setCustomPrep(parseInt(e.target.value) || 0)} />
                             </div>
                         </div>
                     )}
                     <div className="planner-repeats-group drag-dim">
-                        <label className="planner-repeats-label">Repeats</label>
+                        <label className="planner-repeats-label">{t('plan.repeats')}</label>
                         <div className="planner-repeats-control">
                             <button className="btn-repeat btn-repeat-minus" onClick={() => setRepeats(Math.max(1, repeats - 1))} onMouseEnter={() => playSFX('hover_sound', theme)}>-</button>
                             <span className="planner-repeats-value">{repeats}</span>
@@ -438,7 +474,7 @@ export default function Plan() {
                         onClick={addBlocks}
                         onMouseEnter={() => playSFX('hover_sound', theme)}
                     >
-                        Add to Timeline
+                        {t('plan.add_to_timeline')}
                     </button>
 
                     <div
@@ -457,16 +493,18 @@ export default function Plan() {
                             onClick={startSession}
                             disabled={blocks.length === 0}
                         >
-                            Start Session
+                            {t('plan.start_session')}
                         </button>
                     </div>
                 </div>
             </div>
 
+            <WeeklyCompass />
+
             <div className="planner-content-area">
                 {/* Subjects List */}
                 <div className="glass planner-subjects-panel">
-                    <h3>Drag Subjects</h3>
+                    <h3>{t('plan.drag_subjects')}</h3>
                     <div className="planner-subjects-list">
                         {subjects.map((s, idx) => (
                             <div
@@ -480,6 +518,9 @@ export default function Plan() {
                                 onMouseEnter={() => { if (!isDragging) playSFX('hover_sound', theme); }}
                             >
                                 <strong>{s.name}</strong>
+                                {prioritySubjectIds.has(s.id) && (
+                                    <span className="priority-badge">{t('plan.priority')}</span>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -490,11 +531,11 @@ export default function Plan() {
                     {blocks.length === 0 ? (
                         <div className="timeline-empty-state">
                             <div className="timeline-empty-icon">⏳</div>
-                            <h3>Your timeline is empty</h3>
-                            <p>Configure your Pomodoro style above and click <strong>"Add to Timeline"</strong> to build your study schedule.</p>
+                            <h3>{t('plan.timeline_empty_title')}</h3>
+                            <p>{t('plan.timeline_empty_desc')}</p>
                             {isMouseDownOnSubject && (
                                 <div className="timeline-drag-hint animate-bounce">
-                                    ↑ Build a timeline first!
+                                    {t('plan.timeline_build_first')}
                                 </div>
                             )}
                         </div>
@@ -544,17 +585,12 @@ export default function Plan() {
                                         onDragLeave={isWork ? handleBlockDragLeave : undefined}
                                         className={`planner-block ${isWork && block.subject_id ? (!isDropTarget ? 'bg-card border-solid' : 'bg-transparent border-dashed') : 'bg-transparent'} ${(isDragging || isMouseDownOnSubject) && isDropTarget ? 'drop-target' : ''} ${(isDragging || isMouseDownOnSubject) && !isDropTarget ? 'drag-dim' : ''} ${isHovered ? 'drop-hover' : ''}`}
                                         onMouseEnter={() => { if (isWork && block.subject_id) playSFX('hover_sound', theme); }}
-                                        style={{
-                                            minHeight: isWork ? `${Math.max(heightPx, 130)}px` : '40px',
-                                        }}
+                                        style={{ '--block-min-height': isWork ? `${Math.max(heightPx, 130)}px` : '40px' } as React.CSSProperties}
                                     >
                                         {isWork && block.subject_id && (
                                             <div
                                                 onMouseDown={(e) => handleResizeStart(e, block.id)}
-                                                className="block-resize-handle"
-                                                style={{
-                                                    cursor: resizingBlockId === block.id ? 'grabbing' : 'grab',
-                                                }}
+                                                className={`block-resize-handle${resizingBlockId === block.id ? ' grabbing' : ''}`}
                                                 title="Drag to adjust time"
                                             >
                                                 <div className="block-resize-dots">
@@ -581,14 +617,18 @@ export default function Plan() {
                                         {isWork ? (
                                             <div className="block-content-area">
                                                 {subject ? (
-                                                    <div className="block-subject-details" style={{ paddingBottom: isWork ? '32px' : '0' }}>
+                                                    <div className="block-subject-details">
                                                         <div className="block-subject-header">
                                                             <strong className="block-subject-name">{subject.name}</strong>
                                                             {technique && (
-                                                                <span title={technique.hint} className="block-technique-tag" style={{
-                                                                    background: getTierColor(technique.tier),
-                                                                    color: technique.tier === 'S' || technique.tier === 'F' ? '#fff' : '#000'
-                                                                }}>
+                                                                <span
+                                                                    title={technique.hint}
+                                                                    className="block-technique-tag"
+                                                                    style={{
+                                                                        '--tech-bg': getTierColor(technique.tier),
+                                                                        '--tech-color': technique.tier === 'S' || technique.tier === 'F' ? '#fff' : '#000'
+                                                                    } as React.CSSProperties}
+                                                                >
                                                                     {technique.name}
                                                                 </span>
                                                             )}
@@ -598,7 +638,7 @@ export default function Plan() {
                                                             if (subjectChapters.length === 0) {
                                                                 return (
                                                                     <div className="block-no-chapters">
-                                                                        No chapters defined for this subject.
+                                                                        {t('plan.no_chapters')}
                                                                     </div>
                                                                 );
                                                             }
@@ -606,45 +646,64 @@ export default function Plan() {
                                                                 <button
                                                                     onClick={() => setPickingChapterBlockId(block.id)}
                                                                     className={`block-chapter-button ${block.chapter_name ? 'selected' : 'empty'}`}
+                                                                    aria-label={block.chapter_name ? t('plan.chapter_label') + ` ${block.chapter_name}` : t('plan.select_chapter')}
                                                                 >
-                                                                    <span>{block.chapter_name || "Select a chapter..."}</span>
-                                                                    <MoreVertical size={14} opacity={0.5} style={{ transform: 'rotate(90deg)' }} />
+                                                                    <span>{block.chapter_name || t('plan.select_chapter')}</span>
+                                                                    <ChevronDown size={14} opacity={0.5} />
                                                                 </button>
                                                             );
                                                         })()}
                                                         <input
                                                             type="text"
-                                                            placeholder="Ambitious objective BUT doable!"
+                                                            placeholder={t('plan.objective_placeholder')}
                                                             value={block.objective}
                                                             onChange={e => handleObjectiveChange(block.id, e.target.value)}
                                                             className={`block-objective-input${!block.objective ? ' empty' : ''}`}
+                                                            aria-label={t('plan.objective_label')}
                                                         />
                                                     </div>
                                                 ) : (
-                                                    <span className="block-drop-prompt">Drop a subject here</span>
+                                                    <span className="block-drop-prompt">{t('plan.drop_subject')}</span>
                                                 )}
 
                                                 <div className="block-menu-container">
-                                                    <button className="btn-icon">
+                                                    <button
+                                                        className="btn-icon"
+                                                        aria-haspopup="true"
+                                                        aria-expanded={openMenuBlockId === block.id}
+                                                        aria-label={t('plan.block_options')}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setOpenMenuBlockId(openMenuBlockId === block.id ? null : block.id);
+                                                            setChapterGateBlockId(null);
+                                                        }}
+                                                    >
                                                         <MoreVertical size={20} />
                                                     </button>
-                                                    <div className="block-menu-dropdown">
-                                                        <button className="block-menu-btn" onClick={() => {
-                                                            const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
-                                                            if (subjectChapters.length > 0 && !block.chapter_name) {
-                                                                alert("Please select a Chapter first. This helps us recommend the best techniques for your specific study focus!");
-                                                            } else {
-                                                                setPickingBlockId(block.id);
-                                                            }
-                                                        }}>Change technique...</button>
-                                                        <button className="block-menu-btn" onClick={() => clearBlock(block.id)}>Clear block</button>
-                                                        <button className="block-menu-btn danger" onClick={() => deleteCycle(block.id)}>Delete cycle</button>
-                                                    </div>
+                                                    {openMenuBlockId === block.id && (
+                                                        <div className="block-menu-dropdown block-menu-dropdown-open" role="menu">
+                                                            {chapterGateBlockId === block.id ? (
+                                                                <p className="block-menu-gate-msg">{t('plan.select_chapter_first')}</p>
+                                                            ) : (
+                                                                <button className="block-menu-btn" role="menuitem" onClick={() => {
+                                                                    const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
+                                                                    if (subjectChapters.length > 0 && !block.chapter_name) {
+                                                                        setChapterGateBlockId(block.id);
+                                                                    } else {
+                                                                        setOpenMenuBlockId(null);
+                                                                        setPickingBlockId(block.id);
+                                                                    }
+                                                                }}>{t('plan.change_technique')}</button>
+                                                            )}
+                                                            <button className="block-menu-btn" role="menuitem" onClick={() => { clearBlock(block.id); setOpenMenuBlockId(null); }}>{t('plan.clear_block')}</button>
+                                                            <button className="block-menu-btn danger" role="menuitem" onClick={() => { deleteCycle(block.id); setOpenMenuBlockId(null); }}>{t('plan.delete_cycle')}</button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ) : (
                                             <div className="block-break-content">
-                                                {block.type === 'BREAK' ? 'Take a break, maybe stretch a little!' : 'Prepare your materials.'}
+                                                {block.type === 'BREAK' ? t('plan.break_water') : t('plan.prep_materials')}
                                             </div>
                                         )}
                                     </div>
@@ -660,7 +719,7 @@ export default function Plan() {
                                         <div key={`group-${group[0].cycle_id}`} className="study-block-group">
                                             <div className="study-block-group-header">
                                                 <div className="study-block-group-dot"></div>
-                                                Study Block ({totalMinutes}m Limit)
+                                                {t('plan.study_block')} ({totalMinutes}m {t('plan.m_limit')})
                                             </div>
                                             {group.map((block) => renderBlockNode(block))}
                                         </div>

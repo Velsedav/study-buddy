@@ -557,8 +557,20 @@
     user-select: none;
     display: flex;
     align-items: center;
+    gap: 10px;
     box-shadow: var(--shadow-sm);
     color: var(--text-dark);
+}
+
+.priority-badge {
+    background: var(--glass-bg);
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    white-space: nowrap;
 }
 
 .drag-subject-item:hover {

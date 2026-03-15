@@ -1,0 +1,120 @@
+/* ChapterPickerModal.css */
+
+.chapter-picker-modal {
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.chapter-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.chapter-picker-header h2 {
+    margin: 0;
+}
+
+.chapter-picker-list {
+    overflow-y: auto;
+    padding: 4px 12px 4px 4px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chapter-picker-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.chapter-picker-item {
+    padding: 16px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
+.chapter-picker-item.sub-chapter {
+    padding: 10px 14px;
+    margin-left: 24px;
+    border-left: 3px solid var(--glass-border);
+}
+
+.chapter-picker-item.selected {
+    border-color: var(--primary);
+}
+
+.chapter-picker-item.recommended {
+    border-color: #8b5cf6;
+}
+
+.chapter-picker-item.sub-chapter.recommended {
+    border-left-width: 4px;
+    border-left-color: #8b5cf6;
+}
+
+.chapter-picker-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chapter-picker-item-labels {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.chapter-picker-item-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.chapter-picker-item-name.sub-chapter {
+    font-weight: 400;
+    font-size: 0.95rem;
+}
+
+.chapter-picker-focus-badge {
+    background: var(--badge-bg);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 0.3px;
+}
+
+.chapter-picker-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.chapter-picker-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.chapter-picker-dot.filled {
+    background: var(--success);
+}
+
+.chapter-picker-study-count {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}

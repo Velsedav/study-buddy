@@ -1,0 +1,800 @@
+/* ================================================================ */
+/* BINGOALS — scoped styles                                          */
+/* All rules prefixed with .bingoals-root for isolation.            */
+/* Modal backdrop uses .bingo-backdrop since it's position:fixed.   */
+/* ================================================================ */
+
+/* ── Theme variable mappings (Bingoals vars → Study Buddy themes) ─ */
+
+.bingoals-root {
+  --red:    #fce8f2;
+  --white:  #ffffff;
+  --black:  #4a4453;
+  --green:  #8ed85e;
+  --mono:   'Outfit', sans-serif;
+  --border: 2px solid var(--black);
+  --shadow: 4px 4px 0 var(--black);
+  font-family: var(--mono);
+  color: var(--black);
+  background: var(--red);
+}
+
+[data-theme="classic-uniform"] .bingoals-root {
+  --red:    #f8f6fc;
+  --white:  #ffffff;
+  --black:  #121c3b;
+  --green:  #fce31c;
+  --border: 2px solid var(--black);
+  --shadow: 4px 4px 0 var(--black);
+}
+
+[data-theme="cosmic-manicure"] .bingoals-root {
+  --red:    #1a0b33;
+  --white:  #ff1faa;
+  --black:  #00f0ff;
+  --green:  #00ff99;
+  --border: 1px solid rgba(255,31,170,0.5);
+  --shadow: 0 0 12px rgba(255,31,170,0.4);
+  color: #ff1faa;
+}
+
+[data-theme="chibi-moon"] .bingoals-root {
+  --red:    #ffeff9;
+  --white:  #ffffff;
+  --black:  #5e1c44;
+  --green:  #8ed85e;
+  --border: 2px solid var(--black);
+  --shadow: 4px 4px 0 var(--black);
+}
+
+[data-theme="transformation-ribbon"] .bingoals-root {
+  --red:    #e5d8f0;
+  --white:  #ffffff;
+  --black:  #381f5e;
+  --green:  #8ed85e;
+  --border: 2px solid var(--black);
+  --shadow: 4px 4px 0 var(--black);
+}
+
+[data-theme="neumorphism"] .bingoals-root {
+  --red:    #e0e5ec;
+  --white:  rgba(255,255,255,0.9);
+  --black:  #7d8fa3;
+  --green:  #6db88a;
+  --border: 2px solid rgba(182,187,194,0.5);
+  --shadow: 4px 4px 10px rgba(182,187,194,0.65), -2px -2px 6px rgba(255,255,255,0.72);
+  color: #3a4b63;
+}
+
+[data-theme="neobrutalism"] .bingoals-root {
+  --red:    #ffde59;
+  --white:  #000000;
+  --black:  #000000;
+  --green:  #00cc44;
+  --border: 3px solid #000000;
+  --shadow: 5px 5px 0 #000000;
+  color: #000000;
+}
+
+[data-theme="honey-lemon"] .bingoals-root {
+  --red:    #fdd835;
+  --white:  #ffffff;
+  --black:  #212121;
+  --green:  #4caf50;
+  --border: 2px solid var(--black);
+  --shadow: 4px 4px 0 var(--black);
+  color: #212121;
+}
+
+[data-theme="terminal-orange"] .bingoals-root {
+  --red:    #111111;
+  --white:  #ff9d00;
+  --black:  #000000;
+  --green:  #ffb100;
+  --border: 1px solid var(--white);
+  --shadow: 0 0 10px rgba(255,157,0,0.4);
+  --mono:   'JetBrains Mono', 'Cascadia Mono', monospace;
+  color: #ff9d00;
+}
+
+[data-theme="terminal-green"] .bingoals-root {
+  --red:    #111111;
+  --white:  #00ff00;
+  --black:  #000000;
+  --green:  #00ffaa;
+  --border: 1px solid var(--white);
+  --shadow: 0 0 10px rgba(0,255,0,0.4);
+  --mono:   'JetBrains Mono', 'Cascadia Mono', monospace;
+  color: #00ff00;
+}
+
+/* ── Reset inside bingoals-root ── */
+
+.bingoals-root * { box-sizing: border-box; }
+
+/* ── Page layout ── */
+
+.bingoals-root .page {
+  padding: 18px;
+  max-width: 2200px;
+  margin: 0 auto;
+}
+
+.bingoals-root .topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.bingoals-root .h1 {
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.bingoals-root .h2 {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: .7;
+  margin: 0;
+}
+
+.bingoals-root .muted {
+  font-size: 12px;
+  opacity: .75;
+}
+
+.bingoals-root .row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bingoals-root .mini {
+  display: grid;
+  gap: 2px;
+}
+
+/* ── Dashboard Grid ── */
+
+.bingoals-root .grid {
+  display: grid;
+  padding: 12px;
+  gap: 18px;
+  grid-template-columns: repeat(4, minmax(220px, 280px));
+  justify-content: center;
+  align-content: start;
+}
+
+@media (max-width: 1180px) {
+  .bingoals-root .grid { grid-template-columns: repeat(3, minmax(220px, 320px)); }
+}
+@media (max-width: 860px) {
+  .bingoals-root .grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+}
+@media (max-width: 560px) {
+  .bingoals-root .grid { grid-template-columns: 1fr; }
+}
+
+.bingoals-root .cardWrap { position: relative; }
+
+/* ── Cards ── */
+
+.bingoals-root .card {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--black);
+  border: var(--border);
+  padding: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  color: var(--white);
+  transition: transform 90ms linear, box-shadow 90ms linear, background 90ms linear;
+  border-radius: 0;
+}
+
+.bingoals-root .card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: rgba(0,0,0,0.35);
+  transition: opacity 120ms linear;
+}
+
+.bingoals-root .card:hover {
+  transform: translate(-2px,-2px);
+  box-shadow: 10px 10px 0 var(--black);
+  background: hsl(0,0%,96%);
+  border-color: yellow;
+  color: var(--black);
+}
+
+.bingoals-root .card:hover::before { opacity: 0; }
+
+.bingoals-root .card:active {
+  transform: translate(0,0);
+  box-shadow: 3px 3px 0 var(--black);
+}
+
+.bingoals-root .cardTitle,
+.bingoals-root .cardMeta,
+.bingoals-root .hoverProgress {
+  position: relative;
+  z-index: 2;
+}
+
+.bingoals-root .cardEmpty {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  height: 100%;
+}
+
+.bingoals-root .emptyPlus {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.bingoals-root .cardTitle {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+  line-height: 1.15;
+}
+
+.bingoals-root .cardMeta {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  opacity: .9;
+}
+
+.bingoals-root .card:hover .muted { color: var(--black); opacity: .75; }
+
+.bingoals-root .hoverProgress {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 10px 12px;
+  background: var(--black);
+  color: var(--white);
+  transform: translateY(105%);
+  transition: transform 120ms linear;
+}
+
+.bingoals-root .card:hover .hoverProgress { transform: translateY(0%); }
+
+.bingoals-root .hoverRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* ── Pills / bars ── */
+
+.bingoals-root .pill {
+  background: var(--black);
+  color: var(--white);
+  border: var(--border);
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.bingoals-root .bar {
+  height: 28px;
+  background: transparent;
+  border: var(--border);
+  overflow: hidden;
+}
+
+.bingoals-root .barFill {
+  height: 100%;
+  background: var(--white);
+  width: 0%;
+}
+
+/* ── Buttons ── */
+
+.bingoals-root .btn {
+  border: var(--border);
+  background: var(--white);
+  color: var(--black);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-family: var(--mono);
+  box-shadow: 3px 3px 0 var(--black);
+  transition: transform 90ms linear, box-shadow 90ms linear;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bingoals-root .btn:hover {
+  transform: translate(-1px,-1px);
+  box-shadow: 5px 5px 0 var(--black);
+}
+
+.bingoals-root .btn:active {
+  transform: translate(0,0);
+  box-shadow: 2px 2px 0 var(--black);
+}
+
+.bingoals-root .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+.bingoals-root .btn:focus-visible {
+  outline: 3px solid var(--black);
+  outline-offset: 2px;
+}
+
+.bingoals-root .btn.primary {
+  background: var(--black);
+  color: var(--white);
+}
+
+.bingoals-root .btn.danger {
+  background: var(--red);
+  color: var(--black);
+}
+
+.bingoals-root .iconBtn {
+  width: 30px;
+  height: 30px;
+  border: var(--border);
+  background: var(--white);
+  color: var(--black);
+  cursor: pointer;
+  font-family: var(--mono);
+  box-shadow: 3px 3px 0 var(--black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+}
+
+.bingoals-root .iconBtn:hover {
+  transform: translate(-1px,-1px);
+  box-shadow: 5px 5px 0 var(--black);
+}
+
+/* ── Recording ── */
+
+@keyframes bingoRecBlink {
+  0%, 49%  { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+
+.bingoals-root .recBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bingoals-root .recDot {
+  width: 14px;
+  height: 14px;
+  background: var(--red);
+  border: var(--border);
+  outline: 2px solid var(--white);
+  outline-offset: -2px;
+  box-shadow: 2px 2px 0 var(--black);
+  animation: bingoRecBlink 900ms steps(1,end) infinite;
+}
+
+.bingoals-root .panelRecording {
+  outline: 4px solid var(--white);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bingoals-root .recDot { animation: none; }
+}
+
+/* ── Forms ── */
+
+.bingoals-root label {
+  font-size: 12px;
+  opacity: .8;
+  text-transform: uppercase;
+  font-weight: 900;
+  font-family: var(--mono);
+}
+
+.bingoals-root input,
+.bingoals-root select {
+  padding: 10px;
+  border: var(--border);
+  background: var(--white);
+  color: var(--black);
+  outline: none;
+  font-family: var(--mono);
+  border-radius: 0;
+}
+
+.bingoals-root input:focus,
+.bingoals-root select:focus {
+  outline: 3px solid var(--black);
+  outline-offset: 1px;
+}
+
+.bingoals-root .titleInput {
+  font-size: 14px;
+  font-weight: 900;
+  width: 100%;
+  text-transform: uppercase;
+}
+
+.bingoals-root .numInput  { width: 90px; }
+.bingoals-root .unitInput { width: 120px; }
+
+.bingoals-root .form {
+  display: grid;
+  gap: 8px;
+}
+
+/* ── Panels / lists ── */
+
+.bingoals-root .panel {
+  background: var(--black);
+  color: var(--white);
+  border: var(--border);
+  padding: 14px;
+  margin-bottom: 0;
+  box-shadow: var(--shadow);
+}
+
+.bingoals-root .list {
+  display: grid;
+  gap: 32px;
+}
+
+.bingoals-root .panelDone {
+  background: var(--green);
+  color: var(--black);
+}
+
+.bingoals-root .panelDone .muted  { color: var(--black); opacity: .85; }
+.bingoals-root .panelDone .pill   { background: var(--white); color: var(--black); }
+.bingoals-root .panelDone .barFill { background: var(--black); }
+
+/* ── Slideshow / memories ── */
+
+.bingoals-root .memories  { margin-top: 12px; }
+.bingoals-root .slideshow { margin-top: 8px; }
+
+.bingoals-root .slide {
+  position: relative;
+  border: var(--border);
+  padding: 10px;
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+  background: var(--black);
+  color: var(--white);
+}
+
+.bingoals-root .slideImg  { max-width: 100%; max-height: 720px; }
+
+.bingoals-root .quote {
+  font-size: 24px;
+  line-height: 1.5;
+  text-align: center;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.bingoals-root .mediaTrashBtn {
+  position: absolute;
+  top: 10px; right: 10px;
+  border: var(--border);
+  background: var(--white);
+  color: var(--black);
+  width: 42px; height: 42px;
+  cursor: pointer;
+  font-weight: 900;
+  box-shadow: 3px 3px 0 var(--black);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 90ms linear, transform 90ms linear;
+}
+
+.bingoals-root .slide:hover .mediaTrashBtn { opacity: 1; pointer-events: auto; }
+.bingoals-root .mediaTrashBtn:hover { transform: translate(-1px,-1px); }
+
+/* ── Frequency badge ── */
+
+.bingoals-root .lastAge { font-weight: 900; text-transform: uppercase; }
+.bingoals-root .lastAge.neutral { opacity: .85; }
+.bingoals-root .lastAge.green   { color: var(--green); }
+.bingoals-root .lastAge.orange  { color: #ffb100; }
+.bingoals-root .lastAge.red     { color: #ff4040; }
+
+/* ── Card action buttons ── */
+
+.bingoals-root .cardActions {
+  position: absolute;
+  top: 8px; right: 8px;
+  display: flex;
+  gap: 8px;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 90ms linear;
+}
+
+.bingoals-root .cardWrap:hover .cardActions { opacity: 1; pointer-events: auto; }
+
+.bingoals-root .cardActions .pinBtn,
+.bingoals-root .cardActions .iconBtn { position: static; width: 30px; height: 30px; }
+
+.bingoals-root .pinBtn {
+  width: 30px; height: 30px;
+  border: var(--border);
+  background: var(--white);
+  color: var(--black);
+  cursor: pointer;
+  font-family: var(--mono);
+  box-shadow: 3px 3px 0 var(--black);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 90ms linear, transform 90ms linear, box-shadow 90ms linear;
+  border-radius: 0;
+}
+
+.bingoals-root .cardWrap:hover .pinBtn { opacity: 1; pointer-events: auto; }
+.bingoals-root .pinBtn:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--black); }
+
+/* ── Cover image preview ── */
+
+.bingoals-root .coverPreview { max-height: 320px; }
+
+/* ── Animations ── */
+
+@keyframes bingoQuoteFadeIn {
+  from { opacity: 0; filter: blur(2px); transform: translateY(2px); }
+  to   { opacity: 1; filter: blur(0);   transform: translateY(0); }
+}
+
+.bingoals-root .quoteFade {
+  display: inline-block;
+  will-change: opacity, transform, filter;
+  animation: bingoQuoteFadeIn 220ms ease-out;
+}
+
+@keyframes bingoMediaFadeIn {
+  from { opacity: 0; filter: blur(2px); transform: translateY(2px); }
+  to   { opacity: 1; filter: blur(0);   transform: translateY(0); }
+}
+
+.bingoals-root .mediaFade {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  animation: bingoMediaFadeIn 220ms ease-out;
+  will-change: opacity, transform, filter;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bingoals-root .quoteFade,
+  .bingoals-root .mediaFade { animation: none; }
+}
+
+/* ================================================================ */
+/* MODAL — position:fixed so must use .bingo-* class names directly  */
+/* ================================================================ */
+
+.bingo-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+  z-index: 9999;
+  font-family: var(--mono, monospace);
+}
+
+.bingo-modal {
+  width: min(720px, 96vw);
+  background: var(--white, #ffffff);
+  border: var(--border, 2px solid #000);
+  box-shadow: 10px 10px 0 var(--black, #000);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  color: var(--black, #000);
+  border-radius: 0;
+}
+
+.bingo-modal-header {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: var(--border, 2px solid #000);
+  background: var(--black, #000);
+  color: var(--white, #fff);
+}
+
+.bingo-modal-header .btn {
+  border: var(--border, 2px solid #fff);
+  background: transparent;
+  color: var(--white, #fff);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  font-family: var(--mono, monospace);
+  box-shadow: none;
+}
+
+.bingo-modal-header .btn:hover { background: rgba(255,255,255,0.1); }
+
+.bingo-modal-title {
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.bingo-modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px;
+  scrollbar-gutter: stable;
+  background: var(--white, #ffffff);
+  color: var(--black, #000);
+}
+
+/* form elements inside modal body */
+.bingo-modal-body label {
+  font-size: 12px;
+  opacity: .8;
+  text-transform: uppercase;
+  font-weight: 900;
+  font-family: var(--mono, monospace);
+  display: block;
+}
+
+.bingo-modal-body input,
+.bingo-modal-body select {
+  padding: 10px;
+  border: var(--border, 2px solid #000);
+  background: var(--white, #fff);
+  color: var(--black, #000);
+  outline: none;
+  font-family: var(--mono, monospace);
+  border-radius: 0;
+  width: 100%;
+}
+
+.bingo-modal-body input:focus,
+.bingo-modal-body select:focus {
+  outline: 3px solid var(--black, #000);
+  outline-offset: 1px;
+}
+
+.bingo-modal-body .form { display: grid; gap: 8px; }
+
+.bingo-modal-body .btn {
+  border: var(--border, 2px solid #000);
+  background: var(--white, #fff);
+  color: var(--black, #000);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-family: var(--mono, monospace);
+  box-shadow: 3px 3px 0 var(--black, #000);
+  transition: transform 90ms linear, box-shadow 90ms linear;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.bingo-modal-body .btn:hover   { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 var(--black, #000); }
+.bingo-modal-body .btn:active  { transform: translate(0,0); box-shadow: 2px 2px 0 var(--black, #000); }
+.bingo-modal-body .btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.bingo-modal-body .btn.primary { background: var(--black, #000); color: var(--white, #fff); }
+
+.bingo-modal-body .row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bingo-modal-body .muted { font-size: 12px; opacity: .75; }
+.bingo-modal-body .coverPreview { max-height: 320px; max-width: 100%; }
+
+.bingo-modal-body .numInput { width: 90px; }
+
+/* ── Theme overrides for modals ── */
+
+[data-theme="terminal-orange"] .bingo-modal,
+[data-theme="terminal-green"]  .bingo-modal {
+  box-shadow: 0 0 20px rgba(255,157,0,0.4);
+}
+
+[data-theme="terminal-green"] .bingo-modal {
+  box-shadow: 0 0 20px rgba(0,255,0,0.4);
+}
+
+[data-theme="neumorphism"] .bingo-modal {
+  box-shadow: 4px 4px 20px rgba(182,187,194,0.6), -2px -2px 10px rgba(255,255,255,0.8);
+}
+
+/* ── Cosmic manicure card hover ── */
+
+[data-theme="cosmic-manicure"] .bingoals-root .card:hover {
+  background: #2d0d55;
+  border-color: #00f0ff;
+  color: #ff1faa;
+  box-shadow: 0 0 18px rgba(255,31,170,0.5);
+}
+
+/* ── Terminal card hovers ── */
+
+[data-theme="terminal-orange"] .bingoals-root .card:hover {
+  border-color: #ffb100;
+  color: #ff9d00;
+  background: #2a1a00;
+  box-shadow: 0 0 15px rgba(255,157,0,0.6);
+}
+
+[data-theme="terminal-green"] .bingoals-root .card:hover {
+  border-color: #00ffaa;
+  color: #00ff00;
+  background: #002200;
+  box-shadow: 0 0 15px rgba(0,255,0,0.6);
+}
+
+/* ── Neobrutalism card hover ── */
+
+[data-theme="neobrutalism"] .bingoals-root .card:hover {
+  background: #fff;
+  border-color: #ff0055;
+  color: #000;
+}
+
+/* ── Neumorphism card hover ── */
+
+[data-theme="neumorphism"] .bingoals-root .card:hover {
+  background: #e8ecf2;
+  border-color: #9baec8;
+  color: #3a4b63;
+  box-shadow: 6px 6px 16px rgba(182,187,194,0.65), -4px -4px 12px rgba(255,255,255,0.8);
+}
+
+/* ── Terminal panelDone ── */
+
+[data-theme="terminal-orange"] .bingoals-root .panelDone {
+  background: #2a1a00;
+  color: #ffb100;
+}
+
+[data-theme="terminal-green"] .bingoals-root .panelDone {
+  background: #002200;
+  color: #00ffaa;
+}

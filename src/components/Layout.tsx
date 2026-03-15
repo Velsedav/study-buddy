@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Calendar, Sparkles, Pencil, Lightbulb, BarChart2, Settings as SettingsIcon, Wrench, FlaskConical } from 'lucide-react';
+import { BookOpen, Calendar, Sparkles, Pencil, Lightbulb, BarChart2, Settings as SettingsIcon, Wrench, FlaskConical, Target } from 'lucide-react';
 import { getQuotes, addQuote, saveSession, updateSubjectStats } from '../lib/db';
 import type { Quote } from '../lib/db';
 import QuoteEditorModal from './QuoteEditorModal';
@@ -53,7 +53,7 @@ export default function Layout() {
         { path: '/settings', label: t('nav.settings'), icon: SettingsIcon },
     ];
     const navItems = devNavVisible
-        ? [...baseNavItems, { path: '/dev', label: 'Dev', icon: FlaskConical }]
+        ? [...baseNavItems, { path: '/bingoals', label: 'Bingoals', icon: Target }, { path: '/dev', label: 'Dev', icon: FlaskConical }]
         : baseNavItems;
 
     useEffect(() => {

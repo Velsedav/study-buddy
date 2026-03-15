@@ -16,6 +16,9 @@ import Analytics from './pages/Analytics.tsx'
 import Settings from './pages/Settings.tsx'
 import MetacognitionLogs from './pages/MetacognitionLogs.tsx'
 import DevPage from './pages/Dev.tsx'
+import BingoDashboard from './pages/bingoals/BingoDashboard.tsx'
+import BingoObjectivePage from './pages/bingoals/BingoObjectivePage.tsx'
+import './styles/bingoals.css'
 
 // CTRL+Scroll: scale font-size instead of applying zoom (which breaks layout)
 let rootFontScale = 1.0;
@@ -61,6 +64,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="metacognition-logs" element={<MetacognitionLogs />} />
             <Route path="settings" element={<Settings />} />
             <Route path="dev" element={<DevPage />} />
+            <Route path="bingoals" element={<BingoDashboard />} />
+            <Route path="bingoals/objective/:id" element={<BingoObjectivePage />} />
           </Route>
         </Routes>
       </BrowserRouter>

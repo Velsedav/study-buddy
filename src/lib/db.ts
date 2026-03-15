@@ -240,6 +240,8 @@ export interface MetacognitionLog {
     focus_drop: string;
     memorization_align: string;
     mechanical_fix: string;
+    free_time_hours: number | null;
+    priority_subject_ids: string | null;
 }
 
 export async function getMetacognitionLogs(): Promise<MetacognitionLog[]> {
@@ -252,9 +254,9 @@ export async function saveMetacognitionLog(log: Omit<MetacognitionLog, 'id' | 'c
     const id = crypto.randomUUID();
     const created_at = new Date().toISOString();
     await db.execute(
-        `INSERT INTO metacognition_logs (id, created_at, retention, focus_drop, memorization_align, mechanical_fix)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [id, created_at, log.retention, log.focus_drop, log.memorization_align, log.mechanical_fix]
+        `INSERT INTO metacognition_logs (id, created_at, retention, focus_drop, memorization_align, mechanical_fix, free_time_hours, priority_subject_ids)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [id, created_at, log.retention, log.focus_drop, log.memorization_align, log.mechanical_fix, log.free_time_hours, log.priority_subject_ids]
     );
 }
 

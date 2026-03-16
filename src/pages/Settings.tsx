@@ -82,6 +82,7 @@ export default function SettingsTab() {
             themes: [
                 { id: 'terminal-orange', name: 'Orange Terminal', color: '#ff8c00' },
                 { id: 'terminal-green', name: 'Green Terminal', color: '#00ff00' },
+                { id: 'terminal-cyan', name: 'CLI / Cyan', color: '#00d4ff' },
             ]
         },
         {
@@ -91,6 +92,7 @@ export default function SettingsTab() {
                 { id: 'neumorphism', name: 'Neumorphism', color: '#9baec8' },
                 { id: 'neobrutalism', name: 'Neobrutalism', color: '#ffde59' },
                 { id: 'honey-lemon', name: 'Honey Lemon', color: '#ffeb3b' },
+                { id: 'ai-pro', name: 'AI Pro', color: '#7c3aed', background: 'linear-gradient(135deg, #070b14 0%, #1a0a3d 50%, #06b6d4 100%)' },
             ]
         }
     ] as const;

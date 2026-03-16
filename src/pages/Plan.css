@@ -8,6 +8,19 @@
     color: var(--text-muted);
 }
 
+.planner-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.planner-session-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
 .planner-controls {
     display: flex;
     gap: 16px;
@@ -214,6 +227,15 @@
     animation: startWiggle 0.45s ease-in-out 1;
 }
 
+.planner-compass {
+    margin-bottom: 20px;
+}
+
+.planner-compass .weekly-compass {
+    max-width: 100%;
+    margin: 0;
+}
+
 .planner-content-area {
     display: flex;
     gap: 24px;
@@ -260,6 +282,7 @@
     align-items: stretch;
     gap: 16px;
     position: relative;
+    min-height: var(--block-min-height, 40px);
     transition: min-height 0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
@@ -376,7 +399,17 @@
     font-size: 0.8rem;
     font-weight: bold;
     white-space: nowrap;
+    background: var(--tech-bg);
+    color: var(--tech-color);
 }
+
+.block-technique-tag.tier-s { --tech-bg: linear-gradient(135deg, var(--primary), var(--accent)); --tech-color: #fff; }
+.block-technique-tag.tier-a { --tech-bg: var(--success); --tech-color: #000; }
+.block-technique-tag.tier-b { --tech-bg: #3b82f6; --tech-color: #000; }
+.block-technique-tag.tier-c { --tech-bg: #22d3ee; --tech-color: #000; }
+.block-technique-tag.tier-d { --tech-bg: #f59e0b; --tech-color: #000; }
+.block-technique-tag.tier-e { --tech-bg: var(--danger); --tech-color: #fff; }
+.block-technique-tag.tier-f { --tech-bg: #9ca3af; --tech-color: #fff; }
 
 .block-no-chapters {
     width: 100%;

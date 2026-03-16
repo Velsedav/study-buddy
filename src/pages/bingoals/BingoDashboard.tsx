@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useState } from "react";
+import { Target, Pencil, ArrowUp, ArrowDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BingoModal from "../../components/bingoals/BingoModal";
 import type { DashboardRow, Objective, Subobjective } from "../../lib/bingoals/db";
@@ -11,6 +12,7 @@ import {
 import { daysAgo, formatDuration } from "../../lib/bingoals/format";
 import { fileToCompressedDataUrl } from "../../lib/bingoals/image";
 import { computeObjectivePercent } from "../../lib/bingoals/progress";
+import { useTranslation } from "../../lib/i18n";
 
 type Cell = {
   slot_index: number;
@@ -22,13 +24,6 @@ type Cell = {
 };
 
 let DASH_CACHE: Cell[] | null = null;
-
-function lastLabel(days: number | null) {
-  if (days === null) return "—";
-  if (days <= 0) return "Today";
-  if (days === 1) return "Yesterday";
-  return `${days}d ago`;
-}
 
 function statusTitle(status: string) {
   if (status === "green") return "On track";
@@ -48,58 +43,53 @@ function lastStatus(days: number | null, freqDays: number | null) {
 
 export default function BingoDashboard() {
   const nav = useNavigate();
+  const { t } = useTranslation();
   const [cells, setCells] = useState<Cell[]>(() => DASH_CACHE ?? []);
-  const [busy, setBusy] = useState(false);
   const [createSlot, setCreateSlot] = useState<number | null>(null);
   const [editObj, setEditObj] = useState<Objective | null>(null);
 
   async function load() {
-    setBusy(true);
-    try {
-      await getBingoDb();
-      const rows: DashboardRow[] = await listDashboardRows();
-      const objectiveIds = rows
-        .map((r) => r.objective_id)
-        .filter((x): x is string => typeof x === "string" && x.length > 0);
-      const subsByObj = await fetchSubobjectivesByObjective(objectiveIds);
+    await getBingoDb();
+    const rows: DashboardRow[] = await listDashboardRows();
+    const objectiveIds = rows
+      .map((r) => r.objective_id)
+      .filter((x): x is string => typeof x === "string" && x.length > 0);
+    const subsByObj = await fetchSubobjectivesByObjective(objectiveIds);
 
-      const out: Cell[] = rows.map((r) => {
-        const hasObj = !!r.objective_id && !!r.id;
-        const objective: Objective | null = hasObj
-          ? ({
-            id: r.id!,
-            title: r.title!,
-            goal_kind: r.goal_kind as any,
-            goal_target: (r.goal_target ?? null) as any,
-            goal_unit: (r.goal_unit ?? null) as any,
-            cover_data: (r.cover_data ?? null) as any,
-            current_value: (r.current_value ?? 0) as any,
-            created_at: r.created_at!,
-            updated_at: r.updated_at!,
-            pin_bottom: (r as any).pin_bottom ?? 0,
-            frequency_days: (r as any).frequency_days ?? null
-          } satisfies Objective)
-          : null;
+    const out: Cell[] = rows.map((r) => {
+      const hasObj = !!r.objective_id && !!r.id;
+      const objective: Objective | null = hasObj
+        ? ({
+          id: r.id!,
+          title: r.title!,
+          goal_kind: r.goal_kind as any,
+          goal_target: (r.goal_target ?? null) as any,
+          goal_unit: (r.goal_unit ?? null) as any,
+          cover_data: (r.cover_data ?? null) as any,
+          current_value: (r.current_value ?? 0) as any,
+          created_at: r.created_at!,
+          updated_at: r.updated_at!,
+          pin_bottom: (r as any).pin_bottom ?? 0,
+          frequency_days: (r as any).frequency_days ?? null
+        } satisfies Objective)
+        : null;
 
-        let percent: number | null = null;
-        let last_progress_at: number | null = null;
+      let percent: number | null = null;
+      let last_progress_at: number | null = null;
 
-        if (objective) {
-          const subs = subsByObj.get(objective.id) ?? [];
-          percent = computeObjectivePercent(objective, subs);
-          const lastSubUpdate = subs.length === 0 ? 0 : subs.reduce((m, s) => Math.max(m, s.updated_at ?? 0), 0);
-          const last = Math.max(r.last_end ?? 0, lastSubUpdate ?? 0) || 0;
-          last_progress_at = last > 0 ? last : null;
-        }
+      if (objective) {
+        const subs = subsByObj.get(objective.id) ?? [];
+        percent = computeObjectivePercent(objective, subs);
+        const lastSubUpdate = subs.length === 0 ? 0 : subs.reduce((m, s) => Math.max(m, s.updated_at ?? 0), 0);
+        const last = Math.max(r.last_end ?? 0, lastSubUpdate ?? 0) || 0;
+        last_progress_at = last > 0 ? last : null;
+      }
 
-        return { slot_index: r.slot_index, objective_id: r.objective_id, objective, total_ms: r.total_ms ?? 0, last_progress_at, percent };
-      });
+      return { slot_index: r.slot_index, objective_id: r.objective_id, objective, total_ms: r.total_ms ?? 0, last_progress_at, percent };
+    });
 
-      DASH_CACHE = out;
-      setCells(out);
-    } finally {
-      setBusy(false);
-    }
+    DASH_CACHE = out;
+    setCells(out);
   }
 
   useEffect(() => { load(); }, []);
@@ -128,30 +118,26 @@ export default function BingoDashboard() {
   }, [cells]);
 
   return (
-    <div className="bingoals-root">
-      <div className="page">
-        <div className="row dashControls" style={{ justifyContent: "flex-end", marginBottom: 12 }}>
-          <button className="btn" onClick={load} disabled={busy}>Refresh</button>
+    <div className="bingoals-root fade-in">
+      <div className="page-header">
+          <div className="page-title-group">
+            <div className="icon-wrapper bg-blue"><Target size={20} /></div>
+            <h1 className="page-header-title">{t('bingoals.page_title')}</h1>
+          </div>
         </div>
 
         <div className="grid">
           {viewCells.map((c) => {
             if (!c.objective_id || !c.objective) {
               return (
-                <div
+                <button
                   key={c.slot_index}
-                  className="card cardEmpty"
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Add new objective"
+                  className="add-subject-card bingo-add-card"
+                  aria-label={t('bingoals.add_objective')}
                   onClick={() => setCreateSlot(c.slot_index)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCreateSlot(c.slot_index); }
-                  }}
                 >
-                  <div className="emptyPlus">＋</div>
-                  <div className="muted">Add objective</div>
-                </div>
+                  {t('bingoals.add_objective')}
+                </button>
               );
             }
             return (
@@ -161,6 +147,7 @@ export default function BingoDashboard() {
                 nav={nav}
                 setEditObj={setEditObj}
                 load={load}
+                t={t}
               />
             );
           })}
@@ -177,7 +164,6 @@ export default function BingoDashboard() {
           onClose={() => setEditObj(null)}
           onSaved={() => { setEditObj(null); load(); }}
         />
-      </div>
     </div>
   );
 }
@@ -197,6 +183,7 @@ async function fetchSubobjectivesByObjective(objectiveIds: string[]) {
 }
 
 function CreateObjectiveModal(props: { slotIndex: number | null; onClose: () => void; onCreated: () => void }) {
+  const { t } = useTranslation();
   const open = props.slotIndex !== null;
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<Objective["goal_kind"]>("count");
@@ -209,29 +196,29 @@ function CreateObjectiveModal(props: { slotIndex: number | null; onClose: () => 
   }, [open]);
 
   return (
-    <BingoModal open={open} title="Create objective" onClose={props.onClose}>
+    <BingoModal open={open} title={t('bingoals.create_modal_title')} onClose={props.onClose}>
       <div className="form">
-        <label htmlFor="bingo-create-title">Title</label>
+        <label htmlFor="bingo-create-title">{t('bingoals.title_label')}</label>
         <input id="bingo-create-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Learn 10 recipes" />
 
-        <label htmlFor="bingo-create-kind">Goal type</label>
+        <label htmlFor="bingo-create-kind">{t('bingoals.goal_type_label')}</label>
         <select id="bingo-create-kind" value={kind} onChange={(e) => setKind(e.target.value as any)}>
-          <option value="count">Count — track items completed (e.g., 12 books)</option>
-          <option value="metric">Metric — track a measured value (e.g., 1000 km)</option>
-          <option value="amount">Amount — track a sum (e.g., €500 saved)</option>
-          <option value="manual">Manual — set progress percentage directly</option>
+          <option value="count">{t('bingoals.goal_count')}</option>
+          <option value="metric">{t('bingoals.goal_metric')}</option>
+          <option value="amount">{t('bingoals.goal_amount')}</option>
+          <option value="manual">{t('bingoals.goal_manual')}</option>
         </select>
 
-        <label htmlFor="bingo-create-target">Goal target</label>
+        <label htmlFor="bingo-create-target">{t('bingoals.goal_target_label')}</label>
         <input id="bingo-create-target" type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} />
 
-        <label htmlFor="bingo-create-unit">Unit</label>
+        <label htmlFor="bingo-create-unit">{t('bingoals.unit_label')}</label>
         <input id="bingo-create-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="books / € / % / wpm" />
 
         <div className="row">
-          <button className="btn" onClick={props.onClose}>Cancel</button>
+          <button className="btn" onClick={props.onClose}>{t('bingoals.cancel')}</button>
           <button
-            className="btn primary"
+            className="btn btn-primary"
             disabled={busy || title.trim().length === 0 || props.slotIndex === null}
             onClick={async () => {
               setBusy(true);
@@ -243,7 +230,7 @@ function CreateObjectiveModal(props: { slotIndex: number | null; onClose: () => 
               } finally { setBusy(false); }
             }}
           >
-            {busy ? "Creating…" : "Create"}
+            {busy ? t('bingoals.creating') : t('bingoals.create')}
           </button>
         </div>
       </div>
@@ -252,6 +239,7 @@ function CreateObjectiveModal(props: { slotIndex: number | null; onClose: () => 
 }
 
 function EditObjectiveModal(props: { objective: Objective | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
   const open = !!props.objective;
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<Objective["goal_kind"]>("count");
@@ -274,56 +262,56 @@ function EditObjectiveModal(props: { objective: Objective | null; onClose: () =>
   }, [props.objective]);
 
   return (
-    <BingoModal open={open} title="Edit objective" onClose={props.onClose}>
+    <BingoModal open={open} title={t('bingoals.edit_modal_title')} onClose={props.onClose}>
       <div className="form">
-        <label htmlFor="bingo-edit-title">Title</label>
+        <label htmlFor="bingo-edit-title">{t('bingoals.title_label')}</label>
         <input id="bingo-edit-title" value={title} onChange={(e) => setTitle(e.target.value)} />
 
-        <label htmlFor="bingo-edit-kind">Goal type</label>
+        <label htmlFor="bingo-edit-kind">{t('bingoals.goal_type_label')}</label>
         <select id="bingo-edit-kind" value={kind} onChange={(e) => setKind(e.target.value as any)}>
-          <option value="count">Count</option>
-          <option value="metric">Metric</option>
-          <option value="amount">Amount</option>
-          <option value="manual">Manual</option>
+          <option value="count">{t('bingoals.goal_count')}</option>
+          <option value="metric">{t('bingoals.goal_metric')}</option>
+          <option value="amount">{t('bingoals.goal_amount')}</option>
+          <option value="manual">{t('bingoals.goal_manual')}</option>
         </select>
 
-        <label htmlFor="bingo-edit-target">Goal target</label>
+        <label htmlFor="bingo-edit-target">{t('bingoals.goal_target_label')}</label>
         <input id="bingo-edit-target" type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} />
 
-        <label htmlFor="bingo-edit-unit">Unit</label>
+        <label htmlFor="bingo-edit-unit">{t('bingoals.unit_label')}</label>
         <input id="bingo-edit-unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
 
         {(kind === "metric" || kind === "amount" || kind === "manual") && (
           <>
-            <label htmlFor="bingo-edit-current">Current value</label>
+            <label htmlFor="bingo-edit-current">{t('bingoals.current_value_label')}</label>
             <input id="bingo-edit-current" type="number" value={currentValue} onChange={(e) => setCurrentValue(Number(e.target.value))} />
           </>
         )}
 
-        <label htmlFor="bingo-edit-freq">Frequency (days) — optional</label>
+        <label htmlFor="bingo-edit-freq">{t('bingoals.frequency_label')}</label>
         <input
           id="bingo-edit-freq"
           type="number"
           min={0}
           value={frequencyDays}
-          placeholder="How often? In days"
+          placeholder={t('bingoals.frequency_placeholder')}
           onChange={(e) => setFrequencyDays(e.target.value)}
         />
 
-        <label>Cover image</label>
+        <label>{t('bingoals.cover_image_label')}</label>
         {coverData ? (
           <img className="coverPreview" src={coverData} alt="cover preview" />
         ) : (
-          <div className="muted">No cover image</div>
+          <div className="muted">{t('bingoals.no_cover')}</div>
         )}
 
-        <div className="row" style={{ flexWrap: "wrap" }}>
+        <div className="row bingo-row-wrap">
           <label className="btn">
-            Choose image
+            {t('bingoals.choose_image')}
             <input
               type="file"
               accept="image/*"
-              style={{ display: "none" }}
+              className="bingo-file-input"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -333,13 +321,13 @@ function EditObjectiveModal(props: { objective: Objective | null; onClose: () =>
               }}
             />
           </label>
-          <button className="btn" onClick={() => setCoverData(null)}>Remove cover</button>
+          <button className="btn" onClick={() => setCoverData(null)}>{t('bingoals.remove_cover')}</button>
         </div>
 
         <div className="row">
-          <button className="btn" onClick={props.onClose}>Cancel</button>
+          <button className="btn" onClick={props.onClose}>{t('bingoals.cancel')}</button>
           <button
-            className="btn primary"
+            className="btn btn-primary"
             disabled={busy || !props.objective}
             onClick={async () => {
               if (!props.objective) return;
@@ -360,7 +348,7 @@ function EditObjectiveModal(props: { objective: Objective | null; onClose: () =>
               } finally { setBusy(false); }
             }}
           >
-            {busy ? "Saving…" : "Save"}
+            {busy ? t('bingoals.saving') : t('bingoals.save')}
           </button>
         </div>
       </div>
@@ -369,12 +357,13 @@ function EditObjectiveModal(props: { objective: Objective | null; onClose: () =>
 }
 
 const DashboardCard = memo(function DashboardCard({
-  c, nav, setEditObj, load
+  c, nav, setEditObj, load, t
 }: {
   c: Cell;
   nav: (path: string) => void;
   setEditObj: (o: Objective) => void;
   load: () => Promise<void>;
+  t: (key: string) => string;
 }) {
   const d = daysAgo(c.last_progress_at);
   const status = lastStatus(d, c.objective!.frequency_days ?? null);
@@ -389,10 +378,17 @@ const DashboardCard = memo(function DashboardCard({
     }
     : undefined;
 
+  function lastLabel(days: number | null) {
+    if (days === null) return "—";
+    if (days <= 0) return t('bingoals.today');
+    if (days === 1) return t('bingoals.yesterday');
+    return t('bingoals.days_ago').replace('{n}', String(days));
+  }
+
   return (
     <div className="cardWrap">
       <div
-        className="card"
+        className={`card${cover ? ' card--has-cover' : ''}`}
         style={cardStyle}
         role="link"
         tabIndex={0}
@@ -402,17 +398,17 @@ const DashboardCard = memo(function DashboardCard({
       >
         <div className="cardTitle">{c.objective!.title}</div>
         <div className="cardMeta">
-          <div><span className="muted">Time:</span> {formatDuration(c.total_ms)}</div>
+          <div><span className="muted">{t('bingoals.time_label')}:</span> {formatDuration(c.total_ms)}</div>
           <div>
-            <span className="muted">Last:</span>{" "}
+            <span className="muted">{t('bingoals.last_label')}:</span>{" "}
             <span className={`lastAge ${status}`} title={statusTitle(status)}>{lastLabel(d)}</span>
           </div>
-          <div><span className="muted">Progress:</span> {percentText}</div>
+          <div><span className="muted">{t('bingoals.progress_label')}:</span> {percentText}</div>
         </div>
 
         <div className="hoverProgress">
           <div className="hoverRow">
-            <div className="muted">Progress</div>
+            <div className="muted">{t('bingoals.progress_label')}</div>
             <div className="pill">{percentText}</div>
           </div>
           <div className="bar">
@@ -423,13 +419,21 @@ const DashboardCard = memo(function DashboardCard({
 
       <div className="cardActions" onClick={(e) => e.stopPropagation()}>
         <button
-          className="pinBtn"
-          title={pinned ? "Unpin from bottom" : "Pin to bottom"}
+          className="btn btn-icon"
+          title={pinned ? t('bingoals.unpin') : t('bingoals.pin')}
+          aria-label={pinned ? t('bingoals.unpin') : t('bingoals.pin')}
           onClick={async () => { await updateObjective(c.objective!.id, { pin_bottom: pinned ? 0 : 1 }); await load(); }}
         >
-          {pinned ? "⇧" : "⇩"}
+          {pinned ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
         </button>
-        <button className="iconBtn" title="Edit objective" onClick={() => setEditObj(c.objective!)}>✎</button>
+        <button
+          className="btn btn-icon"
+          title={t('bingoals.edit_objective')}
+          aria-label={t('bingoals.edit_objective')}
+          onClick={() => setEditObj(c.objective!)}
+        >
+          <Pencil size={14} />
+        </button>
       </div>
     </div>
   );

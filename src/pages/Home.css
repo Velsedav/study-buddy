@@ -71,14 +71,24 @@
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
-    /* align-items: flex-start; */
-    max-width: 70%;
+    align-items: flex-start;
+    max-width: 85%;
     margin: 0 auto 24px;
-    justify-content: space-between;
+    justify-content: space-around;
+}
+
+.stats-containers-group {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .dashboard-top-row .weekly-stats-container {
-    flex: 0 0 280px;
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
 }
 
 .dashboard-top-row .analytics-main-panel {
@@ -86,7 +96,11 @@
     min-width: 0;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
+
+    .stats-containers-group {
+        flex-direction: column;
+    }
 
     .dashboard-top-row .weekly-stats-container,
     .dashboard-top-row .analytics-main-panel {
@@ -97,7 +111,6 @@
 /* Weekly Stats */
 .weekly-stats-container {
     width: 300px;
-    flex-shrink: 0;
     padding: 16px;
     border-radius: var(--border-radius);
     display: flex;
@@ -421,4 +434,61 @@
 .recommendation-overdue {
     color: var(--danger);
     margin-left: 8px;
+}
+
+/* Trash Modal */
+.trash-toast-undo-btn {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+}
+
+.trash-modal-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.trash-modal-empty {
+    padding: 24px 0;
+}
+
+.trash-item-info {
+    flex: 1;
+}
+
+.trash-item-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.trash-item-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.trash-action-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.trash-confirm-text {
+    font-size: 0.8rem;
+    color: var(--danger);
+}
+
+.trash-delete-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    background: transparent;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
 }

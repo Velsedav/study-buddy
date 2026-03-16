@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { curriculum } from '../lib/learningContent';
@@ -362,10 +362,18 @@ export default function LearningTab() {
     const [animating, setAnimating] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
     const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
-    const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+    const [activeLessonIdx, setActiveLessonIdx] = useState(0);
+    const [carouselHeight, setCarouselHeight] = useState(640);
+    const activePanelRef = useRef<HTMLDivElement>(null);
 
     const [quizState, setQuizState] = useState<Record<number, Record<string, boolean>>>(loadQuizState);
     const [srsState, setSRSState] = useState<SRSState>(loadSRSState);
+
+    // Flat lesson list with chapter context — recomputes whenever selectedSection changes
+    const flatLessons = selectedSection
+        ? selectedSection.chapters.flatMap(ch => ch.lessons.map(l => ({ lesson: l, chapterTitle: ch.title })))
+        : [];
+    const currentLessonId = flatLessons[activeLessonIdx]?.lesson.id ?? null;
 
     function handleDevReset() {
         setSRSState({});
@@ -482,29 +490,37 @@ export default function LearningTab() {
     const handleBackClickRef = useRef(handleBackClick);
     useEffect(() => { handleBackClickRef.current = handleBackClick; });
 
-    // Track which lesson is visible for the nav sidebar
+    // Reset carousel index when entering a new section
     useEffect(() => {
-        if (!selectedSection) { setActiveLessonId(null); return; }
-        const observer = new IntersectionObserver(
-            (entries) => {
-                const visible = entries.filter(e => e.isIntersecting);
-                if (visible.length > 0) {
-                    const topmost = visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-                    setActiveLessonId(topmost.target.id);
-                }
-            },
-            { threshold: 0.15, rootMargin: '-80px 0px -40% 0px' }
-        );
-        const timer = setTimeout(() => {
-            document.querySelectorAll('.lesson-card[id]').forEach(el => observer.observe(el));
-        }, 50);
-        return () => { clearTimeout(timer); observer.disconnect(); };
-    }, [selectedSection?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+        setActiveLessonIdx(0);
+    }, [selectedSection?.id]);
 
-    const scrollToLesson = (lessonId: string) => {
-        const el = document.getElementById(lessonId);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+    // Sync carousel height with active panel via ResizeObserver
+    useEffect(() => {
+        const panel = activePanelRef.current;
+        if (!panel) return;
+        setCarouselHeight(panel.offsetHeight);
+        const obs = new ResizeObserver(([entry]) => {
+            setCarouselHeight(Math.ceil(entry.contentRect.height));
+        });
+        obs.observe(panel);
+        return () => obs.disconnect();
+    }, [activeLessonIdx, selectedSection?.id]);
+
+    // Keyboard arrow-key navigation within the carousel
+    useEffect(() => {
+        if (!selectedSection) return;
+        const total = selectedSection.chapters.reduce((n, ch) => n + ch.lessons.length, 0);
+        const handler = (e: KeyboardEvent) => {
+            // Don't intercept when a button/input has keyboard focus
+            const t = e.target as HTMLElement;
+            if (t instanceof HTMLButtonElement || t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement) return;
+            if (e.key === 'ArrowLeft')  setActiveLessonIdx(prev => Math.max(0, prev - 1));
+            else if (e.key === 'ArrowRight') setActiveLessonIdx(prev => Math.min(total - 1, prev + 1));
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [selectedSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Intercept mouse back button / browser back gesture while inside a lesson
     useEffect(() => {
@@ -575,10 +591,10 @@ export default function LearningTab() {
                 return !Object.values(qs).some(v => v === true);
             });
             if (nextLesson) {
-                const el = document.getElementById(nextLesson.id);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const nextIdx = allLessons.findIndex(l => l.id === nextLesson.id);
+                if (nextIdx >= 0) setActiveLessonIdx(nextIdx);
             }
-        }, 1000);
+        }, 1200);
     };
 
     // ── Lesson View ──
@@ -669,8 +685,12 @@ export default function LearningTab() {
                                 return (
                                     <button
                                         key={lesson.id}
-                                        className={`lesson-nav-item status-${statusClass}${activeLessonId === lesson.id ? ' active' : ''}`}
-                                        onClick={() => { playSFX('hover_sound', theme); scrollToLesson(lesson.id); }}
+                                        className={`lesson-nav-item status-${statusClass}${currentLessonId === lesson.id ? ' active' : ''}`}
+                                        onClick={() => {
+                                            playSFX('hover_sound', theme);
+                                            const idx = flatLessons.findIndex(({ lesson: l }) => l.id === lesson.id);
+                                            if (idx >= 0) setActiveLessonIdx(idx);
+                                        }}
                                     >
                                         <span className="lesson-nav-item-dot" />
                                         <span className="lesson-nav-item-title">{lesson.title}</span>
@@ -680,166 +700,214 @@ export default function LearningTab() {
                         </div>
                     ))}
                 </nav>
-                <div className="learning-content">
-                    {selectedSection.chapters.map(chapter => (
-                        <div key={chapter.id} className="chapter-container">
-                            <h3 className="learning-chapter-title" style={{ color: selectedSection.color }}>
-                                {chapter.title}
-                            </h3>
-                            <div className="learning-lessons-list">
-                                {chapter.lessons.map(lesson => {
-                                    const qState = quizState[lesson.question.id] || {};
-                                    const isSolved = Object.values(qState).some(v => v === true);
 
-                                    return (
-                                        <div key={lesson.id} id={lesson.id} className={`glass lesson-card ${locked ? 'locked-section' : ''} ${isSolved ? 'solved' : ''}`}>
-                                            <h4 className="lesson-card-title">
-                                                {lesson.title}
-                                                {isSolved && <CheckCircle2 size={20} className="lesson-card-title-icon" />}
-                                            </h4>
-                                            <p className="lesson-card-desc">
-                                                {lesson.content}
-                                            </p>
+                {/* ── Horizontal Carousel ── */}
+                <div className="lesson-carousel-wrapper">
+                    <div
+                        className="lesson-carousel-viewport"
+                        style={{ '--carousel-height': `${carouselHeight}px` } as React.CSSProperties}
+                    >
+                        {flatLessons.map(({ lesson, chapterTitle }, idx) => {
+                            const diff = idx - activeLessonIdx;
+                            let panelClass = 'lesson-panel';
+                            if (diff === 0)       panelClass += ' panel-active';
+                            else if (diff === -1) panelClass += ' panel-prev';
+                            else if (diff === 1)  panelClass += ' panel-next';
+                            else if (diff < 0)    panelClass += ' panel-hidden-left';
+                            else                  panelClass += ' panel-hidden-right';
 
-                                            {/* Sleep — memory consolidation */}
-                                            {lesson.id === 'lesson-1-1-a' && (
+                            const qState = quizState[lesson.question.id] || {};
+                            const isSolved = Object.values(qState).some(v => v === true);
+                            const isActive = diff === 0;
+
+                            return (
+                                <div
+                                    key={lesson.id}
+                                    ref={isActive ? activePanelRef : undefined}
+                                    className={panelClass}
+                                    onClick={!isActive ? () => setActiveLessonIdx(idx) : undefined}
+                                    aria-hidden={!isActive}
+                                >
+                                    {(() => {
+                                        // Compute image column content (null = no image for this lesson)
+                                        let imageCol: React.ReactNode = null;
+                                        if (lesson.id === 'lesson-1-1-a') {
+                                            imageCol = (
                                                 <div className="lesson-mascot-container">
-                                                    <img
-                                                        src="/assets/images/learning center/01_mascot-sleep.png"
-                                                        alt="The mascot sleeping — memory consolidation happens during sleep"
-                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-sleep.png')}
-                                                        className="lesson-mascot-img"
-                                                    />
-                                                    <p className="lesson-mascot-caption">
-                                                        Sleep is when your brain consolidates memories and grows new neural connections. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
-                                                    </p>
+                                                    <img src="/assets/images/learning center/01_mascot-sleep.png" alt="The mascot sleeping — memory consolidation happens during sleep" onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-sleep.png')} className="lesson-mascot-img" />
+                                                    <p className="lesson-mascot-caption">Sleep is when your brain consolidates memories and grows new neural connections. <span className="lesson-mascot-caption-action">(Click to enlarge)</span></p>
                                                 </div>
-                                            )}
-
-                                            {/* Exercise — BDNF & brain fertilizer */}
-                                            {lesson.id === 'lesson-1-1-b' && (
+                                            );
+                                        } else if (lesson.id === 'lesson-1-1-b') {
+                                            imageCol = (
                                                 <div className="lesson-mascot-container">
-                                                    <img
-                                                        src="/assets/images/learning center/01_mascot-brainfertilizer.png"
-                                                        alt="The mascot after a workout — BDNF boosts brain connections"
-                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-brainfertilizer.png')}
-                                                        className="lesson-mascot-img"
-                                                    />
-                                                    <p className="lesson-mascot-caption">
-                                                        Exercise releases BDNF — the brain's own fertilizer for growing stronger neural connections. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
-                                                    </p>
+                                                    <img src="/assets/images/learning center/01_mascot-brainfertilizer.png" alt="The mascot after a workout — BDNF boosts brain connections" onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-brainfertilizer.png')} className="lesson-mascot-img" />
+                                                    <p className="lesson-mascot-caption">Exercise releases BDNF — the brain's own fertilizer for growing stronger neural connections. <span className="lesson-mascot-caption-action">(Click to enlarge)</span></p>
                                                 </div>
-                                            )}
-
-                                            {/* Nutrition — brain fuel */}
-                                            {lesson.id === 'lesson-1-1-c' && (
+                                            );
+                                        } else if (lesson.id === 'lesson-1-1-c') {
+                                            imageCol = (
                                                 <div className="lesson-mascot-container">
-                                                    <img
-                                                        src="/assets/images/learning center/01_mascot-brain-fuel.png"
-                                                        alt="The mascot fueling up — proper nutrition powers the brain"
-                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-brain-fuel.png')}
-                                                        className="lesson-mascot-img"
-                                                    />
-                                                    <p className="lesson-mascot-caption">
-                                                        Your brain runs on quality fuel — complex carbs, Omega-3s, and antioxidants sustain focus; sugar spikes crash it. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
-                                                    </p>
+                                                    <img src="/assets/images/learning center/01_mascot-brain-fuel.png" alt="The mascot fueling up — proper nutrition powers the brain" onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-brain-fuel.png')} className="lesson-mascot-img" />
+                                                    <p className="lesson-mascot-caption">Your brain runs on quality fuel — complex carbs, Omega-3s, and antioxidants sustain focus; sugar spikes crash it. <span className="lesson-mascot-caption-action">(Click to enlarge)</span></p>
                                                 </div>
-                                            )}
-
-                                            {/* Illusion of Laziness — prefrontal cortex depletion */}
-                                            {lesson.id === 'lesson-1-2-a' && (
+                                            );
+                                        } else if (lesson.id === 'lesson-1-2-a') {
+                                            imageCol = (
                                                 <div className="lesson-mascot-container">
-                                                    <img
-                                                        src="/assets/images/learning center/01_mascot-the-illusion-of-laziness.png"
-                                                        alt="The mascot exhausted in the evening — it's biology, not laziness"
-                                                        onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-the-illusion-of-laziness.png')}
-                                                        className="lesson-mascot-img"
-                                                    />
-                                                    <p className="lesson-mascot-caption">
-                                                        Evening brain fog isn't laziness — your prefrontal cortex has simply run out of energy for the day. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
-                                                    </p>
+                                                    <img src="/assets/images/learning center/01_mascot-the-illusion-of-laziness.png" alt="The mascot exhausted in the evening — it's biology, not laziness" onClick={() => setEnlargedImage('/assets/images/learning center/01_mascot-the-illusion-of-laziness.png')} className="lesson-mascot-img" />
+                                                    <p className="lesson-mascot-caption">Evening brain fog isn't laziness — your prefrontal cortex has simply run out of energy for the day. <span className="lesson-mascot-caption-action">(Click to enlarge)</span></p>
                                                 </div>
-                                            )}
-
-                                            {/* Focused vs Diffuse Mode images */}
-                                            {lesson.id === 'lesson-1-2-c' && (
+                                            );
+                                        } else if (lesson.id === 'lesson-1-2-c') {
+                                            imageCol = (
+                                                <div className="lesson-modes-grid">
+                                                    {[
+                                                        { src: '/assets/images/learning center/01_mascot_focused-mode.png', label: 'Focused Mode — tight, directed thinking along known neural paths.' },
+                                                        { src: '/assets/images/learning center/01_mascot-diffuse-mode.png', label: 'Diffuse Mode — relaxed, wandering thought that makes unexpected connections.' },
+                                                    ].map(img => (
+                                                        <div key={img.src} className="lesson-modes-item">
+                                                            <img src={img.src} alt={img.label} onClick={() => setEnlargedImage(img.src)} className="lesson-mascot-img full-width" />
+                                                            <p className="lesson-mascot-caption small">{img.label} <span className="lesson-mascot-caption-action">(Click to enlarge)</span></p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        } else if (lesson.id === 'lesson-2-2-a') {
+                                            imageCol = (
                                                 <div className="lesson-mascot-container">
-                                                    <div className="lesson-modes-grid">
-                                                        {[
-                                                            { src: '/assets/images/learning center/01_mascot_focused-mode.png', label: 'Focused Mode — tight, directed thinking along known neural paths.' },
-                                                            { src: '/assets/images/learning center/01_mascot-diffuse-mode.png', label: 'Diffuse Mode — relaxed, wandering thought that makes unexpected connections.' },
-                                                        ].map(img => (
-                                                            <div key={img.src} className="lesson-modes-item">
-                                                                <img
-                                                                    src={img.src}
-                                                                    alt={img.label}
-                                                                    onClick={() => setEnlargedImage(img.src)}
-                                                                    className="lesson-mascot-img full-width"
-                                                                />
-                                                                <p className="lesson-mascot-caption small">
-                                                                    {img.label} <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
-                                                                </p>
-                                                            </div>
-                                                        ))}
+                                                    <img src="/assets/images/learning center/spaced_repetition.png" alt="The Forgetting Curve & Spaced Repetition" onClick={() => setEnlargedImage('/assets/images/learning center/spaced_repetition.png')} className="lesson-mascot-img full-width" />
+                                                    <p className="lesson-mascot-caption">The Forgetting Curve shows how memory decays without review. Spaced repetition resets the curve each time. <span className="lesson-mascot-caption-action">(Click to enlarge)</span></p>
+                                                </div>
+                                            );
+                                        }
+
+                                        const quizCol = (
+                                            <div className="lesson-card-quiz-col">
+                                                <div className="concept-check-container">
+                                                    <h5 className="concept-check-header">
+                                                        <Sparkles size={18} /> Concept Check
+                                                    </h5>
+                                                    <p className="concept-check-question">{lesson.question.question}</p>
+                                                    <div className="concept-check-options">
+                                                        {lesson.question.options.map(opt => {
+                                                            const clickedStatus = qState[opt.id];
+                                                            let optClass = 'quiz-option';
+                                                            if (clickedStatus === true) optClass += ' correct revealed';
+                                                            else if (clickedStatus === false) optClass += ' incorrect revealed';
+                                                            else if (isSolved) optClass += ' disabled';
+                                                            if (locked && clickedStatus === undefined) optClass += ' disabled';
+                                                            return (
+                                                                <div
+                                                                    key={opt.id}
+                                                                    className={optClass}
+                                                                    onClick={() => handleOptionClick(lesson.question.id, opt)}
+                                                                >
+                                                                    <span>{opt.text}</span>
+                                                                    {clickedStatus === true && <CheckCircle2 size={24} className="quiz-icon-correct" />}
+                                                                    {clickedStatus === false && <XCircle size={24} className="quiz-icon-incorrect" />}
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
+                                                    {isSolved && (
+                                                        <div className="quiz-success-msg slide-up">
+                                                            <strong>Correct!</strong> Great job internalizing this concept!
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-
-                                            {/* Forgetting Curve image for spaced repetition lesson */}
-                                            {lesson.id === 'lesson-2-2-a' && (
-                                                <div className="lesson-mascot-container">
-                                                    <img
-                                                        src="/assets/images/learning center/spaced_repetition.png"
-                                                        alt="The Forgetting Curve & Spaced Repetition"
-                                                        onClick={() => setEnlargedImage('/assets/images/learning center/spaced_repetition.png')}
-                                                        className="lesson-mascot-img full-width"
-                                                    />
-                                                    <p className="lesson-mascot-caption">
-                                                        The Forgetting Curve shows how memory decays without review. Spaced repetition resets the curve each time. <span className="lesson-mascot-caption-action">(Click to enlarge)</span>
-                                                    </p>
-                                                </div>
-                                            )}
-
-                                            <div className="concept-check-container">
-                                                <h5 className="concept-check-header">
-                                                    <Sparkles size={18} /> Concept Check
-                                                </h5>
-                                                <p className="concept-check-question">{lesson.question.question}</p>
-
-                                                <div className="concept-check-options">
-                                                    {lesson.question.options.map(opt => {
-                                                        const clickedStatus = qState[opt.id];
-                                                        let optClass = 'quiz-option';
-                                                        if (clickedStatus === true) optClass += ' correct revealed';
-                                                        else if (clickedStatus === false) optClass += ' incorrect revealed';
-                                                        else if (isSolved) optClass += ' disabled';
-                                                        if (locked && clickedStatus === undefined) optClass += ' disabled';
-
-                                                        return (
-                                                            <div
-                                                                key={opt.id}
-                                                                className={optClass}
-                                                                onClick={() => handleOptionClick(lesson.question.id, opt)}
-                                                            >
-                                                                <span>{opt.text}</span>
-                                                                {clickedStatus === true && <CheckCircle2 size={24} className="quiz-icon-correct" />}
-                                                                {clickedStatus === false && <XCircle size={24} className="quiz-icon-incorrect" />}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                {isSolved && (
-                                                    <div className="quiz-success-msg slide-up">
-                                                        <strong>Correct!</strong> Great job internalizing this concept!
-                                                    </div>
-                                                )}
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                        );
+
+                                        return (
+                                            <div className={`glass lesson-card ${locked ? 'locked-section' : ''} ${isSolved ? 'solved' : ''}`}>
+                                                <div className={`lesson-card-columns${imageCol ? ' has-image' : ''}`}>
+                                                    {imageCol ? (
+                                                        <>
+                                                            <div className="lesson-card-left-col">
+                                                                <div className="lesson-card-content"
+                                                                    style={{ '--chapter-color': selectedSection.color } as React.CSSProperties}
+                                                                >
+                                                                    <div className="lesson-panel-chapter-label">{chapterTitle}</div>
+                                                                    <h4 className="lesson-card-title">
+                                                                        {lesson.title}
+                                                                        {isSolved && <CheckCircle2 size={20} className="lesson-card-title-icon" />}
+                                                                    </h4>
+                                                                    <div className="lesson-card-body">
+                                                                        <p className="lesson-card-desc">{lesson.content}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {quizCol}
+                                                            </div>
+                                                            <div className="lesson-card-image-col">
+                                                                {imageCol}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="lesson-card-content"
+                                                                style={{ '--chapter-color': selectedSection.color } as React.CSSProperties}
+                                                            >
+                                                                <div className="lesson-panel-chapter-label">{chapterTitle}</div>
+                                                                <h4 className="lesson-card-title">
+                                                                    {lesson.title}
+                                                                    {isSolved && <CheckCircle2 size={20} className="lesson-card-title-icon" />}
+                                                                </h4>
+                                                                <div className="lesson-card-body">
+                                                                    <p className="lesson-card-desc">{lesson.content}</p>
+                                                                </div>
+                                                            </div>
+                                                            {quizCol}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="lesson-carousel-nav">
+                        <button
+                            className="btn-icon lesson-carousel-btn"
+                            onClick={() => { playSFX('hover_sound', theme); setActiveLessonIdx(prev => Math.max(0, prev - 1)); }}
+                            disabled={activeLessonIdx === 0}
+                            aria-label="Previous lesson"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <div className="lesson-progress-dots" role="tablist" aria-label="Lesson progress">
+                            {flatLessons.map(({ lesson }, dotIdx) => {
+                                const qs = quizState[lesson.question.id] || {};
+                                const dotSolved = Object.values(qs).some(v => v === true);
+                                const dotWrong = !dotSolved && Object.values(qs).some(v => v === false);
+                                let dotClass = 'lesson-progress-dot';
+                                if (dotIdx === activeLessonIdx) dotClass += ' dot-active';
+                                else if (dotSolved) dotClass += ' dot-solved';
+                                else if (dotWrong) dotClass += ' dot-wrong';
+                                return (
+                                    <button
+                                        key={lesson.id}
+                                        className={dotClass}
+                                        onClick={() => { playSFX('hover_sound', theme); setActiveLessonIdx(dotIdx); }}
+                                        aria-label={lesson.title}
+                                        aria-selected={dotIdx === activeLessonIdx}
+                                        role="tab"
+                                    />
+                                );
+                            })}
                         </div>
-                    ))}
+                        <button
+                            className="btn-icon lesson-carousel-btn"
+                            onClick={() => { playSFX('hover_sound', theme); setActiveLessonIdx(prev => Math.min(flatLessons.length - 1, prev + 1)); }}
+                            disabled={activeLessonIdx === flatLessons.length - 1}
+                            aria-label="Next lesson"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
                 </div>
                 </div>
                 </div>

@@ -1,7 +1,7 @@
 /* WeeklyCompass.css */
 
 .weekly-compass {
-    max-width: 1500px;
+    max-width: 70%;
     margin: 0 auto 24px;
     padding: 16px 20px;
     border-left: 4px solid var(--accent);

@@ -381,20 +381,20 @@ export default function AnalyticsTab() {
                     </div>
 
                     <div className="stat-card">
-                        <Zap className="stat-icon" size={20} style={{ color: 'var(--accent)' }} />
-                        <div className="stat-val">{animCurrentStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>{t('analytics.days')}</span></div>
+                        <Zap className="stat-icon stat-icon-accent" size={20} />
+                        <div className="stat-val">{animCurrentStreak} <span className="stat-days-suffix">{t('analytics.days')}</span></div>
                         <div className="stat-label">{t('analytics.current_streak')}</div>
                     </div>
 
                     <div className="stat-card">
-                        <Flag className="stat-icon" size={20} style={{ color: 'var(--success)' }} />
-                        <div className="stat-val">{animBestStreak} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>{t('analytics.days')}</span></div>
+                        <Flag className="stat-icon stat-icon-success" size={20} />
+                        <div className="stat-val">{animBestStreak} <span className="stat-days-suffix">{t('analytics.days')}</span></div>
                         <div className="stat-label">{t('analytics.best_streak')}</div>
                     </div>
 
                     <div className="stat-card">
                         <Target size={20} className="stat-icon" />
-                        <div className="stat-value">{weekFreeTimePercent !== null ? `${animWeekFreeTime}%` : '—'}</div>
+                        <div className="stat-val">{weekFreeTimePercent !== null ? `${animWeekFreeTime}%` : '—'}</div>
                         <div className="stat-label">{t('analytics.free_time_used')}</div>
                     </div>
                 </div>
@@ -426,7 +426,7 @@ export default function AnalyticsTab() {
 
                     <div className="stat-card">
                         <Target size={20} className="stat-icon" />
-                        <div className="stat-value">{monthFreeTimePercent !== null ? `${animMonthFreeTime}%` : '—'}</div>
+                        <div className="stat-val">{monthFreeTimePercent !== null ? `${animMonthFreeTime}%` : '—'}</div>
                         <div className="stat-label">{t('analytics.free_time_used')}</div>
                     </div>
                 </div>
@@ -457,14 +457,14 @@ export default function AnalyticsTab() {
                     </div>
 
                     <div className="stat-card">
-                        <Flag className="stat-icon" size={20} style={{ color: 'var(--success)' }} />
-                        <div className="stat-val">{animBestStreak} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('analytics.days')}</span></div>
+                        <Flag className="stat-icon stat-icon-success" size={20} />
+                        <div className="stat-val">{animBestStreak} <span className="stat-days-suffix">{t('analytics.days')}</span></div>
                         <div className="stat-label">{t('analytics.best_streak')}</div>
                     </div>
 
                     <div className="stat-card">
                         <Target size={20} className="stat-icon" />
-                        <div className="stat-value">{totalFreeTimePercent !== null ? `${animTotalFreeTime}%` : '—'}</div>
+                        <div className="stat-val">{totalFreeTimePercent !== null ? `${animTotalFreeTime}%` : '—'}</div>
                         <div className="stat-label">{t('analytics.free_time_used')}</div>
                     </div>
                 </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMetacognitionLogs } from '../lib/db';
+import { useTranslation } from '../lib/i18n';
 import './WeeklyCompass.css';
 
 interface CompassData {
@@ -8,6 +9,7 @@ interface CompassData {
 }
 
 export default function WeeklyCompass() {
+    const { t } = useTranslation();
     const [compass, setCompass] = useState<CompassData | null>(null);
 
     useEffect(() => {
@@ -29,16 +31,16 @@ export default function WeeklyCompass() {
     return (
         <div className="weekly-compass glass">
             <div className="weekly-compass-header">
-                <span>📋 Weekly Compass</span>
+                <span>{t('weekly_compass.title')}</span>
             </div>
             {compass.mechanical_fix && (
                 <div className="weekly-compass-item">
-                    <strong>🔧 System Rule:</strong> {compass.mechanical_fix}
+                    <strong>{t('weekly_compass.system_rule')}</strong> {compass.mechanical_fix}
                 </div>
             )}
             {compass.retention && (
                 <div className="weekly-compass-item">
-                    <strong>📍 Focus Areas:</strong> {compass.retention}
+                    <strong>{t('weekly_compass.focus_areas')}</strong> {compass.retention}
                 </div>
             )}
         </div>

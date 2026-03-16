@@ -91,6 +91,7 @@
 .lesson-card {
     padding: 24px;
     border-radius: 16px;
+    container-type: inline-size;
 }
 
 .lesson-card.solved {
@@ -111,20 +112,74 @@
     color: var(--success);
 }
 
-.lesson-card-desc {
-    line-height: 1.6;
-    color: var(--text-dark);
-    margin-bottom: 24px;
+/* ── Two-column lesson card layout ── */
+/* No image: text (left) | quiz (right)  */
+/* Has image: text+quiz stacked (left) | image (right) */
+.lesson-card-columns {
+    display: grid;
+    grid-template-columns: 1fr minmax(220px, 280px);
+    gap: 28px;
+    align-items: start;
+}
+
+/* Has image — same 2-col, but image gets more horizontal room */
+.lesson-card-columns.has-image {
+    grid-template-columns: 1fr minmax(260px, 380px);
+    gap: 16px;
+}
+
+/* Left column when image is present: stacks text + quiz */
+.lesson-card-left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+}
+
+.lesson-card-content {
+    min-width: 0;
     max-width: 60ch;
 }
 
+/* Image column — right side when has-image */
+.lesson-card-image-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 80px;
+}
+
+.lesson-card-quiz-col {
+    min-width: 0;
+}
+
+/* Stack all columns when the card is very narrow (< 380px) */
+@container (max-width: 380px) {
+
+    .lesson-card-columns,
+    .lesson-card-columns.has-image {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Lesson card body: just description (image is now in its own column) ── */
+.lesson-card-body {
+    margin-bottom: 0;
+}
+
+.lesson-card-desc {
+    line-height: 1.6;
+    color: var(--text-dark);
+}
+
 .lesson-mascot-container {
-    margin-bottom: 24px;
     text-align: center;
 }
 
 .lesson-mascot-img {
-    max-width: 340px;
+    max-width: 100%;
     width: 100%;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -171,6 +226,14 @@
     padding: 20px;
     border-radius: 12px;
     border: 1px solid var(--glass-border);
+    border-top: 2px solid rgba(var(--primary-rgb), 0.5);
+    max-width: 60ch;
+}
+
+/* Stick quiz to viewport top only when it's the right column (no image) */
+.lesson-card-columns:not(.has-image) .lesson-card-quiz-col .concept-check-container {
+    position: sticky;
+    top: 80px;
 }
 
 .concept-check-header {
@@ -180,12 +243,12 @@
     margin-bottom: 16px;
     color: var(--primary);
     font-size: 1rem;
+    font-weight: 600;
 }
 
 .concept-check-question {
     font-weight: 500;
     margin-bottom: 16px;
-    max-width: 60ch;
 }
 
 .concept-check-options {
@@ -326,4 +389,163 @@
 
 .lesson-mascot-img.full-width:hover {
     transform: scale(1.01);
+}
+
+/* ── Horizontal Lesson Carousel ── */
+
+.lesson-carousel-wrapper {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Perspective container — overflow hidden clips the angled side panels */
+.lesson-carousel-viewport {
+    position: relative;
+    perspective: 1600px;
+    perspective-origin: 50% 25%;
+    height: var(--carousel-height, 640px);
+    transition: height 0.2s ease;
+    overflow: hidden;
+}
+
+/* Every lesson is a panel, absolutely positioned inside the viewport */
+.lesson-panel {
+    position: absolute;
+    top: 0;
+    left: 8%;
+    width: 84%;
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.4s ease;
+    transform-origin: center center;
+    will-change: transform, opacity;
+}
+
+/* Active panel — centered, flat, full opacity */
+.lesson-panel.panel-active {
+    transform: translateX(0) rotateY(0deg) scale(1);
+    opacity: 1;
+    z-index: 3;
+    pointer-events: all;
+}
+
+/* Previous panel — peeks in from left, angled away */
+.lesson-panel.panel-prev {
+    transform: translateX(-83%) rotateY(42deg) scale(0.82);
+    opacity: 0.1;
+    filter: blur(0.5px);
+    z-index: 2;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.lesson-panel.panel-prev:hover {
+    opacity: 0.45;
+    filter: blur(0px);
+    transform: translateX(-80%) rotateY(36deg) scale(0.84);
+}
+
+/* Next panel — peeks in from right, angled away */
+.lesson-panel.panel-next {
+    transform: translateX(83%) rotateY(-42deg) scale(0.82);
+    opacity: 0.1;
+    filter: blur(0.5px);
+    z-index: 2;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.lesson-panel.panel-next:hover {
+    opacity: 0.45;
+    filter: blur(0px);
+    transform: translateX(80%) rotateY(-36deg) scale(0.84);
+}
+
+/* Prevent quiz/image clicks from firing inside non-active panels */
+.lesson-panel.panel-prev *,
+.lesson-panel.panel-next * {
+    pointer-events: none;
+}
+
+/* Further panels — fully hidden off-screen */
+.lesson-panel.panel-hidden-left {
+    transform: translateX(-160%) rotateY(58deg) scale(0.65);
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.lesson-panel.panel-hidden-right {
+    transform: translateX(160%) rotateY(-58deg) scale(0.65);
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Chapter label above the lesson title inside each panel */
+.lesson-panel-chapter-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--chapter-color, var(--text-muted));
+    margin-bottom: 10px;
+    opacity: 0.85;
+}
+
+/* Bottom carousel navigation row */
+.lesson-carousel-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 4px 0 8px;
+}
+
+.lesson-carousel-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+}
+
+/* Progress dot track */
+.lesson-progress-dots {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 360px;
+}
+
+.lesson-progress-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    background: var(--glass-border);
+    cursor: pointer;
+    transition: transform 0.18s ease, background 0.18s ease, width 0.18s ease;
+    flex-shrink: 0;
+}
+
+.lesson-progress-dot.dot-active {
+    width: 20px;
+    border-radius: 4px;
+    background: var(--primary);
+    transform: scale(1);
+}
+
+.lesson-progress-dot.dot-solved {
+    background: var(--success);
+}
+
+.lesson-progress-dot.dot-wrong {
+    background: var(--danger);
+}
+
+.lesson-progress-dot:not(.dot-active):hover {
+    transform: scale(1.4);
 }

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { X } from "lucide-react";
+import { useTranslation } from "../../lib/i18n";
 
 interface Props {
   open: boolean;
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export default function BingoModal({ open, title, onClose, children }: Props) {
+  const { t } = useTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -51,23 +54,25 @@ export default function BingoModal({ open, title, onClose, children }: Props) {
 
   return (
     <div
-      className="bingo-backdrop"
+      className="modal-overlay"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="bingo-modal"
+        className="modal-content"
         role="dialog"
         aria-modal="true"
         aria-labelledby="bingo-modal-title"
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bingo-modal-header">
-          <span className="bingo-modal-title" id="bingo-modal-title">{title}</span>
-          <button className="btn" onClick={onClose} aria-label="Close">✕</button>
+        <div className="modal-header">
+          <h2 className="modal-title" id="bingo-modal-title">{title}</h2>
+          <button className="btn btn-icon" onClick={onClose} aria-label={t('bingoals.close')}>
+            <X size={18} />
+          </button>
         </div>
-        <div className="bingo-modal-body">
+        <div className="modal-body">
           {children}
         </div>
       </div>

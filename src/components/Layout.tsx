@@ -53,7 +53,7 @@ export default function Layout() {
         { path: '/settings', label: t('nav.settings'), icon: SettingsIcon },
     ];
     const navItems = devNavVisible
-        ? [...baseNavItems, { path: '/bingoals', label: 'Bingoals', icon: Target }, { path: '/dev', label: 'Dev', icon: FlaskConical }]
+        ? [...baseNavItems, { path: '/bingoals', label: t('nav.bingoals'), icon: Target }, { path: '/dev', label: 'Dev', icon: FlaskConical }]
         : baseNavItems;
 
     useEffect(() => {
@@ -292,8 +292,7 @@ export default function Layout() {
                     <div className="terminal-quote-container">
                         <div className="terminal-quote-line">
                             <span className="terminal-prompt">&gt; </span>
-                            <span className="terminal-typed">{typedText}</span>
-                            <span className="terminal-cursor">█</span>
+                            <span className="terminal-typed">{typedText}<span className="terminal-cursor">█</span></span>
                         </div>
                         <button
                             className="quote-edit-btn terminal-edit-btn"

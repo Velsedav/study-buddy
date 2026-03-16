@@ -670,8 +670,7 @@ export default function Home() {
                 <div className="soft-delete-toast glass" role="status" aria-live="polite">
                     <span>{t('home.moved_to_trash')}</span>
                     <button
-                        className="btn btn-secondary"
-                        style={{ padding: '4px 10px', fontSize: '0.85rem' }}
+                        className="btn btn-secondary trash-toast-undo-btn"
                         onClick={async () => {
                             await restoreSubject(softDeleteToast.id);
                             if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -691,7 +690,7 @@ export default function Home() {
                 <div className="modal-overlay" onClick={() => setShowTrash(false)}>
                     <div className="modal-content log-modal-content" role="dialog" aria-modal="true" aria-labelledby="trash-modal-title" onClick={e => e.stopPropagation()}>
                         <div className="log-modal-header">
-                            <h2 id="trash-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h2 id="trash-modal-title" className="trash-modal-title-row">
                                 <Trash2 size={20} /> {t('home.trash_modal_title')}
                             </h2>
                             <button className="btn btn-icon" onClick={() => setShowTrash(false)}>
@@ -700,21 +699,20 @@ export default function Home() {
                         </div>
 
                         {trashedSubjects.length === 0 ? (
-                            <p className="text-muted text-center" style={{ padding: '24px 0' }}>{t('home.trash_empty')}</p>
+                            <p className="text-muted text-center trash-modal-empty">{t('home.trash_empty')}</p>
                         ) : (
                             <div className="log-modal-list">
                                 {trashedSubjects.map(s => (
-                                    <div key={s.id} className="glass log-modal-item" style={{ alignItems: 'center' }}>
-                                        <div style={{ flex: 1 }}>
+                                    <div key={s.id} className="glass log-modal-item">
+                                        <div className="trash-item-info">
                                             <div className="log-modal-subject">{s.name}</div>
-                                            <div className="log-modal-duration" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            <div className="trash-item-date">
                                                 {t('home.deleted_on')} {new Date(s.deleted_at!).toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div className="trash-item-actions">
                                             <button
-                                                className="btn btn-secondary"
-                                                style={{ padding: '5px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                className="btn btn-secondary trash-action-btn"
                                                 title={t('home.restore')}
                                                 onClick={async () => {
                                                     await restoreSubject(s.id);
@@ -727,10 +725,9 @@ export default function Home() {
                                             </button>
                                             {confirmDeleteId === s.id ? (
                                                 <>
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>{t('home.confirm')}</span>
+                                                    <span className="trash-confirm-text">{t('home.confirm')}</span>
                                                     <button
-                                                        className="btn"
-                                                        style={{ padding: '5px 10px', fontSize: '0.8rem', color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
+                                                        className="btn trash-delete-btn"
                                                         onClick={async () => {
                                                             playSFX('cancelling', theme);
                                                             await permanentlyDeleteSubject(s.id);
@@ -742,8 +739,7 @@ export default function Home() {
                                                         <Trash2 size={13} /> {t('home.yes_delete')}
                                                     </button>
                                                     <button
-                                                        className="btn btn-secondary"
-                                                        style={{ padding: '5px 10px', fontSize: '0.8rem' }}
+                                                        className="btn btn-secondary trash-action-btn"
                                                         onClick={() => setConfirmDeleteId(null)}
                                                     >
                                                         {t('home.cancel')}
@@ -751,8 +747,7 @@ export default function Home() {
                                                 </>
                                             ) : (
                                                 <button
-                                                    className="btn"
-                                                    style={{ padding: '5px 10px', fontSize: '0.8rem', color: 'var(--danger)', border: '1px solid var(--danger)', background: 'transparent', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
+                                                    className="btn trash-delete-btn"
                                                     title={t('home.delete_permanently')}
                                                     onClick={() => setConfirmDeleteId(s.id)}
                                                 >

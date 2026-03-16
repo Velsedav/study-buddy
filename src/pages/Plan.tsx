@@ -6,7 +6,7 @@ import { useUndoRedo } from '../lib/undo';
 import TechniquePickerModal from '../components/TechniquePickerModal';
 import ChapterPickerModal from '../components/ChapterPickerModal';
 import WeeklyCompass from '../components/WeeklyCompass';
-import { TECHNIQUES, getTierColor, type TechCategory } from '../lib/techniques';
+import { TECHNIQUES, type TechCategory } from '../lib/techniques';
 import { ChevronDown, MoreVertical, Calendar } from 'lucide-react';
 import { CustomSelect } from '../components/CustomSelect';
 import { playSFX } from '../lib/sounds';
@@ -499,7 +499,7 @@ export default function Plan() {
                 </div>
             </div>
 
-            <WeeklyCompass />
+            <div className="planner-compass"><WeeklyCompass /></div>
 
             <div className="planner-content-area">
                 {/* Subjects List */}
@@ -514,7 +514,6 @@ export default function Plan() {
                                 onDragEnd={handleDragEnd}
                                 onMouseDown={() => handleSubjectMouseDown(s.id)}
                                 className={`drag-subject-item ${((isDragging || isMouseDownOnSubject) && draggingSubjectId === s.id) ? 'drag-active' : ''} ${((isDragging || isMouseDownOnSubject) && draggingSubjectId !== s.id) ? 'drag-dim' : ''}`}
-                                style={{ '--animation-order': idx } as any}
                                 onMouseEnter={() => { if (!isDragging) playSFX('hover_sound', theme); }}
                             >
                                 <strong>{s.name}</strong>
@@ -623,11 +622,7 @@ export default function Plan() {
                                                             {technique && (
                                                                 <span
                                                                     title={technique.hint}
-                                                                    className="block-technique-tag"
-                                                                    style={{
-                                                                        '--tech-bg': getTierColor(technique.tier),
-                                                                        '--tech-color': technique.tier === 'S' || technique.tier === 'F' ? '#fff' : '#000'
-                                                                    } as React.CSSProperties}
+                                                                    className={`block-technique-tag tier-${technique.tier.toLowerCase()}`}
                                                                 >
                                                                     {technique.name}
                                                                 </span>

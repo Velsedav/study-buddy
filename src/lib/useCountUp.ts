@@ -14,6 +14,12 @@ export function useCountUp(target: number, duration = 3000): number {
             return;
         }
 
+        // Respect user's reduced-motion preference — jump straight to final value
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            setValue(target);
+            return;
+        }
+
         const animate = (timestamp: number) => {
             if (!startRef.current) startRef.current = timestamp;
             const progress = Math.min((timestamp - startRef.current) / duration, 1);

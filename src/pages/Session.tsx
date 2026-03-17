@@ -277,13 +277,13 @@ export default function Session() {
                     <div className="session-work-container">
                         {currentBlock.chapter_name && (
                             <div className="session-info-card">
-                                <div className="session-info-label">📖 {t('session.chapter')}</div>
+                                <div className="session-info-label">{isTerminal ? '>>' : '📖'} {t('session.chapter')}</div>
                                 <div className="session-info-value">{currentBlock.chapter_name}</div>
                             </div>
                         )}
                         {currentBlock.objective && (
                             <div className="session-info-card">
-                                <div className="session-info-label">🎯 {t('session.objective')}</div>
+                                <div className="session-info-label">{isTerminal ? '[!]' : '🎯'} {t('session.objective')}</div>
                                 <div className="session-info-value">{currentBlock.objective}</div>
                             </div>
                         )}
@@ -575,7 +575,7 @@ export default function Session() {
                     <div className="modal-content confirm-modal-content" onClick={e => e.stopPropagation()}>
                         {endConfirmStep === 'confirm-stop' && (
                             <>
-                                <h2 className="confirm-modal-title">{t('session.stop_title')}</h2>
+                                <h2 className="confirm-modal-title">{isTerminal ? '[!]' : '⏸️'} {t('session.stop_title')}</h2>
                                 <p className="confirm-modal-text">
                                     {t('session.stop_text')}
                                 </p>
@@ -592,7 +592,7 @@ export default function Session() {
 
                         {endConfirmStep === 'confirm-save' && (
                             <>
-                                <h2 className="confirm-modal-title">{t('session.save_title')}</h2>
+                                <h2 className="confirm-modal-title">{isTerminal ? '[S]' : '💾'} {t('session.save_title')}</h2>
                                 <p className="confirm-modal-text">
                                     {t('session.save_text')}
                                 </p>

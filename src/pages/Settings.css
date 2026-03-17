@@ -105,10 +105,11 @@
     margin-top: 8px;
 }
 
-.audio-header-label {
+.form-group .audio-header-label {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
 }
 
 .audio-master-val {

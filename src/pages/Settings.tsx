@@ -84,6 +84,9 @@ export default function SettingsTab() {
                 { id: 'terminal-green', name: 'Green Terminal', color: '#00ff00' },
                 { id: 'terminal-red', name: 'Red Terminal', color: '#ff0000' },
                 { id: 'terminal-cyan', name: 'CLI / Cyan', color: '#00d4ff' },
+                { id: 'terminal-amber', name: 'Amber Terminal', color: '#ffaa00' },
+                { id: 'terminal-purple', name: 'Purple Terminal', color: '#cc33ff' },
+                { id: 'terminal-blue', name: 'Blue Terminal', color: '#4499ff' },
             ]
         },
         {
@@ -94,6 +97,7 @@ export default function SettingsTab() {
                 { id: 'neobrutalism', name: 'Neobrutalism', color: '#ffde59' },
                 { id: 'honey-lemon', name: 'Honey Lemon', color: '#ffeb3b' },
                 { id: 'ai-pro', name: 'AI Pro', color: '#7c3aed', background: 'linear-gradient(135deg, #070b14 0%, #1a0a3d 50%, #06b6d4 100%)' },
+                { id: 'cyber-scan', name: 'Cyber Scan', color: '#b8ff00', background: 'linear-gradient(135deg, #050510 0%, #0a0830 50%, #b8ff00 100%)' },
             ]
         }
     ] as const;

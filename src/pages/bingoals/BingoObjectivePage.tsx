@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import BingoModal from "../../components/bingoals/BingoModal";
 import type { MediaItem, Objective, Subobjective } from "../../lib/bingoals/db";
@@ -352,7 +352,7 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
               <input
                 className="numInput"
                 type="number"
-                aria-label="Current progress"
+                aria-label={t('bingoals.aria_current')}
                 value={s.progress_current ?? 0}
                 onChange={(e) => { const v = Number(e.target.value); setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: v } : x))); }}
                 onBlur={async () => {
@@ -395,7 +395,7 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
               <input
                 className="numInput"
                 type="number"
-                aria-label="Target total"
+                aria-label={t('bingoals.aria_target')}
                 value={s.target_total ?? 0}
                 onChange={(e) => { const v = Number(e.target.value); setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, target_total: v } : x))); }}
                 onBlur={async () => {
@@ -422,9 +422,9 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
             </div>
             <input
               className="unitInput"
-              aria-label="Unit"
+              aria-label={t('bingoals.unit_label')}
               value={s.unit ?? ""}
-              placeholder="unit"
+              placeholder={t('bingoals.unit_placeholder')}
               onChange={(e) => setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, unit: e.target.value } : x)))}
               onBlur={async () => {
                 const fresh = subs.find((x) => x.id === s.id);
@@ -451,7 +451,7 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
           </button>
 
           {isRunning ? (
-            <button className="btn btn-danger recBtn" onClick={stopTimerIfRunning} title="Stop recording">
+            <button className="btn btn-danger recBtn" onClick={stopTimerIfRunning} title={t('bingoals.rec_stop')}>
               <span className="recDot" aria-hidden="true" />
               {t('bingoals.rec_stop')}
             </button>
@@ -472,7 +472,9 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
               <button className="btn" onClick={() => setDeleteConfirm(false)}>{t('bingoals.cancel')}</button>
             </>
           ) : (
-            <button className="btn" onClick={() => setDeleteConfirm(true)}>{t('bingoals.delete')}</button>
+            <button className="btn-icon bingo-delete-btn" onClick={() => setDeleteConfirm(true)} aria-label={t('bingoals.delete')}>
+              <Trash2 size={14} />
+            </button>
           )}
         </div>
       </div>
@@ -484,7 +486,7 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
       <div className="memories">
         <div className="row bingo-panel-header-row">
           <div className="muted">{t('bingoals.memories_label')}</div>
-          <div className="row bingo-gap-sm">
+          <div className="memories-actions">
             <button className="btn" onClick={() => setQuoteOpen(true)}>{t('bingoals.add_quote')}</button>
 
             <label className="btn">
@@ -510,8 +512,9 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
             </label>
 
             <button
-              className="btn"
+              className="btn bingo-memories-play"
               disabled={subMedia.length < 2}
+              title={subMedia.length < 2 ? t('bingoals.play_requires_two') : undefined}
               onClick={() => setPlayingSubId((prev) => (prev === s.id ? null : s.id))}
             >
               {isPlaying ? t('bingoals.pause') : t('bingoals.play')}

@@ -209,11 +209,15 @@ function CreateObjectiveModal(props: { slotIndex: number | null; onClose: () => 
           <option value="manual">{t('bingoals.goal_manual')}</option>
         </select>
 
-        <label htmlFor="bingo-create-target">{t('bingoals.goal_target_label')}</label>
-        <input id="bingo-create-target" type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} />
+        {kind !== "manual" && (
+          <>
+            <label htmlFor="bingo-create-target">{t('bingoals.goal_target_label')}</label>
+            <input id="bingo-create-target" type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} />
 
-        <label htmlFor="bingo-create-unit">{t('bingoals.unit_label')}</label>
-        <input id="bingo-create-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="books / € / % / wpm" />
+            <label htmlFor="bingo-create-unit">{t('bingoals.unit_label')}</label>
+            <input id="bingo-create-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="books / € / % / wpm" />
+          </>
+        )}
 
         <div className="row">
           <button className="btn" onClick={props.onClose}>{t('bingoals.cancel')}</button>
@@ -275,11 +279,15 @@ function EditObjectiveModal(props: { objective: Objective | null; onClose: () =>
           <option value="manual">{t('bingoals.goal_manual')}</option>
         </select>
 
-        <label htmlFor="bingo-edit-target">{t('bingoals.goal_target_label')}</label>
-        <input id="bingo-edit-target" type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} />
+        {kind !== "manual" && (
+          <>
+            <label htmlFor="bingo-edit-target">{t('bingoals.goal_target_label')}</label>
+            <input id="bingo-edit-target" type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} />
 
-        <label htmlFor="bingo-edit-unit">{t('bingoals.unit_label')}</label>
-        <input id="bingo-edit-unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
+            <label htmlFor="bingo-edit-unit">{t('bingoals.unit_label')}</label>
+            <input id="bingo-edit-unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
+          </>
+        )}
 
         {(kind === "metric" || kind === "amount" || kind === "manual") && (
           <>

@@ -57,10 +57,16 @@ interface InsightItem {
 function RotatingInsightCard({ items }: { items: InsightItem[] }) {
     const [idx, setIdx] = useState(0);
     const [visible, setVisible] = useState(true);
+    const [paused, setPaused] = useState(false);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    const goTo = (i: number) => {
+        setVisible(false);
+        setTimeout(() => { setIdx(i); setVisible(true); }, 280);
+    };
+
     useEffect(() => {
-        if (items.length <= 1) return;
+        if (items.length <= 1 || paused) return;
         timerRef.current = setInterval(() => {
             setVisible(false);
             setTimeout(() => {
@@ -69,19 +75,34 @@ function RotatingInsightCard({ items }: { items: InsightItem[] }) {
             }, 280);
         }, 3000);
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, [items.length]);
+    }, [items.length, paused]);
 
     const item = items[idx] ?? items[0];
     return (
-        <div className="stat-card glass rotating-insight-card">
-            <div className={`rotating-insight-content${visible ? ' ri-visible' : ' ri-hidden'}`}>
+        <div
+            className="stat-card glass rotating-insight-card"
+            onMouseEnter={() => setPaused(true)}
+            onMouseLeave={() => setPaused(false)}
+        >
+            <div
+                className={`rotating-insight-content${visible ? ' ri-visible' : ' ri-hidden'}`}
+                aria-live="polite"
+                aria-atomic="true"
+            >
                 <div className="stat-icon">{item.icon}</div>
                 <div className="stat-value-sm">{item.value}</div>
                 <div className="stat-label">{item.label}</div>
             </div>
-            <div className="rotating-insight-dots">
-                {items.map((_, i) => (
-                    <span key={i} className={`ri-dot${i === idx ? ' active' : ''}`} />
+            <div className="rotating-insight-dots" role="tablist">
+                {items.map((it, i) => (
+                    <button
+                        key={i}
+                        role="tab"
+                        aria-selected={i === idx}
+                        aria-label={it.label}
+                        className={`ri-dot${i === idx ? ' active' : ''}`}
+                        onClick={() => goTo(i)}
+                    />
                 ))}
             </div>
         </div>
@@ -107,6 +128,7 @@ export default function Home() {
     const [sortBy, setSortBy] = useState<string>('lastStudied');
     const [sortAsc, setSortAsc] = useState<boolean>(true);
     const [showArchived, setShowArchived] = useState<boolean>(false);
+    const [loading, setLoading] = useState(true);
 
     const { weekStart, theme } = useSettings();
     const { t } = useTranslation();
@@ -356,6 +378,8 @@ export default function Home() {
 
         } catch (e) {
             console.error(e);
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -368,9 +392,8 @@ export default function Home() {
             return matchesTag && matchesSubject;
         })
         .sort((a, b) => {
-            // Pinned logic (can adjust if always bottom or follow sort)
-            // Sticking to bottom-pinned as original
-            if (a.pinned !== b.pinned) return a.pinned ? 1 : -1;
+            // Pinned subjects always sort to the top
+            if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
 
             let valA, valB;
             if (sortBy === 'name') {
@@ -475,7 +498,7 @@ export default function Home() {
                                 <Pen size={28} color="white" />
                             </div>
                         </div>
-                        <div className="stat-card glass stat-card-full">
+                        <div className="stat-card glass stat-card-full" title={t('home.free_time_used_tooltip')}>
                             <Target size={24} className="stat-icon" />
                             <div className="stat-value">{freeTimePercent !== null ? `${animFreeTime}%` : '—'}</div>
                             <div className="stat-label">{t('home.free_time_used')}</div>
@@ -586,6 +609,8 @@ export default function Home() {
                         className="btn btn-secondary s-toggle-btn"
                         onClick={() => setSortAsc(!sortAsc)}
                         title={sortAsc ? t('home.ascending') : t('home.descending')}
+                        aria-label={sortAsc ? t('home.ascending') : t('home.descending')}
+                        aria-pressed={!sortAsc}
                     >
                         {sortAsc ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
                     </button>
@@ -638,9 +663,25 @@ export default function Home() {
                 </div>
             )}
 
+            {!loading && sessions.length === 0 && subjects.length === 0 && (
+                <div className="onboarding-banner glass">
+                    <BookOpen size={40} className="onboarding-icon" />
+                    <h2 className="onboarding-title">{t('home.onboard_title')}</h2>
+                    <p className="onboarding-desc">{t('home.onboard_desc')}</p>
+                    <button className="btn btn-primary onboarding-cta" onClick={handleNewSubject}>
+                        {t('home.onboard_cta')}
+                    </button>
+                </div>
+            )}
+
             <div className="dashboard-grid">
+                <h2 className="subjects-section-heading">{t('home.subjects')}</h2>
                 <div className="subjects-grid">
-                    {sortedAndFilteredSubjects.map(s => (
+                    {loading ? (
+                        Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="skeleton skeleton-subject-card" />
+                        ))
+                    ) : sortedAndFilteredSubjects.map(s => (
                         <SubjectCard
                             key={s.id}
                             subject={s}

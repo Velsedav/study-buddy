@@ -1,0 +1,34 @@
+/* CalendarPanel.css */
+
+.calendar-goal-modal {
+    max-width: 420px;
+}
+
+.calendar-header {
+    margin-bottom: 8px;
+}
+
+.calendar-month-title {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.heatmap-cell-interactive {
+    cursor: pointer;
+}
+
+.heatmap-legend-goal {
+    margin-left: 12px;
+}
+
+/* Goal item remove button — danger color via CSS, not inline style */
+.goal-remove-btn {
+    color: var(--danger);
+}
+
+/* Deadline remove button — danger color via CSS, not inline style */
+.deadline-remove-btn {
+    color: var(--danger);
+}

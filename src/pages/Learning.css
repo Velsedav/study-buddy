@@ -181,7 +181,8 @@
 .lesson-mascot-img {
     max-width: 100%;
     width: auto;
-    max-height: 55vh; /* Prevents image from taking more than half the screen height */
+    max-height: 55vh;
+    /* Prevents image from taking more than half the screen height */
     object-fit: contain;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);

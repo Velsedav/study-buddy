@@ -1,5 +1,5 @@
 .home-page {
-    padding-bottom: 20vh;
+    padding-bottom: 80px;
 }
 
 .home-page .page-header {
@@ -66,13 +66,18 @@
     position: relative;
 }
 
+/* Shared max-width for all dashboard content sections */
+:root {
+    --dashboard-max-width: 1600px;
+}
+
 /* Dashboard top row: weekly stats + calendar side by side */
 .dashboard-top-row {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
-    align-items: flex-start;
-    max-width: 85%;
+    align-items: stretch;
+    max-width: var(--dashboard-max-width);
     margin: 0 auto 24px;
     justify-content: space-around;
 }
@@ -94,6 +99,7 @@
 .dashboard-top-row .analytics-main-panel {
     /* flex: 1 1 600px; */
     min-width: 0;
+    align-self: stretch;
 }
 
 @media (max-width: 900px) {
@@ -144,6 +150,56 @@
     animation: glow-rainbow 3s linear infinite;
 }
 
+.stat-card-full {
+    grid-column: 1 / -1;
+}
+
+.rotating-insight-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+    transition: opacity 0.25s ease;
+}
+
+.ri-visible {
+    opacity: 1;
+}
+
+.ri-hidden {
+    opacity: 0;
+}
+
+.rotating-insight-dots {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.ri-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background 0.2s, transform 0.15s;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ri-dot:hover {
+    background: var(--primary);
+    transform: scale(1.3);
+}
+
+.ri-dot.active {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
 .stat-icon {
     margin-bottom: 8px;
 }
@@ -155,7 +211,7 @@
 }
 
 .stat-value-sm {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: bold;
     color: var(--accent);
     text-align: center;
@@ -175,6 +231,21 @@
     color: var(--text-muted);
     text-align: center;
     margin-top: 4px;
+}
+
+/* Streaks container — subtle success tint to differentiate from metric sections */
+.streaks-container {
+    border-color: rgba(var(--success-rgb, 80, 200, 120), 0.3);
+    background: rgba(var(--success-rgb, 80, 200, 120), 0.04);
+}
+
+.streaks-container h3 {
+    color: var(--success);
+}
+
+.streak-current .stat-value,
+.streak-best .stat-value {
+    color: var(--success);
 }
 
 /* Compliments Container */
@@ -213,7 +284,7 @@
 
 /* Filter Bar */
 .shopping-filter-bar {
-    max-width: 70%;
+    max-width: var(--dashboard-max-width);
     margin: 0 auto 24px auto;
     position: relative;
     z-index: 50;
@@ -342,7 +413,7 @@
 
 /* Recommendations Tracker */
 .recommendations-container {
-    max-width: 80%;
+    max-width: var(--dashboard-max-width);
     margin: 0 auto 24px auto;
     padding: 20px;
     border-radius: var(--border-radius);
@@ -394,7 +465,8 @@
     transition: opacity 0.15s, background 0.15s;
 }
 
-.recommendation-card:hover .recommendation-ignore-btn {
+.recommendation-card:hover .recommendation-ignore-btn,
+.recommendation-card:focus-within .recommendation-ignore-btn {
     opacity: 1;
 }
 
@@ -434,6 +506,21 @@
 .recommendation-overdue {
     color: var(--danger);
     margin-left: 8px;
+}
+
+/* Dashboard grid + subjects section heading */
+.dashboard-grid {
+    max-width: var(--dashboard-max-width);
+    margin: 0 auto;
+}
+
+.subjects-section-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 0 0 16px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 /* Trash Modal */
@@ -491,4 +578,38 @@
     align-items: center;
     gap: 5px;
     cursor: pointer;
+}
+
+/* ── Onboarding empty state ── */
+.onboarding-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px 32px;
+    margin-bottom: 24px;
+    border-radius: var(--border-radius);
+}
+
+.onboarding-icon {
+    color: var(--primary);
+    margin-bottom: 16px;
+    opacity: 0.8;
+}
+
+.onboarding-title {
+    margin: 0 0 12px 0;
+    font-size: 1.4rem;
+}
+
+.onboarding-desc {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin: 0 0 24px 0;
+    max-width: 400px;
+}
+
+.onboarding-cta {
+    font-size: 1rem;
+    padding: 10px 28px;
 }

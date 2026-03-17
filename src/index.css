@@ -629,9 +629,6 @@
   box-shadow: 0 0 10px rgba(255, 140, 0, 0.1) inset;
 }
 
-[data-theme="terminal-orange"] * {
-  text-shadow: 0 0 5px rgba(255, 140, 0, 0.5);
-}
 
 [data-theme="terminal-orange"] .heatmap-cell[class*="intensity"] {
   border-radius: 0;
@@ -700,9 +697,6 @@
   box-shadow: 0 0 10px rgba(0, 255, 0, 0.1) inset;
 }
 
-[data-theme="terminal-green"] * {
-  text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
-}
 
 [data-theme="terminal-green"] .heatmap-cell[class*="intensity"] {
   border-radius: 0;
@@ -770,9 +764,6 @@
   box-shadow: 0 0 10px rgba(255, 0, 0, 0.1) inset;
 }
 
-[data-theme="terminal-red"] * {
-  text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
-}
 
 [data-theme="terminal-red"] .heatmap-cell[class*="intensity"] {
   border-radius: 0;
@@ -844,9 +835,6 @@
     0 0 1px rgba(0, 212, 255, 0.5);
 }
 
-[data-theme="terminal-cyan"] * {
-  text-shadow: 0 0 4px rgba(0, 212, 255, 0.35);
-}
 
 [data-theme="terminal-cyan"] .heatmap-cell[class*="intensity"] {
   border-radius: 0;
@@ -882,6 +870,225 @@
   border-left: 2px solid var(--primary);
 }
 
+
+/* Theme - Terminal Amber (P3 phosphor) */
+[data-theme="terminal-amber"] {
+  --font-main: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --bg-color: #100a00;
+  --bg-gradient: linear-gradient(180deg, #100a00, #1a1000);
+  --card-bg: #100a00;
+  --primary: #ffaa00;
+  --primary-rgb: 255, 170, 0;
+  --primary-hover: #ffbb33;
+  --secondary: #cc7700;
+  --accent: #ff6600;
+  --success: #88dd00;
+  --danger: #ff4444;
+  --text-dark: #f5d070;
+  --text-muted: #7a5a00;
+  --text-light: #f5d070;
+  --border-radius: 0px;
+  --border-radius-sm: 0px;
+  --shadow-sm: 0 0 6px rgba(255, 170, 0, 0.15);
+  --shadow-md: 0 0 12px rgba(255, 170, 0, 0.3);
+  --shadow-lg: 0 0 20px rgba(255, 170, 0, 0.5);
+  --transition: all 0.15s ease;
+  --sidebar-bg: rgba(16, 10, 0, 0.95);
+  --glass-border: rgba(255, 170, 0, 0.4);
+  --input-border: rgba(255, 170, 0, 0.5);
+  --input-bg-focus: #100a00;
+  --input-focus-ring: rgba(255, 170, 0, 0.2);
+  --bubble-bg: #100a00;
+  --h-0: #1a1000;
+  --h-1: #2a1e00;
+  --h-2: #4a3300;
+  --h-3: #cc7700;
+  --h-4: #ffaa00;
+}
+
+[data-theme="terminal-amber"] .glass {
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  backdrop-filter: none;
+  background: rgba(16, 10, 0, 0.95);
+  box-shadow: 0 0 12px rgba(255, 170, 0, 0.08) inset,
+    0 0 1px rgba(255, 170, 0, 0.5);
+}
+
+
+[data-theme="terminal-amber"] .heatmap-cell[class*="intensity"] {
+  border-radius: 0;
+}
+
+[data-theme="terminal-amber"] .btn {
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  border-radius: 0;
+  box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8em;
+}
+
+[data-theme="terminal-amber"] input,
+[data-theme="terminal-amber"] select,
+[data-theme="terminal-amber"] textarea {
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  background: #100a00;
+  color: var(--text-dark);
+  border-radius: 0;
+}
+
+[data-theme="terminal-amber"] .nav-item.active {
+  background: rgba(255, 170, 0, 0.12);
+  border-left: 2px solid var(--primary);
+}
+
+/* Theme - Terminal Purple */
+[data-theme="terminal-purple"] {
+  --font-main: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --bg-color: #0a0014;
+  --bg-gradient: linear-gradient(180deg, #0a0014, #12001e);
+  --card-bg: #0a0014;
+  --primary: #cc33ff;
+  --primary-rgb: 204, 51, 255;
+  --primary-hover: #dd55ff;
+  --secondary: #9900cc;
+  --accent: #ff44cc;
+  --success: #44ff88;
+  --danger: #ff3355;
+  --text-dark: #e0b0ff;
+  --text-muted: #6a2a8a;
+  --text-light: #e0b0ff;
+  --border-radius: 0px;
+  --border-radius-sm: 0px;
+  --shadow-sm: 0 0 6px rgba(204, 51, 255, 0.15);
+  --shadow-md: 0 0 12px rgba(204, 51, 255, 0.3);
+  --shadow-lg: 0 0 20px rgba(204, 51, 255, 0.5);
+  --transition: all 0.15s ease;
+  --sidebar-bg: rgba(10, 0, 20, 0.95);
+  --glass-border: rgba(204, 51, 255, 0.4);
+  --input-border: rgba(204, 51, 255, 0.5);
+  --input-bg-focus: #0a0014;
+  --input-focus-ring: rgba(204, 51, 255, 0.2);
+  --bubble-bg: #0a0014;
+  --h-0: #12001e;
+  --h-1: #220033;
+  --h-2: #440066;
+  --h-3: #9900cc;
+  --h-4: #cc33ff;
+}
+
+[data-theme="terminal-purple"] .glass {
+  border: 1px solid rgba(204, 51, 255, 0.3);
+  backdrop-filter: none;
+  background: rgba(10, 0, 20, 0.95);
+  box-shadow: 0 0 12px rgba(204, 51, 255, 0.08) inset,
+    0 0 1px rgba(204, 51, 255, 0.5);
+}
+
+
+[data-theme="terminal-purple"] .heatmap-cell[class*="intensity"] {
+  border-radius: 0;
+}
+
+[data-theme="terminal-purple"] .btn {
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  border-radius: 0;
+  box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8em;
+}
+
+[data-theme="terminal-purple"] input,
+[data-theme="terminal-purple"] select,
+[data-theme="terminal-purple"] textarea {
+  border: 1px solid rgba(204, 51, 255, 0.4);
+  background: #0a0014;
+  color: var(--text-dark);
+  border-radius: 0;
+}
+
+[data-theme="terminal-purple"] .nav-item.active {
+  background: rgba(204, 51, 255, 0.12);
+  border-left: 2px solid var(--primary);
+}
+
+/* Theme - Terminal Blue (P1 phosphor) */
+[data-theme="terminal-blue"] {
+  --font-main: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  --bg-color: #00061a;
+  --bg-gradient: linear-gradient(180deg, #00061a, #000e2a);
+  --card-bg: #00061a;
+  --primary: #4499ff;
+  --primary-rgb: 68, 153, 255;
+  --primary-hover: #66aaff;
+  --secondary: #0066dd;
+  --accent: #00ccff;
+  --success: #44ffbb;
+  --danger: #ff4455;
+  --text-dark: #99ccff;
+  --text-muted: #2a4a7a;
+  --text-light: #99ccff;
+  --border-radius: 0px;
+  --border-radius-sm: 0px;
+  --shadow-sm: 0 0 6px rgba(68, 153, 255, 0.15);
+  --shadow-md: 0 0 12px rgba(68, 153, 255, 0.3);
+  --shadow-lg: 0 0 20px rgba(68, 153, 255, 0.5);
+  --transition: all 0.15s ease;
+  --sidebar-bg: rgba(0, 6, 26, 0.95);
+  --glass-border: rgba(68, 153, 255, 0.4);
+  --input-border: rgba(68, 153, 255, 0.5);
+  --input-bg-focus: #00061a;
+  --input-focus-ring: rgba(68, 153, 255, 0.2);
+  --bubble-bg: #00061a;
+  --h-0: #000e2a;
+  --h-1: #001844;
+  --h-2: #002a77;
+  --h-3: #0066dd;
+  --h-4: #4499ff;
+}
+
+[data-theme="terminal-blue"] .glass {
+  border: 1px solid rgba(68, 153, 255, 0.3);
+  backdrop-filter: none;
+  background: rgba(0, 6, 26, 0.95);
+  box-shadow: 0 0 12px rgba(68, 153, 255, 0.08) inset,
+    0 0 1px rgba(68, 153, 255, 0.5);
+}
+
+
+[data-theme="terminal-blue"] .heatmap-cell[class*="intensity"] {
+  border-radius: 0;
+}
+
+[data-theme="terminal-blue"] .btn {
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  border-radius: 0;
+  box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8em;
+}
+
+[data-theme="terminal-blue"] input,
+[data-theme="terminal-blue"] select,
+[data-theme="terminal-blue"] textarea {
+  border: 1px solid rgba(68, 153, 255, 0.4);
+  background: #00061a;
+  color: var(--text-dark);
+  border-radius: 0;
+}
+
+[data-theme="terminal-blue"] .nav-item.active {
+  background: rgba(68, 153, 255, 0.12);
+  border-left: 2px solid var(--primary);
+}
 
 /* ── Terminal Theme Component Overrides ── */
 [data-theme^="terminal-"] .tag-picker-input-area:focus-within {
@@ -945,6 +1152,86 @@
 
 [data-theme^="terminal-"] .tag-chip-remove:hover {
   background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ── Terminal hover inversion system ──────────────────────────────
+   All terminal themes use a unified "inverse video" hover pattern:
+   primary-color background, dark text. No glows, no 3D transforms.
+   This is idiomatic CRT/terminal UI — it's how real terminals work.
+   ──────────────────────────────────────────────────────────────── */
+
+/* Buttons: inversion instead of semi-transparent glow */
+[data-theme^="terminal-"] .btn:hover {
+  background: var(--primary);
+  color: var(--bg-color);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* Planner drag subjects: crisp transition + inversion, no spring lift */
+[data-theme^="terminal-"] .drag-subject-item {
+  transition: background 0.1s linear, color 0.1s linear, border-color 0.1s linear;
+}
+
+[data-theme^="terminal-"] .drag-subject-item:hover {
+  transform: none;
+  background: var(--primary);
+  color: var(--bg-color);
+  border-color: var(--primary);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+[data-theme^="terminal-"] .drag-subject-item:hover strong {
+  color: var(--bg-color);
+}
+
+[data-theme^="terminal-"] .drag-subject-item:hover .priority-badge {
+  background: var(--bg-color);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Subject cards: no 3D lift in terminal themes */
+[data-theme^="terminal-"] .subject-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-md);
+}
+
+/* Nav links: inversion on hover */
+[data-theme^="terminal-"] .nav-link:hover {
+  background: var(--primary);
+  color: var(--bg-color);
+  text-shadow: none;
+}
+
+/* Keep active nav legible (don't invert it — it's already highlighted) */
+[data-theme^="terminal-"] .nav-link.active:hover {
+  background: var(--primary);
+  color: var(--bg-color);
+  text-shadow: none;
+}
+
+/* btn-primary: override transparent .btn background, use solid primary */
+[data-theme^="terminal-"] .btn-primary {
+  background: var(--primary);
+  color: var(--bg-color);
+  text-shadow: none;
+}
+
+[data-theme^="terminal-"] .btn-primary:hover {
+  background: var(--primary);
+  color: var(--bg-color);
+  text-shadow: none;
+}
+
+/* Quiz options: inversion on hover */
+[data-theme^="terminal-"] .quiz-option:hover:not(.disabled):not(.correct):not(.incorrect) {
+  background: var(--primary);
+  color: var(--bg-color);
+  border-color: var(--primary);
+  box-shadow: none;
+  text-shadow: none;
 }
 
 
@@ -1400,11 +1687,6 @@ h2 {
 .settings-tab.fade-in,
 .analytics-tab.fade-in {
   animation: pageFadeIn 0.35s ease forwards;
-}
-
-.drag-subject-item {
-  animation: learningFadeIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--animation-order, 0) * 50ms);
 }
 
 /* ── MetacognitionLogs page entrance ── */
@@ -2238,9 +2520,9 @@ input[type="checkbox"] {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--primary);
-  color: white;
-  border: none;
+  background: transparent;
+  color: var(--text-dark);
+  border: 1px solid var(--glass-border);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2250,8 +2532,19 @@ input[type="checkbox"] {
 }
 
 .audio-test-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
   transform: scale(1.1);
   box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4);
+}
+
+[data-theme^="terminal-"] .audio-test-btn:hover {
+  background: var(--primary);
+  color: var(--bg-color);
+  border-color: var(--primary);
+  box-shadow: none;
+  transform: none;
 }
 
 /* ── MetacognitionMode Swipe Animations ── */
@@ -4645,6 +4938,228 @@ input[type="checkbox"] {
 [data-theme="ai-pro"] ::selection {
   background: rgba(124, 58, 237, 0.35);
   color: #f0f0ff;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Theme — Cyber Scan
+   Biometric scan aesthetic: neon yellow-green primary, electric blue
+   background, hot magenta accent. Dark glassmorphism panels.
+   ══════════════════════════════════════════════════════════════════ */
+
+[data-theme="cyber-scan"] {
+  --font-main: 'Outfit', sans-serif;
+  --bg-color: #050510;
+  --bg-gradient: linear-gradient(160deg, #050510 0%, #080828 60%, #0a0518 100%);
+  --card-bg: rgba(8, 12, 38, 0.88);
+  --sidebar-bg: rgba(5, 5, 18, 0.96);
+
+  --primary: #b8ff00;
+  --primary-rgb: 184, 255, 0;
+  --primary-hover: #ccff33;
+  --secondary: #1133ff;
+  --accent: #ff00aa;
+
+  --success: #00ff88;
+  --danger: #ff2244;
+  --danger-rgb: 255, 34, 68;
+
+  --text-dark: #d4ffaa;
+  --text-muted: #4a6080;
+  --text-light: #ffffff;
+
+  --glass-border: rgba(184, 255, 0, 0.18);
+  --border-radius: 6px;
+  --border-radius-sm: 3px;
+
+  --shadow-sm: 0 2px 10px rgba(17, 51, 255, 0.25), 0 0 6px rgba(184, 255, 0, 0.08);
+  --shadow-md: 0 4px 24px rgba(17, 51, 255, 0.35), 0 0 16px rgba(184, 255, 0, 0.12);
+  --shadow-lg: 0 8px 48px rgba(17, 51, 255, 0.45), 0 0 32px rgba(184, 255, 0, 0.18);
+
+  --input-border: rgba(184, 255, 0, 0.28);
+  --input-bg-focus: rgba(184, 255, 0, 0.04);
+  --input-focus-ring: rgba(184, 255, 0, 0.35);
+  --bubble-bg: rgba(184, 255, 0, 0.07);
+
+  --transition: all 0.15s ease;
+
+  /* Heatmap: dark void → electric blue → neon green */
+  --h-0: rgba(8, 12, 38, 0.6);
+  --h-1: rgba(17, 51, 255, 0.35);
+  --h-2: rgba(0, 160, 80, 0.55);
+  --h-3: rgba(140, 220, 0, 0.8);
+  --h-4: #b8ff00;
+}
+
+/* ── Glass panels ── */
+[data-theme="cyber-scan"] .glass {
+  background: rgba(8, 12, 38, 0.85);
+  border: 1px solid rgba(184, 255, 0, 0.18);
+  box-shadow: 0 4px 24px rgba(17, 51, 255, 0.3), inset 0 1px 0 rgba(184, 255, 0, 0.1);
+  backdrop-filter: blur(14px);
+}
+
+/* ── Buttons ── */
+[data-theme="cyber-scan"] .btn {
+  border: 1px solid rgba(184, 255, 0, 0.3);
+  background: transparent;
+  color: var(--primary);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition);
+}
+
+[data-theme="cyber-scan"] .btn:hover {
+  background: rgba(184, 255, 0, 0.08);
+  border-color: var(--primary);
+  box-shadow: 0 0 14px rgba(184, 255, 0, 0.3);
+}
+
+[data-theme="cyber-scan"] .btn-primary {
+  background: #b8ff00;
+  color: #050510;
+  border: none;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="cyber-scan"] .btn-primary:hover {
+  background: #ccff33;
+  box-shadow: 0 0 22px rgba(184, 255, 0, 0.55);
+}
+
+[data-theme="cyber-scan"] .btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(184, 255, 0, 0.3);
+  color: var(--primary);
+}
+
+[data-theme="cyber-scan"] .btn-secondary:hover {
+  background: rgba(184, 255, 0, 0.08);
+  border-color: var(--primary);
+}
+
+[data-theme="cyber-scan"] .btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+}
+
+[data-theme="cyber-scan"] .btn-icon:hover {
+  color: var(--primary);
+  background: rgba(184, 255, 0, 0.08);
+}
+
+/* ── Form inputs ── */
+[data-theme="cyber-scan"] input,
+[data-theme="cyber-scan"] select,
+[data-theme="cyber-scan"] textarea {
+  background: rgba(8, 12, 38, 0.9);
+  border: 1px solid rgba(184, 255, 0, 0.25);
+  color: var(--text-dark);
+  border-radius: var(--border-radius-sm);
+}
+
+[data-theme="cyber-scan"] input:focus,
+[data-theme="cyber-scan"] select:focus,
+[data-theme="cyber-scan"] textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(184, 255, 0, 0.15);
+  outline: none;
+}
+
+[data-theme="cyber-scan"] input[type="checkbox"] {
+  accent-color: #b8ff00;
+}
+
+[data-theme="cyber-scan"] input[type="range"] {
+  accent-color: #b8ff00;
+}
+
+/* ── Nav ── */
+[data-theme="cyber-scan"] .nav-link {
+  color: var(--text-muted);
+}
+
+[data-theme="cyber-scan"] .nav-link:hover {
+  color: var(--primary);
+  background: rgba(184, 255, 0, 0.06);
+}
+
+[data-theme="cyber-scan"] .nav-link.active {
+  color: var(--primary);
+  background: rgba(184, 255, 0, 0.1);
+  border-left: 2px solid var(--primary);
+  box-shadow: inset 0 0 12px rgba(184, 255, 0, 0.08);
+}
+
+/* ── Tags / chips ── */
+[data-theme="cyber-scan"] .tag,
+[data-theme="cyber-scan"] .tag-chip {
+  background: rgba(184, 255, 0, 0.1);
+  border: 1px solid rgba(184, 255, 0, 0.3);
+  color: var(--primary);
+}
+
+/* ── Modals ── */
+[data-theme="cyber-scan"] .modal-content,
+[data-theme="cyber-scan"] .modal-glass {
+  background: rgba(6, 9, 28, 0.96);
+  border: 1px solid rgba(184, 255, 0, 0.2);
+  box-shadow: 0 8px 48px rgba(17, 51, 255, 0.4), 0 0 32px rgba(184, 255, 0, 0.12);
+}
+
+/* ── Heatmap cells ── */
+[data-theme="cyber-scan"] .heatmap-cell[class*="intensity"] {
+  border-radius: 2px;
+}
+
+/* ── Accent glow on stat values and headings ── */
+[data-theme="cyber-scan"] .stat-val,
+[data-theme="cyber-scan"] .stat-value {
+  text-shadow: 0 0 10px rgba(184, 255, 0, 0.45);
+}
+
+[data-theme="cyber-scan"] h1,
+[data-theme="cyber-scan"] h2,
+[data-theme="cyber-scan"] h3 {
+  text-shadow: 0 0 16px rgba(184, 255, 0, 0.2);
+}
+
+/* ── Scan-line overlay on cards (subtle CRT feel) ── */
+[data-theme="cyber-scan"] .glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to bottom,
+      transparent 0px,
+      transparent 3px,
+      rgba(184, 255, 0, 0.015) 3px,
+      rgba(184, 255, 0, 0.015) 4px);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ── Scrollbar ── */
+[data-theme="cyber-scan"] ::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-theme="cyber-scan"] ::-webkit-scrollbar-track {
+  background: #050510;
+}
+
+[data-theme="cyber-scan"] ::-webkit-scrollbar-thumb {
+  background: rgba(184, 255, 0, 0.3);
+  border-radius: 3px;
+}
+
+[data-theme="cyber-scan"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 255, 0, 0.55);
+}
+
+/* ── Selection ── */
+[data-theme="cyber-scan"] ::selection {
+  background: rgba(184, 255, 0, 0.25);
+  color: #050510;
 }
 
 /* ── Reduced motion ── */

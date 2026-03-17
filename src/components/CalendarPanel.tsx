@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, X, Flag, Trash2 } from 'lucide-react';
 import type { Session, Subject, SessionBlock } from '../lib/db';
 import type { Chapter } from '../lib/chapters';
 import { useSettings } from '../lib/settings';
+import { useTranslation } from '../lib/i18n';
 import { playSFX } from '../lib/sounds';
+import { formatHM } from '../lib/time';
+import './CalendarPanel.css';
 
 // ── Goal Dates ──
 interface GoalDate {
@@ -57,6 +60,7 @@ export default function CalendarPanel({
     weeklyActiveDays = 0,
 }: CalendarPanelProps) {
     const { weekStart, theme } = useSettings();
+    const { t } = useTranslation();
 
     const [currentHeatmapMonth, setCurrentHeatmapMonth] = useState(() => {
         const d = new Date();
@@ -69,6 +73,8 @@ export default function CalendarPanel({
     const [showGoalModal, setShowGoalModal] = useState(false);
     const [newGoalDate, setNewGoalDate] = useState('');
     const [newGoalLabel, setNewGoalLabel] = useState('');
+    const [removedGoalToast, setRemovedGoalToast] = useState<GoalDate | null>(null);
+    const removeToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const updateGoalDates = (next: GoalDate[]) => {
         setGoalDates(next);
@@ -83,7 +89,22 @@ export default function CalendarPanel({
         setShowGoalModal(false);
     };
 
-    const removeGoalDate = (id: string) => updateGoalDates(goalDates.filter(g => g.id !== id));
+    const removeGoalDate = (id: string) => {
+        const removed = goalDates.find(g => g.id === id);
+        updateGoalDates(goalDates.filter(g => g.id !== id));
+        if (removed) {
+            setRemovedGoalToast(removed);
+            if (removeToastTimerRef.current) clearTimeout(removeToastTimerRef.current);
+            removeToastTimerRef.current = setTimeout(() => setRemovedGoalToast(null), 5000);
+        }
+    };
+
+    const undoRemoveGoal = () => {
+        if (!removedGoalToast) return;
+        updateGoalDates([...goalDates, removedGoalToast].sort((a, b) => a.date.localeCompare(b.date)));
+        if (removeToastTimerRef.current) clearTimeout(removeToastTimerRef.current);
+        setRemovedGoalToast(null);
+    };
 
     // ── Heatmap ──
     const heatmapData = useMemo(() => {
@@ -155,23 +176,23 @@ export default function CalendarPanel({
             {/* ── Day Log Modal ── */}
             {selectedLogDate && (
                 <div className="modal-overlay" onClick={() => setSelectedLogDate(null)}>
-                    <div className="modal-content modal-content-analytics" onClick={e => e.stopPropagation()}>
+                    <div className="modal-content modal-content-analytics" role="dialog" aria-modal="true" aria-labelledby="day-log-modal-title" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2 className="modal-title">
-                                Logs for {selectedLogDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                            <h2 id="day-log-modal-title" className="modal-title">
+                                {t('calendar.day_log_title').replace('{date}', selectedLogDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }))}
                             </h2>
-                            <button className="btn btn-icon" onClick={() => setSelectedLogDate(null)}>
+                            <button className="btn btn-icon" aria-label={t('home.cancel')} onClick={() => setSelectedLogDate(null)}>
                                 <X size={20} />
                             </button>
                         </div>
                         {sessionsForSelectedDate.length === 0 ? (
-                            <p className="text-muted text-center">No recorded focus sessions on this day.</p>
+                            <p className="text-muted text-center">{t('calendar.no_sessions')}</p>
                         ) : (
                             <div className="modal-body">
                                 {sessionsForSelectedDate.map((session: any) => (
                                     <div key={session.id} className="glass log-item">
                                         <div className="log-item-title">{session.subject_name}</div>
-                                        <div className="log-item-time">{session.actual_minutes} min</div>
+                                        <div className="log-item-time">{formatHM(session.actual_minutes)}</div>
                                     </div>
                                 ))}
                             </div>
@@ -184,7 +205,7 @@ export default function CalendarPanel({
                             if (studied.length === 0) return null;
                             return (
                                 <div className="log-modal-chapters">
-                                    <div className="log-modal-chapters-title">📖 Chapitres révisés</div>
+                                    <div className="log-modal-chapters-title">{t('calendar.chapters_reviewed')}</div>
                                     {studied.map(ch => {
                                         const sub = subjects.find(s => s.id === ch.subjectId);
                                         return (
@@ -205,40 +226,40 @@ export default function CalendarPanel({
             {/* ── Goal Date Modal ── */}
             {showGoalModal && (
                 <div className="modal-overlay" onClick={() => setShowGoalModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+                    <div className="modal-content calendar-goal-modal" role="dialog" aria-modal="true" aria-labelledby="goal-modal-title" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2 className="modal-title-small"><Flag size={20} /> Add Goal Date</h2>
-                            <button className="btn btn-icon" onClick={() => setShowGoalModal(false)}><X size={20} /></button>
+                            <h2 id="goal-modal-title" className="modal-title-small"><Flag size={20} /> {t('calendar.add_deadline_title')}</h2>
+                            <button className="btn btn-icon" aria-label={t('home.cancel')} onClick={() => setShowGoalModal(false)}><X size={20} /></button>
                         </div>
                         <div className="modal-body-form">
                             <div className="form-group">
-                                <label>Label (e.g. "Math Exam")</label>
-                                <input type="text" value={newGoalLabel} onChange={e => setNewGoalLabel(e.target.value)}
-                                    placeholder="Exam / Deadline name" className="form-input-full" />
+                                <label htmlFor="goal-label-input">{t('calendar.label_label')}</label>
+                                <input id="goal-label-input" type="text" value={newGoalLabel} onChange={e => setNewGoalLabel(e.target.value)}
+                                    placeholder={t('calendar.label_placeholder')} className="form-input-full" />
                             </div>
                             <div className="form-group">
-                                <label>Date</label>
-                                <input type="date" value={newGoalDate} onChange={e => setNewGoalDate(e.target.value)}
+                                <label htmlFor="goal-date-input">{t('calendar.date_label')}</label>
+                                <input id="goal-date-input" type="date" value={newGoalDate} onChange={e => setNewGoalDate(e.target.value)}
                                     className="form-input-full" />
                             </div>
                             <button className="btn btn-primary w-full" onClick={addGoalDate}
                                 disabled={!newGoalDate || !newGoalLabel.trim()}>
-                                Add Goal
+                                {t('calendar.add_goal_btn')}
                             </button>
                         </div>
                         {goalDates.length > 0 && (
                             <div className="existing-goals-container">
-                                <h4 className="existing-goals-title">Existing Goals</h4>
+                                <h4 className="existing-goals-title">{t('calendar.existing_goals')}</h4>
                                 <div className="goals-list">
                                     {goalDates.sort((a, b) => a.date.localeCompare(b.date)).map(g => (
                                         <div key={g.id} className="goal-item">
                                             <div>
                                                 <span className="goal-item-icon">🏁</span>
                                                 <strong>{g.label}</strong>
-                                                <span className="goal-item-date">{g.date}</span>
+                                                <span className="goal-item-date">{new Date(g.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                             </div>
-                                            <button className="btn-icon" onClick={() => removeGoalDate(g.id)} title="Remove goal">
-                                                <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                                            <button className="btn-icon goal-remove-btn" onClick={() => removeGoalDate(g.id)} aria-label={`${t('calendar.remove_goal')}: ${g.label}`}>
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     ))}
@@ -253,27 +274,29 @@ export default function CalendarPanel({
             <div className="analytics-main-panel">
                 {/* Heatmap */}
                 <div className="heatmap-section heatmap-section-wrapper">
-                    <div className="heatmap-header analytics-header" style={{ marginBottom: '8px' }}>
-                        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="heatmap-header analytics-header calendar-header">
+                        <h3 className="calendar-month-title">
                             <CalendarDays size={20} className="icon-blue" />
                             {currentHeatmapMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
                         </h3>
                         <div className="heatmap-nav">
                             <button className="btn btn-secondary add-deadline-btn" onClick={() => setShowGoalModal(true)}>
-                                <span className="add-deadline-plus">+</span> Add a deadline
+                                <span className="add-deadline-plus">+</span> {t('calendar.add_deadline')}
                             </button>
                             <button className="btn btn-icon glass heatmap-nav-btn"
+                                aria-label="Previous month"
                                 onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}>
                                 <ChevronLeft size={18} />
                             </button>
                             <button className="btn btn-icon glass heatmap-nav-btn"
+                                aria-label="Next month"
                                 onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}>
                                 <ChevronRight size={18} />
                             </button>
                         </div>
                     </div>
 
-                    <div className="heatmap-grid" style={{ position: 'relative' }}>
+                    <div className="heatmap-grid">
                         {weekStart === 'monday' ? (
                             <>
                                 <div className="calendar-day-header">Mon</div>
@@ -306,9 +329,8 @@ export default function CalendarPanel({
                             return (
                                 <div
                                     key={i}
-                                    className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'streak-rainbow' : isFlame ? 'streak-flame' : ''} ${goal ? 'goal-cell' : ''}`}
+                                    className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'streak-rainbow' : isFlame ? 'streak-flame' : ''} ${goal ? 'goal-cell' : ''} ${d.mins > 0 || goal ? 'heatmap-cell-interactive' : ''}`}
                                     title={goal ? `🏁 ${goal.label} • ${d.tooltip}` : d.tooltip}
-                                    style={{ cursor: d.mins > 0 || goal ? 'pointer' : 'default' }}
                                     onMouseEnter={() => { if (d.mins > 0 || goal) playSFX('hover_sound', theme); }}
                                     onClick={() => { if (d.mins > 0) setSelectedLogDate(d.date); }}
                                 >
@@ -324,15 +346,15 @@ export default function CalendarPanel({
                         <span className="heatmap-cell h-level-2" />
                         <span className="heatmap-cell h-level-3" />
                         <span className="heatmap-cell h-level-4" /> More
-                        <span style={{ marginLeft: '12px' }}>🏁 = Goal</span>
+                        <span className="heatmap-legend-goal">🏁 {t('calendar.goal_marker')}</span>
                     </div>
                 </div>
 
                 {/* Deadlines */}
                 <div className="glass deadlines-panel">
-                    <h3 className="panel-header"><Flag size={18} /> Upcoming Deadlines</h3>
+                    <h3 className="panel-header"><Flag size={18} /> {t('calendar.upcoming_deadlines')}</h3>
                     {upcoming.length === 0 ? (
-                        <p className="empty-state-text">No deadlines set yet.<br />Click "+ Add a deadline" to add one, or set it on a subject.</p>
+                        <p className="empty-state-text">{t('calendar.no_deadlines')}<br />{t('calendar.no_deadlines_hint')}</p>
                     ) : (
                         <div className="upcoming-list">
                             {upcoming.map((g, idx) => {
@@ -342,7 +364,7 @@ export default function CalendarPanel({
                                 const months = Math.floor(totalDays / 30);
                                 const weeks = Math.floor((totalDays % 30) / 7);
                                 const days = totalDays % 7;
-                                let countdown = totalDays === 0 ? 'Today!' : [
+                                const countdown = totalDays === 0 ? t('calendar.today') : [
                                     months > 0 && `${months}mo`,
                                     weeks > 0 && `${weeks}w`,
                                     days > 0 && `${days}d`,
@@ -355,11 +377,11 @@ export default function CalendarPanel({
                                 return (
                                     <div key={`${g.id}-${idx}`} className={cardClass}>
                                         <div className="deadline-card-title">🏁 {g.label}</div>
-                                        <div className="deadline-card-date">{g.date}</div>
+                                        <div className="deadline-card-date">{new Date(g.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                                         <div className="deadline-card-countdown">{countdown}</div>
                                         {g.type === 'manual' && (
-                                            <button className="btn-icon remove-deadline-btn" onClick={() => removeGoalDate(g.id)} title="Remove deadline">
-                                                <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                                            <button className="btn-icon remove-deadline-btn deadline-remove-btn" onClick={() => removeGoalDate(g.id)} aria-label={`${t('calendar.remove_deadline')}: ${g.label}`}>
+                                                <Trash2 size={14} />
                                             </button>
                                         )}
                                     </div>
@@ -369,13 +391,13 @@ export default function CalendarPanel({
                     )}
                     {pastWithResults.length > 0 && (
                         <div className="past-results-container">
-                            <h4 className="past-results-title">Past Results</h4>
+                            <h4 className="past-results-title">{t('calendar.past_results')}</h4>
                             <div className="goals-list">
                                 {pastWithResults.map((p, idx) => (
                                     <div key={`past-${p.id}-${idx}`} className="past-result-item">
                                         <div>
                                             <div className="past-result-label">{p.label}</div>
-                                            <div className="past-result-date">{p.date}</div>
+                                            <div className="past-result-date">{new Date(p.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                                         </div>
                                         <div className="past-result-score">{p.result}</div>
                                     </div>
@@ -385,6 +407,19 @@ export default function CalendarPanel({
                     )}
                 </div>
             </div>
+
+            {/* ── Deadline removed undo toast ── */}
+            {removedGoalToast && (
+                <div className="soft-delete-toast glass" role="status" aria-live="polite">
+                    <span>{t('calendar.remove_deadline')}: <strong>{removedGoalToast.label}</strong></span>
+                    <button className="btn btn-secondary trash-toast-undo-btn" onClick={undoRemoveGoal}>
+                        {t('home.restore')}
+                    </button>
+                    <button className="btn-icon" onClick={() => setRemovedGoalToast(null)} aria-label={t('home.cancel')}>
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
 
         </>
     );

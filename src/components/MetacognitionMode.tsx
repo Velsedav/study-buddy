@@ -3,6 +3,7 @@ import { Wrench, Timer, Play } from 'lucide-react';
 import { saveMetacognitionLog, getSubjects } from '../lib/db';
 import { formatSecondsMMSS } from '../lib/time';
 import { getAllChapters } from '../lib/chapters';
+import { useSettings } from '../lib/settings';
 import './MetacognitionMode.css';
 const STEPS = [
     { id: 1, label: 'Le Recul' },
@@ -15,6 +16,7 @@ const STEPS = [
 const TOTAL_SECONDS = 15 * 60;
 
 export default function MetacognitionMode({ onComplete }: { onComplete: () => void }) {
+    const { isTerminal } = useSettings();
     const [step, setStep] = useState(1);
     const [animKey, setAnimKey] = useState(0);
     const [animClass, setAnimClass] = useState('');
@@ -249,7 +251,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                     {/* ── Step 1: Le Recul ── */}
                     {step === 1 && (
                         <div className="glass" style={{ padding: '48px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🛑</div>
+                            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>{isTerminal ? '[!]' : '🛑'}</div>
                             <h2 style={{ fontSize: '1.8rem', marginBottom: '16px' }}>Le Recul</h2>
                             <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '24px', lineHeight: 1.6, maxWidth: '500px', margin: '0 auto 24px auto' }}>
                                 C'est la fin de la semaine. On stop tout un instant !<br />
@@ -280,7 +282,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                     {/* ── Step 2: Priorités ── */}
                     {step === 2 && (
                         <div className="glass" style={{ padding: '40px' }}>
-                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>🎯 Pression Majeure</h2>
+                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>{isTerminal ? '[>]' : '🎯'} Pression Majeure</h2>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '32px', lineHeight: 1.6 }}>
                                 Quelle est ton échéance ou ta matière la plus pressante cette semaine ? De quoi auras-tu besoin à l'examen ?
                             </p>
@@ -300,16 +302,16 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                                 <label style={{ fontWeight: 600, marginBottom: '16px', display: 'block' }}>Type d'évaluation attendu :</label>
                                 <div className="mc-exam-type-grid">
                                     {[
-                                        { id: 'memorisation', icon: '🧠', label: 'Mémorisation Pure', desc: 'QCM, Dates, Vocabulaire' },
-                                        { id: 'comprehension', icon: '💡', label: 'Compréhension', desc: 'Concepts, Liens logiques, Théorie' },
-                                        { id: 'savoirfaire', icon: '✍️', label: 'Savoir-Faire', desc: 'Exercices, Rédaction, Pratique' }
+                                        { id: 'memorisation', icon: '🧠', terminalIcon: '[M]', label: 'Mémorisation Pure', desc: 'QCM, Dates, Vocabulaire' },
+                                        { id: 'comprehension', icon: '💡', terminalIcon: '[C]', label: 'Compréhension', desc: 'Concepts, Liens logiques, Théorie' },
+                                        { id: 'savoirfaire', icon: '✍️', terminalIcon: '[F]', label: 'Savoir-Faire', desc: 'Exercices, Rédaction, Pratique' }
                                     ].map(type => (
                                         <div
                                             key={type.id}
                                             onClick={() => setExamType(type.id as any)}
                                             className={`mc-exam-type-card${examType === type.id ? ' active' : ''}`}
                                         >
-                                            <div style={{ fontSize: '2.4rem', marginBottom: '12px' }}>{type.icon}</div>
+                                            <div style={{ fontSize: '2.4rem', marginBottom: '12px' }}>{isTerminal ? type.terminalIcon : type.icon}</div>
                                             <div style={{ fontWeight: 600, fontSize: '1.05rem', marginBottom: '6px' }}>{type.label}</div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{type.desc}</div>
                                         </div>
@@ -328,13 +330,13 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                     {/* ── Step 3: Les Malaises ── */}
                     {step === 3 && (
                         <div className="glass" style={{ padding: '40px' }}>
-                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>🧱 Les Obstacles</h2>
+                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>{isTerminal ? '[#]' : '🧱'} Les Obstacles</h2>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '32px', lineHeight: 1.6 }}>
                                 Identifions ce qui ne fonctionne pas actuellement pour que tu puisses t'adapter.
                             </p>
 
                             <div className="form-group" style={{ marginBottom: '32px' }}>
-                                <label style={{ fontWeight: 600, marginBottom: '16px', display: 'block' }}>⚠️ Quels sont les 3 problèmes majeurs de ta semaine passée ?</label>
+                                <label style={{ fontWeight: 600, marginBottom: '16px', display: 'block' }}>{isTerminal ? '[!]' : '⚠️'} Quels sont les 3 problèmes majeurs de ta semaine passée ?</label>
                                 {[
                                     { val: problem1, set: setProblem1, p: '1. Ex: Je repousse toujours mes fiches...' },
                                     { val: problem2, set: setProblem2, p: '2. Ex: Je suis distrait par mon téléphone...' },
@@ -345,7 +347,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                             </div>
 
                             <div className="form-group" style={{ background: 'rgba(var(--danger-rgb), 0.07)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(var(--danger-rgb), 0.2)' }}>
-                                <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>🔪 Le Sacrifice Invisible</label>
+                                <label style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>{isTerminal ? '[-]' : '🔪'} Le Sacrifice Invisible</label>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px', lineHeight: 1.5 }}>
                                     Qu'est-ce qui n'a servi <em>ni</em> à tes études, <em>ni</em> à ta vie personnelle ?
                                 </p>
@@ -362,14 +364,14 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                     {/* ── Step 4: Le Système ── */}
                     {step === 4 && (
                         <div className="glass" style={{ padding: '40px' }}>
-                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>⚙️ Mise à Jour du Système</h2>
+                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>{isTerminal ? '[*]' : '⚙️'} Mise à Jour du Système</h2>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '32px', lineHeight: 1.6 }}>
                                 Le design de ton environnement bat ta volonté. Crée une règle stricte.
                             </p>
 
                             <div className="form-group">
                                 <label style={{ fontWeight: 600, marginBottom: '12px', display: 'block' }}>
-                                    🔒 Quelle règle système vas-tu imposer pour ta prochaine session ?
+                                    {isTerminal ? '[L]' : '🔒'} Quelle règle système vas-tu imposer pour ta prochaine session ?
                                 </label>
                                 <div style={{ background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
                                     <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
@@ -396,14 +398,14 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                     {/* ── Step 5: La Boussole ── */}
                     {step === 5 && (
                         <div className="glass" style={{ padding: '40px' }}>
-                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>🧭 La Boussole</h2>
+                            <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>{isTerminal ? '[N]' : '🧭'} La Boussole</h2>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '32px', lineHeight: 1.6 }}>
                                 Mets à jour ton suivi visuel pour savoir où diriger tes efforts demain.
                             </p>
 
                             <div className="form-group">
                                 <label style={{ fontWeight: 600, marginBottom: '16px', display: 'block' }}>
-                                    ✍️ Quels chapitres ou objectifs sont actuellement en "Rouge" (non maîtrisés) ?
+                                    {isTerminal ? '[F]' : '✍️'} Quels chapitres ou objectifs sont actuellement en "Rouge" (non maîtrisés) ?
                                 </label>
                                 <div className="mc-mention-wrapper">
                                     <textarea

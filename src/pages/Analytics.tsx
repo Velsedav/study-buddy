@@ -9,6 +9,7 @@ import { TECHNIQUES, getTierColor } from '../lib/techniques';
 import { getAllChapters } from '../lib/chapters';
 import type { Chapter } from '../lib/chapters';
 import CalendarPanel from '../components/CalendarPanel';
+import { CustomSelect } from '../components/CustomSelect';
 import './Analytics.css';
 
 // ── Helpers ──
@@ -44,6 +45,7 @@ export default function AnalyticsTab() {
     const [metacogLogs, setMetacogLogs] = useState<MetacognitionLog[]>([]);
     const [hoveredBarIdx, setHoveredBarIdx] = useState<number | null>(null);
     const [timelineFilter, setTimelineFilter] = useState<number>(1);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function load() {
@@ -63,6 +65,8 @@ export default function AnalyticsTab() {
                 setMetacogLogs(logs);
             } catch (e) {
                 console.error("Failed to load analytics data", e);
+            } finally {
+                setLoading(false);
             }
         }
         load();
@@ -167,27 +171,49 @@ export default function AnalyticsTab() {
         };
     }, [sessions]);
 
-    const weekFreeTimePercent = useMemo((): number | null => {
+    const trends = useMemo(() => {
         const today = new Date();
-        const wkStart = getWeekStart(today);
-        const weekEnd = new Date(wkStart);
-        weekEnd.setDate(wkStart.getDate() + 7);
 
-        const weekSessions = sessions.filter(s => {
+        // Last week
+        const thisWeekStart = getStartOfWeek(today, weekStart);
+        thisWeekStart.setHours(0, 0, 0, 0);
+        const lastWeekStart = new Date(thisWeekStart);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+        const lastWeekEnd = new Date(thisWeekStart);
+
+        // Last month
+        const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(thisMonthStart);
+
+        let lastWeekMins = 0, lastWeekCount = 0;
+        let lastMonthMins = 0, lastMonthCount = 0;
+
+        sessions.forEach(s => {
             const sd = new Date(s.started_at);
-            return sd >= wkStart && sd < weekEnd;
+            if (sd >= lastWeekStart && sd < lastWeekEnd) {
+                lastWeekMins += s.actual_minutes;
+                lastWeekCount++;
+            }
+            if (sd >= lastMonthStart && sd < lastMonthEnd) {
+                lastMonthMins += s.actual_minutes;
+                lastMonthCount++;
+            }
         });
-        const weekStudyMinutes = weekSessions.reduce((sum, s) => sum + (s.actual_minutes || 0), 0);
 
-        const logsThisWeek = metacogLogs.filter(log => {
-            const ld = new Date(log.created_at);
-            return ld >= wkStart && ld < weekEnd && (log.free_time_hours ?? 0) > 0;
-        });
-        if (logsThisWeek.length === 0) return null;
+        const pctChange = (current: number, previous: number): number | null => {
+            if (previous === 0) return current > 0 ? 100 : null;
+            return Math.round(((current - previous) / previous) * 100);
+        };
 
-        const mostRecent = logsThisWeek[0];
-        return Math.round((weekStudyMinutes / 60) / mostRecent.free_time_hours! * 100);
-    }, [sessions, metacogLogs]);
+        return {
+            weekMinutesDelta: pctChange(weeklyStats.minutes, lastWeekMins),
+            weekCountDelta: pctChange(weeklyStats.count, lastWeekCount),
+            monthMinutesDelta: pctChange(monthlyStats.minutes, lastMonthMins),
+            monthCountDelta: pctChange(monthlyStats.count, lastMonthCount),
+            avgSessionMins: totalStats.count > 0 ? Math.round(totalStats.minutes / totalStats.count) : 0,
+        };
+    }, [sessions, weeklyStats, monthlyStats, totalStats, weekStart]);
 
     const monthFreeTimePercent = useMemo((): number | null => {
         const today = new Date();
@@ -237,7 +263,6 @@ export default function AnalyticsTab() {
 
     const animMinutes = useCountUp(weeklyStats.minutes);
     const animCount = useCountUp(weeklyStats.count);
-    const animDays = useCountUp(weeklyStats.days);
     const animCurrentStreak = useCountUp(streaks.current);
     const animBestStreak = useCountUp(streaks.best);
     const animMonthMinutes = useCountUp(monthlyStats.minutes);
@@ -246,7 +271,6 @@ export default function AnalyticsTab() {
     const animTotalMinutes = useCountUp(totalStats.minutes);
     const animTotalCount = useCountUp(totalStats.count);
     const animTotalDays = useCountUp(totalStats.days);
-    const animWeekFreeTime = useCountUp(weekFreeTimePercent ?? 0);
     const animMonthFreeTime = useCountUp(monthFreeTimePercent ?? 0);
     const animTotalFreeTime = useCountUp(totalFreeTimePercent ?? 0);
 
@@ -355,29 +379,77 @@ export default function AnalyticsTab() {
                     <h1>{t('analytics.title')}</h1>
                 </div>
             </div>
+            {loading ? (
+                <div className="analytics-summaries-row">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="analytics-summary">
+                            <div className="analytics-header"><div className="skeleton skeleton-heading" /></div>
+                            <div className="stats-grid">
+                                {Array.from({ length: 4 }).map((_, j) => (
+                                    <div key={j} className="skeleton skeleton-stat-card" />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
             <div className="analytics-summaries-row">
             <div className="analytics-summary">
                 <div className="analytics-header">
-                    <h3>{t('analytics.this_week')}</h3>
+                    <h3>{t('analytics.trends')}</h3>
                 </div>
 
                 <div className="stats-grid">
                     <div className="stat-card">
                         <Clock className="stat-icon" size={20} />
-                        <div className="stat-val">{formatTime(animMinutes)}</div>
-                        <div className="stat-label">{t('analytics.focus_time')}</div>
+                        <div className="stat-val">
+                            {formatTime(animMinutes)}
+                            {trends.weekMinutesDelta !== null && (
+                                <span className={`trend-badge${trends.weekMinutesDelta >= 0 ? ' trend-up' : ' trend-down'}`}>
+                                    {trends.weekMinutesDelta >= 0 ? t('analytics.trend_up') : t('analytics.trend_down')}{Math.abs(trends.weekMinutesDelta)}%
+                                </span>
+                            )}
+                        </div>
+                        <div className="stat-label">{t('analytics.focus_time')} <span className="trend-period">({t('analytics.vs_last_week')})</span></div>
                     </div>
 
                     <div className="stat-card">
                         <Activity className="stat-icon" size={20} />
-                        <div className="stat-val">{animCount}</div>
-                        <div className="stat-label">{t('analytics.sessions')}</div>
+                        <div className="stat-val">
+                            {animCount}
+                            {trends.weekCountDelta !== null && (
+                                <span className={`trend-badge${trends.weekCountDelta >= 0 ? ' trend-up' : ' trend-down'}`}>
+                                    {trends.weekCountDelta >= 0 ? t('analytics.trend_up') : t('analytics.trend_down')}{Math.abs(trends.weekCountDelta)}%
+                                </span>
+                            )}
+                        </div>
+                        <div className="stat-label">{t('analytics.sessions')} <span className="trend-period">({t('analytics.vs_last_week')})</span></div>
                     </div>
 
                     <div className="stat-card">
-                        <Flame className="stat-icon danger-text" size={20} />
-                        <div className="stat-val">{animDays} / 7</div>
-                        <div className="stat-label">{t('analytics.active_days')}</div>
+                        <Clock className="stat-icon" size={20} />
+                        <div className="stat-val">
+                            {formatTime(animMonthMinutes)}
+                            {trends.monthMinutesDelta !== null && (
+                                <span className={`trend-badge${trends.monthMinutesDelta >= 0 ? ' trend-up' : ' trend-down'}`}>
+                                    {trends.monthMinutesDelta >= 0 ? t('analytics.trend_up') : t('analytics.trend_down')}{Math.abs(trends.monthMinutesDelta)}%
+                                </span>
+                            )}
+                        </div>
+                        <div className="stat-label">{t('analytics.focus_time')} <span className="trend-period">({t('analytics.vs_last_month')})</span></div>
+                    </div>
+
+                    <div className="stat-card">
+                        <Activity className="stat-icon" size={20} />
+                        <div className="stat-val">
+                            {animMonthCount}
+                            {trends.monthCountDelta !== null && (
+                                <span className={`trend-badge${trends.monthCountDelta >= 0 ? ' trend-up' : ' trend-down'}`}>
+                                    {trends.monthCountDelta >= 0 ? t('analytics.trend_up') : t('analytics.trend_down')}{Math.abs(trends.monthCountDelta)}%
+                                </span>
+                            )}
+                        </div>
+                        <div className="stat-label">{t('analytics.sessions')} <span className="trend-period">({t('analytics.vs_last_month')})</span></div>
                     </div>
 
                     <div className="stat-card">
@@ -387,15 +459,9 @@ export default function AnalyticsTab() {
                     </div>
 
                     <div className="stat-card">
-                        <Flag className="stat-icon stat-icon-success" size={20} />
-                        <div className="stat-val">{animBestStreak} <span className="stat-days-suffix">{t('analytics.days')}</span></div>
-                        <div className="stat-label">{t('analytics.best_streak')}</div>
-                    </div>
-
-                    <div className="stat-card">
                         <Target size={20} className="stat-icon" />
-                        <div className="stat-val">{weekFreeTimePercent !== null ? `${animWeekFreeTime}%` : '—'}</div>
-                        <div className="stat-label">{t('analytics.free_time_used')}</div>
+                        <div className="stat-val">{formatTime(trends.avgSessionMins)}</div>
+                        <div className="stat-label">{t('analytics.avg_session')}</div>
                     </div>
                 </div>
             </div>
@@ -470,6 +536,7 @@ export default function AnalyticsTab() {
                 </div>
             </div>
             </div>
+            )}
 
             <div className="analytics-panels">
                 <CalendarPanel
@@ -541,15 +608,12 @@ export default function AnalyticsTab() {
                                 .replace('{days}', String(timelineData.studiedDays))
                                 .replace('{time}', formatTime(timelineData.totalPeriodMinutes))}
                         </div>
-                        <select
-                            value={timelineFilter}
-                            onChange={e => setTimelineFilter(parseFloat(e.target.value))}
+                        <CustomSelect
+                            value={String(timelineFilter)}
+                            onChange={val => setTimelineFilter(parseFloat(val))}
+                            options={timelineOptions.map(opt => ({ value: String(opt.value), label: opt.label }))}
                             className="timeline-select"
-                        >
-                            {timelineOptions.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
                 </div>
 
@@ -561,36 +625,40 @@ export default function AnalyticsTab() {
                         <span className="y-axis-label">{formatTime(Math.round(timelineData.maxMins / 3))}</span>
                         <span className="y-axis-label">0m</span>
                     </div>
-                    <div className="graph-bars-wrapper">
+                    <div className="graph-bars-wrapper" role="list">
                         {timelineData.data.map((day, i) => {
                             const heightPct = Math.max((day.minutes / timelineData.maxMins) * 100, day.minutes > 0 ? 2 : 0);
                             const isToday = toLocalDateStr(new Date()) === day.dateStr;
                             const isHovered = hoveredBarIdx === i;
+                            const dateLabel = day.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                            const barLabel = day.minutes > 0
+                                ? `${dateLabel}: ${formatTime(day.minutes)}`
+                                : `${dateLabel}: ${t('analytics.no_study')}`;
                             return (
                                 <div
                                     key={i}
+                                    role="listitem"
                                     className="graph-bar-col"
                                     onMouseEnter={() => setHoveredBarIdx(i)}
                                     onMouseLeave={() => setHoveredBarIdx(null)}
+                                    tabIndex={day.minutes > 0 ? 0 : -1}
+                                    aria-label={barLabel}
+                                    onFocus={() => setHoveredBarIdx(i)}
+                                    onBlur={() => setHoveredBarIdx(null)}
+                                    onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && day.minutes > 0) setHoveredBarIdx(i); }}
                                 >
                                     {isHovered && day.minutes > 0 && (
-                                        <div className="graph-tooltip" style={{
-                                            top: `${Math.max(100 - heightPct - 15, 0)}%`,
-                                        }}>
+                                        <div
+                                            className="graph-tooltip"
+                                            style={{ '--tooltip-top': `${Math.max(100 - heightPct - 15, 0)}%` } as React.CSSProperties}
+                                        >
                                             {formatTime(day.minutes)}
-                                            <div className="graph-tooltip-date">
-                                                {day.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                                            </div>
+                                            <div className="graph-tooltip-date">{dateLabel}</div>
                                         </div>
                                     )}
                                     <div
-                                        className="graph-bar graph-bar-hover"
-                                        style={{
-                                            height: `${heightPct}%`,
-                                            background: isToday ? 'var(--accent)' : 'var(--primary)',
-                                            opacity: isHovered ? 1 : (day.minutes > 0 ? 0.8 : 0.1),
-                                            cursor: day.minutes > 0 ? 'pointer' : 'default',
-                                        }}
+                                        className={`graph-bar graph-bar-hover${isToday ? ' graph-bar--today' : ''}${day.minutes === 0 ? ' graph-bar--empty' : ''}${isHovered ? ' graph-bar--hovered' : ''}${day.minutes > 0 ? ' graph-bar--interactive' : ''}`}
+                                        style={{ height: `${heightPct}%` } as React.CSSProperties}
                                     />
                                     {timelineData.data.length <= 14 && (
                                         <div className="x-axis-label">

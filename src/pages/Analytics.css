@@ -422,7 +422,7 @@
 }
 
 .y-axis-label {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
 }
 
@@ -446,6 +446,7 @@
 
 .graph-tooltip {
     position: absolute;
+    top: var(--tooltip-top, 0%);
     left: 50%;
     transform: translateX(-50%);
     background: var(--card-bg);
@@ -471,6 +472,30 @@
     width: 100%;
     border-radius: 4px 4px 0 0;
     transition: height 0.3s ease, opacity 0.15s;
+    background: var(--primary);
+    opacity: 0.8;
+}
+
+.graph-bar--today {
+    background: var(--accent);
+}
+
+.graph-bar--empty {
+    opacity: 0.1;
+}
+
+.graph-bar--hovered {
+    opacity: 1;
+}
+
+.graph-bar--interactive {
+    cursor: pointer;
+}
+
+.graph-bar-col:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
 }
 
 .x-axis-label {
@@ -478,6 +503,90 @@
     bottom: -20px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
+}
+
+/* ── Trend badges ── */
+.trend-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.trend-badge.trend-up {
+    background: rgba(var(--success-rgb, 80, 200, 120), 0.15);
+    color: var(--success);
+}
+
+.trend-badge.trend-down {
+    background: rgba(var(--danger-rgb, 220, 80, 80), 0.12);
+    color: var(--danger);
+}
+
+.trend-period {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* ── Skeleton loading (global utility — Vite CSS is global) ── */
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+.skeleton {
+    background: var(--glass-border);
+    border-radius: 6px;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton { animation: none; opacity: 0.5; }
+}
+
+.skeleton-stat-card {
+    height: 90px;
+    border-radius: var(--border-radius);
+}
+
+.skeleton-subject-card {
+    height: 160px;
+    border-radius: var(--border-radius);
+}
+
+.skeleton-heading {
+    height: 1.2rem;
+    width: 120px;
+}
+
+@media (max-width: 900px) {
+    .analytics-summaries-row {
+        flex-direction: column;
+    }
+
+    .analytics-summaries-row .analytics-summary {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .analytics-panels {
+        flex-direction: column;
+    }
+
+    .pie-chart-panel,
+    .deadlines-panel {
+        width: 100%;
+    }
+
+    .timeline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
 }

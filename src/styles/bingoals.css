@@ -107,9 +107,102 @@
   color: #00ff00;
 }
 
+[data-theme="terminal-amber"] .bingoals-root {
+  --red:    #1a1000;
+  --white:  #ffaa00;
+  --black:  #100a00;
+  --green:  #ff6600;
+  --border: 1px solid rgba(255,170,0,0.5);
+  --shadow: 0 0 10px rgba(255,170,0,0.4);
+  --mono:   'JetBrains Mono', 'Cascadia Mono', monospace;
+  color: #ffaa00;
+}
+
+[data-theme="terminal-purple"] .bingoals-root {
+  --red:    #12001e;
+  --white:  #cc33ff;
+  --black:  #0a0014;
+  --green:  #ff44cc;
+  --border: 1px solid rgba(204,51,255,0.5);
+  --shadow: 0 0 10px rgba(204,51,255,0.4);
+  --mono:   'JetBrains Mono', 'Cascadia Mono', monospace;
+  color: #cc33ff;
+}
+
+[data-theme="terminal-blue"] .bingoals-root {
+  --red:    #000e2a;
+  --white:  #4499ff;
+  --black:  #00061a;
+  --green:  #00ccff;
+  --border: 1px solid rgba(68,153,255,0.5);
+  --shadow: 0 0 10px rgba(68,153,255,0.4);
+  --mono:   'JetBrains Mono', 'Cascadia Mono', monospace;
+  color: #4499ff;
+}
+
+[data-theme="cyber-scan"] .bingoals-root {
+  --red:    #070b22;
+  --white:  #b8ff00;
+  --black:  #d4ffaa;
+  --green:  #00ff88;
+  --border: 1px solid rgba(184, 255, 0, 0.4);
+  --shadow: 0 0 14px rgba(184, 255, 0, 0.3);
+  --mono:   'Outfit', sans-serif;
+  color: #b8ff00;
+}
+
+[data-theme="cyber-scan"] .bingoals-root .panel {
+  background: rgba(17, 51, 255, 0.12);
+}
+
 /* ── Reset inside bingoals-root ── */
 
 .bingoals-root * { box-sizing: border-box; }
+
+/* ── label.btn alignment (file upload labels must match button height) ── */
+.bingoals-root label.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  margin-bottom: 0;
+}
+
+/* ── Hide browser number spinners on counter inputs ── */
+.bingo-counter .numInput::-webkit-inner-spin-button,
+.bingo-counter .numInput::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.bingo-counter .numInput[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* ── Terminal theme: inversion hover (overrides panel-context specificity) ── */
+[data-theme^="terminal-"] .bingoals-root .btn:hover,
+[data-theme^="terminal-"] .bingoals-root .panel .btn:hover {
+  background: var(--primary) !important;
+  color: var(--bg-color) !important;
+  border-color: var(--primary) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+[data-theme^="terminal-"] .bingoals-root .btn-primary,
+[data-theme^="terminal-"] .bingoals-root .btn-primary:hover {
+  color: var(--bg-color) !important;
+  text-shadow: none !important;
+}
+
+[data-theme^="terminal-"] .bingoals-root .btn-danger:hover {
+  background: var(--danger) !important;
+  color: #000 !important;
+  border-color: var(--danger) !important;
+  text-shadow: none !important;
+}
 
 /* ── Button resting state + hover (plain .btn) ── */
 
@@ -388,6 +481,16 @@
 .bingoals-root .numInput  { width: 90px; }
 .bingoals-root .unitInput { width: 120px; }
 
+.bingoals-root .bingo-delete-btn {
+  opacity: 0.45;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.bingoals-root .bingo-delete-btn:hover {
+  opacity: 1;
+  color: var(--danger) !important;
+}
+
 .bingoals-root .bingo-counter {
   display: flex;
   align-items: center;
@@ -466,6 +569,16 @@
 
 .bingoals-root .memories  { margin-top: 12px; }
 .bingoals-root .slideshow { margin-top: 8px; }
+
+.bingoals-root .memories-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bingoals-root .memories-actions .bingo-memories-play {
+  margin-left: 10px;
+}
 
 .bingoals-root .slide {
   position: relative;
@@ -599,6 +712,48 @@
 
 /* ── Neobrutalism card (keep hard-shadow brutalist style) ── */
 
+[data-theme="terminal-amber"] .bingoals-root .card {
+  background: #1a1000;
+  color: #ffaa00;
+  border: 1px solid #ffaa00;
+  border-radius: 0;
+  box-shadow: 0 0 10px rgba(255,170,0,0.3);
+}
+
+[data-theme="terminal-amber"] .bingoals-root .card:hover {
+  border-color: #ffbb33;
+  background: #2a1e00;
+  box-shadow: 0 0 15px rgba(255,170,0,0.6);
+}
+
+[data-theme="terminal-purple"] .bingoals-root .card {
+  background: #12001e;
+  color: #cc33ff;
+  border: 1px solid #cc33ff;
+  border-radius: 0;
+  box-shadow: 0 0 10px rgba(204,51,255,0.3);
+}
+
+[data-theme="terminal-purple"] .bingoals-root .card:hover {
+  border-color: #dd55ff;
+  background: #220033;
+  box-shadow: 0 0 15px rgba(204,51,255,0.6);
+}
+
+[data-theme="terminal-blue"] .bingoals-root .card {
+  background: #000e2a;
+  color: #4499ff;
+  border: 1px solid #4499ff;
+  border-radius: 0;
+  box-shadow: 0 0 10px rgba(68,153,255,0.3);
+}
+
+[data-theme="terminal-blue"] .bingoals-root .card:hover {
+  border-color: #66aaff;
+  background: #001844;
+  box-shadow: 0 0 15px rgba(68,153,255,0.6);
+}
+
 [data-theme="neobrutalism"] .bingoals-root .card {
   background: #000;
   color: #fff;
@@ -672,7 +827,10 @@
 
 [data-theme="neobrutalism"] .bingoals-root .hoverProgress,
 [data-theme="terminal-orange"] .bingoals-root .hoverProgress,
-[data-theme="terminal-green"] .bingoals-root .hoverProgress {
+[data-theme="terminal-green"] .bingoals-root .hoverProgress,
+[data-theme="terminal-amber"] .bingoals-root .hoverProgress,
+[data-theme="terminal-purple"] .bingoals-root .hoverProgress,
+[data-theme="terminal-blue"] .bingoals-root .hoverProgress {
   background: rgba(0,0,0,0.75);
   border-top: 1px solid rgba(255,255,255,0.15);
   color: #fff;

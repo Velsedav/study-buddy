@@ -357,7 +357,7 @@ function CelebrationOverlay({ onDone }: { onDone: () => void }) {
 // ── Main Component ──
 
 export default function LearningTab() {
-    const { theme } = useSettings();
+    const { theme, isTerminal } = useSettings();
     const [selectedSection, setSelectedSection] = useState<Section | null>(null);
     const [animating, setAnimating] = useState(false);
     const [showCelebration, setShowCelebration] = useState(false);
@@ -626,7 +626,7 @@ export default function LearningTab() {
                     <div className="learning-header-title-container">
                         <h2 className="learning-header-title">
                             <span className="learning-header-icon" style={{ background: selectedSection.color }}>
-                                {selectedSection.icon}
+                                {isTerminal ? `[${String(curriculum.findIndex(s => s.id === selectedSection.id) + 1).padStart(2, '0')}]` : selectedSection.icon}
                             </span>
                             {selectedSection.title}
                         </h2>
@@ -959,7 +959,7 @@ export default function LearningTab() {
                             onMouseEnter={() => { if (!locked) playSFX('hover_sound', theme); }}
                         >
                             <div className="section-icon-badge" style={{ background: locked ? 'var(--text-muted)' : section.color }}>
-                                {locked ? <Lock size={20} /> : section.icon}
+                                {locked ? <Lock size={20} /> : (isTerminal ? `[${String(idx + 1).padStart(2, '0')}]` : section.icon)}
                             </div>
                             <h3>{section.title}</h3>
                             <p className="learning-section-card-desc">{section.description}</p>

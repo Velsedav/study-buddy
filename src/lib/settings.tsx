@@ -1,7 +1,12 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
-export type Theme = 'pastel' | 'neumorphism' | 'neobrutalism' | 'terminal-orange' | 'terminal-green' | 'classic-uniform' | 'cosmic-manicure' | 'chibi-moon' | 'transformation-ribbon' | 'honey-lemon' | 'ai-pro';
+export type Theme = 'pastel' | 'neumorphism' | 'neobrutalism' | 'terminal-orange' | 'terminal-green' | 'terminal-red' | 'terminal-cyan' | 'classic-uniform' | 'cosmic-manicure' | 'chibi-moon' | 'transformation-ribbon' | 'honey-lemon' | 'ai-pro';
+
+/** True for any theme whose name starts with "terminal-". Works for future themes automatically. */
+export function isTerminalTheme(theme: Theme | string): boolean {
+    return theme.startsWith('terminal-');
+}
 export type WeekStart = 'monday' | 'sunday';
 
 interface Settings {
@@ -19,6 +24,7 @@ const defaultSettings: Settings = {
 };
 
 interface SettingsContextType extends Settings {
+    isTerminal: boolean;
     setTheme: (t: Theme) => void;
     setWeekStart: (w: WeekStart) => void;
     setLanguage: (l: string) => void;
@@ -77,6 +83,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return (
         <SettingsContext.Provider value={{
             ...settings,
+            isTerminal: isTerminalTheme(settings.theme),
             setTheme: (t) => updateSetting('theme', t),
             setWeekStart: (w) => updateSetting('weekStart', w),
             setLanguage: (l) => updateSetting('language', l),

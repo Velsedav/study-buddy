@@ -82,6 +82,7 @@ export default function SettingsTab() {
             themes: [
                 { id: 'terminal-orange', name: 'Orange Terminal', color: '#ff8c00' },
                 { id: 'terminal-green', name: 'Green Terminal', color: '#00ff00' },
+                { id: 'terminal-red', name: 'Red Terminal', color: '#ff0000' },
                 { id: 'terminal-cyan', name: 'CLI / Cyan', color: '#00d4ff' },
             ]
         },

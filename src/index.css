@@ -729,6 +729,76 @@
   border-radius: 0;
 }
 
+/* Theme - Terminal Red */
+[data-theme="terminal-red"] {
+  --font-main: 'JetBrains Mono', monospace;
+  --bg-color: #000000;
+  --bg-gradient: linear-gradient(180deg, #000000, #000000);
+  --card-bg: #000000;
+  --primary: #ff0000;
+  --primary-rgb: 255, 0, 0;
+  --primary-hover: #ff3333;
+  --secondary: #cc0000;
+  --accent: #ff6666;
+  --text-dark: #ff0000;
+  --text-muted: #a10000;
+  --text-light: #ff0000;
+  --border-radius: 0px;
+  --border-radius-sm: 0px;
+  --shadow-sm: 0 0 5px rgba(255, 0, 0, 0.2);
+  --shadow-md: 0 0 10px rgba(255, 0, 0, 0.4);
+  --shadow-lg: 0 0 15px rgba(255, 0, 0, 0.6);
+  --transition: all 0.2s ease;
+  --sidebar-bg: rgba(0, 0, 0, 0.8);
+  --glass-border: var(--primary);
+
+  --input-border: var(--primary);
+  --input-bg-focus: #000000;
+  --input-focus-ring: rgba(255, 0, 0, 0.2);
+  --bubble-bg: #000000;
+
+  --h-0: #1a0000;
+  --h-1: #4d0000;
+  --h-2: #800000;
+  --h-3: #cc0000;
+  --h-4: #ff0000;
+}
+
+[data-theme="terminal-red"] .glass {
+  border: 1px solid var(--primary);
+  backdrop-filter: none;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.1) inset;
+}
+
+[data-theme="terminal-red"] * {
+  text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+[data-theme="terminal-red"] .heatmap-cell[class*="intensity"] {
+  border-radius: 0;
+}
+
+[data-theme="terminal-red"] .btn {
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+[data-theme="terminal-red"] .btn:hover {
+  background: rgba(255, 0, 0, 0.2);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+}
+
+[data-theme="terminal-red"] input,
+[data-theme="terminal-red"] select,
+[data-theme="terminal-red"] textarea {
+  background: #000;
+  color: var(--primary);
+  border-radius: 0;
+}
+
 /* Theme - Terminal Cyan (CLI) */
 [data-theme="terminal-cyan"] {
   --font-main: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
@@ -812,15 +882,6 @@
   border-left: 2px solid var(--primary);
 }
 
-/* Glow-blink for terminal-cyan attention elements */
-[data-theme="terminal-cyan"] .recommended-technique,
-[data-theme="terminal-cyan"] .block-objective-input.empty,
-[data-theme="terminal-cyan"] .stat-card.technique-unset {
-  animation-name: glow-blink;
-  animation-duration: 0.7s;
-  animation-timing-function: step-end;
-  animation-iteration-count: infinite;
-}
 
 /* ── Terminal Theme Component Overrides ── */
 [data-theme^="terminal-"] .tag-picker-input-area:focus-within {
@@ -2793,12 +2854,9 @@ input[type="checkbox"] {
 
 /* ── Terminal theme: swap rainbow glows to blink ── */
 
-[data-theme="terminal-orange"] .recommended-technique,
-[data-theme="terminal-green"] .recommended-technique,
-[data-theme="terminal-orange"] .block-objective-input.empty,
-[data-theme="terminal-green"] .block-objective-input.empty,
-[data-theme="terminal-orange"] .stat-card.technique-unset,
-[data-theme="terminal-green"] .stat-card.technique-unset {
+[data-theme^="terminal-"] .recommended-technique,
+[data-theme^="terminal-"] .block-objective-input.empty,
+[data-theme^="terminal-"] .stat-card.technique-unset {
   animation-name: glow-blink;
   animation-duration: 0.7s;
   animation-timing-function: step-end;
@@ -3474,6 +3532,50 @@ input[type="checkbox"] {
 [data-theme^="terminal-"] .subject-card:has(.cover-image) .tag {
   background: rgba(0, 0, 0, 0.6);
   color: var(--primary);
+}
+
+/* ── Terminal: hide sidebar mascot image, keep bubble ── */
+[data-theme^="terminal-"] .mascot-img {
+  display: none !important;
+}
+
+/* ── Terminal: strip colored backgrounds from learning section icon badges ── */
+[data-theme^="terminal-"] .section-icon-badge,
+[data-theme^="terminal-"] .learning-header-icon {
+  background: transparent !important;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-family: var(--font-main);
+  letter-spacing: 0;
+}
+
+/* ── Terminal: strip colored backgrounds from icon-wrappers ── */
+[data-theme^="terminal-"] .icon-wrapper,
+[data-theme^="terminal-"] .icon-wrapper.bg-blue,
+[data-theme^="terminal-"] .icon-wrapper.bg-purple,
+[data-theme^="terminal-"] .icon-wrapper.bg-orange,
+[data-theme^="terminal-"] .icon-wrapper.bg-green,
+[data-theme^="terminal-"] .icon-wrapper.bg-red,
+[data-theme^="terminal-"] .icon-wrapper.bg-accent {
+  background: transparent !important;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+
+/* ── Terminal: replace hourglass emoji with ASCII in empty timeline ── */
+[data-theme^="terminal-"] .timeline-empty-icon {
+  font-size: 0;
+  line-height: 1;
+}
+
+[data-theme^="terminal-"] .timeline-empty-icon::before {
+  content: '[===]';
+  font-size: 3rem;
+  font-family: var(--font-main);
+  color: var(--primary);
+  display: block;
+  text-align: center;
 }
 
 /* ── Drag & Drop visual feedback ── */

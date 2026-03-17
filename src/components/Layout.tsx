@@ -17,7 +17,7 @@ export default function Layout() {
     const location = useLocation();
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const { theme } = useSettings();
+    const { theme, isTerminal } = useSettings();
     const [quotes, setQuotes] = useState<Quote[]>([]);
     const [currentIdx, setCurrentIdx] = useState(0);
     const [animClass, setAnimClass] = useState('quote-visible');
@@ -226,8 +226,6 @@ export default function Layout() {
         navigate(pendingNavPath || '/');
         setPendingNavPath(null);
     }
-
-    const isTerminal = theme === 'terminal-orange' || theme === 'terminal-green';
 
     // Terminal typing effect
     const [typedText, setTypedText] = useState('');

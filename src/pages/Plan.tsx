@@ -42,7 +42,7 @@ const PIXELS_PER_MINUTE = 16;
 
 export default function Plan() {
     const navigate = useNavigate();
-    const { theme } = useSettings();
+    const { theme, isTerminal } = useSettings();
     const { t } = useTranslation();
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [prioritySubjectIds, setPrioritySubjectIds] = useState<Set<string>>(new Set());
@@ -518,7 +518,7 @@ export default function Plan() {
                             >
                                 <strong>{s.name}</strong>
                                 {prioritySubjectIds.has(s.id) && (
-                                    <span className="priority-badge">{t('plan.priority')}</span>
+                                    <span className="priority-badge">{isTerminal ? '[!]' : t('plan.priority')}</span>
                                 )}
                             </div>
                         ))}

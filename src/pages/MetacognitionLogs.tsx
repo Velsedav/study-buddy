@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Wrench, ChevronLeft, ChevronRight, ClipboardCopy, Check } from 'lucide-react';
 import { getMetacognitionLogs, type MetacognitionLog } from '../lib/db';
 import { useTranslation } from '../lib/i18n';
+import { useSettings } from '../lib/settings';
 import './MetacognitionLogs.css';
 
 function getMonthKey(dateStr: string): string {
@@ -32,6 +33,7 @@ function formatForNotebookLM(logs: MetacognitionLog[], monthLabel: string): stri
 
 export default function MetacognitionLogs() {
     const { t } = useTranslation();
+    const { isTerminal } = useSettings();
     const [logs, setLogs] = useState<MetacognitionLog[]>([]);
     const [monthIndex, setMonthIndex] = useState(0); // 0 = most recent month
     const [copied, setCopied] = useState(false);
@@ -163,25 +165,25 @@ export default function MetacognitionLogs() {
 
                                     <div className="log-content-container">
                                         <div>
-                                            <h4 className="text-muted log-section-title">🎯 Priorités</h4>
+                                            <h4 className="text-muted log-section-title">{isTerminal ? '[>]' : '🎯'} Priorités</h4>
                                             <div className="log-section-box">
                                                 {log.memorization_align || 'N/A'}
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 className="text-muted log-section-title">🔧 Problèmes</h4>
+                                            <h4 className="text-muted log-section-title">{isTerminal ? '[~]' : '🔧'} Problèmes</h4>
                                             <div className="log-section-box">
                                                 {log.focus_drop || 'N/A'}
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 className="icon-gold log-section-title">⚙️ Règle Système</h4>
+                                            <h4 className="icon-gold log-section-title">{isTerminal ? '[*]' : '⚙️'} Règle Système</h4>
                                             <div className="log-section-box gold">
                                                 {log.mechanical_fix || 'Aucune règle définie.'}
                                             </div>
                                         </div>
                                         <div>
-                                            <h4 className="text-muted log-section-title">🧭 La Boussole</h4>
+                                            <h4 className="text-muted log-section-title">{isTerminal ? '[+]' : '🧭'} La Boussole</h4>
                                             <div className="log-section-box">
                                                 {log.retention || 'N/A'}
                                             </div>

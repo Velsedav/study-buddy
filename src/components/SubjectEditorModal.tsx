@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
-import { copyFile, mkdir, BaseDirectory, exists, readFile } from '@tauri-apps/plugin-fs';
+import { mkdir, BaseDirectory, exists, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { createSubject, updateSubject } from '../lib/db';
+import { resizeImage } from '../lib/image';
 import type { Subject, Tag } from '../lib/db';
 import TagPicker from './TagPicker';
 import { X, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
@@ -140,14 +141,24 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
             let newFileName = '';
 
             if (typeof pathOrBlob === 'string') {
-                const ext = pathOrBlob.split('.').pop();
-                newFileName = `covers/${id}.${ext}`;
-                await copyFile(pathOrBlob, newFileName, { toPathBaseDir: BaseDirectory.AppData });
+                // Read the file from path
+                const originalBytes = await readFile(pathOrBlob);
+                const blob = new Blob([originalBytes]);
+                
+                // Resize
+                const resizedBlob = await resizeImage(blob);
+                const arrayBuffer = await resizedBlob.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+                
+                newFileName = `covers/${id}.jpg`; // We save as jpg after resizing
+                await writeFile(newFileName, bytes, { baseDir: BaseDirectory.AppData });
             } else {
-                const buffer = await pathOrBlob.arrayBuffer();
-                const bytes = new Uint8Array(buffer);
-                newFileName = `covers/${id}.png`; // Paste usually gives png
-                const { writeFile } = await import('@tauri-apps/plugin-fs');
+                // Resize the blob directly
+                const resizedBlob = await resizeImage(pathOrBlob);
+                const arrayBuffer = await resizedBlob.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuffer);
+                
+                newFileName = `covers/${id}.jpg`;
                 await writeFile(newFileName, bytes, { baseDir: BaseDirectory.AppData });
             }
 

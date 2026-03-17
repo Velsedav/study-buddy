@@ -42,7 +42,7 @@ function getImageLuminance(src: string): Promise<number> {
 }
 
 export default function SubjectCard({ subject, tags, coverUrl, onDelete, onTogglePin, onClick }: SubjectCardProps) {
-    const { theme } = useSettings();
+    const { theme, isTerminal } = useSettings();
     const days = daysSince(subject.last_studied_at);
     const isNever = days === null;
     const [isDarkImage, setIsDarkImage] = useState(true);
@@ -58,7 +58,6 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
         setChapterCount(getChaptersForSubject(subject.id).length);
     }, [subject.id]);
 
-    const isTerminal = theme === 'terminal-orange' || theme === 'terminal-green';
     const hasCover = !!coverUrl;
     const textColor = hasCover
         ? (isTerminal ? 'var(--primary)' : (isDarkImage ? '#ffffff' : 'var(--text-dark)'))
@@ -137,13 +136,13 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
 
                 {subject.deadline && (
                     <div style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '6px', fontWeight: 'bold' }}>
-                        ⏳ Deadline: {new Date(subject.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {isTerminal ? '[!]' : '⏳'} Deadline: {new Date(subject.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                 )}
 
                 {/* Compact chapter count */}
                 <div style={{ marginTop: '6px', fontSize: '0.8rem', color: textColor || 'var(--text-muted)' }}>
-                    📖 {chapterCount} chapter{chapterCount !== 1 ? 's' : ''}
+                    {isTerminal ? '>>' : '📖'} {chapterCount} chapter{chapterCount !== 1 ? 's' : ''}
                 </div>
 
                 {subject.pinned && <Pin className="pin-icon" size={16} />}

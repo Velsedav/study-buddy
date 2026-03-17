@@ -84,7 +84,7 @@ export default function Session() {
     const [restCountdown, setRestCountdown] = useState(600); // 10 minutes in seconds
     const [newCustomItem, setNewCustomItem] = useState('');
     const [newCustomBreakItem, setNewCustomBreakItem] = useState('');
-    const { theme } = useSettings();
+    const { theme, isTerminal } = useSettings();
     const { t } = useTranslation();
 
     useEffect(() => {
@@ -299,7 +299,7 @@ export default function Session() {
                         {/* Metacognition Reminder */}
                         {currentBlock.technique_id && METACOGNITION_QUESTIONS[currentBlock.technique_id] && (
                             <div className={`meta-check-card ${METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'F' || METACOGNITION_QUESTIONS[currentBlock.technique_id].tier === 'D' ? 'warning' : 'normal'}`}>
-                                <div className="meta-check-label">🧠 {t('session.meta_check')}</div>
+                                <div className="meta-check-label">{isTerminal ? '[?]' : '🧠'} {t('session.meta_check')}</div>
                                 {METACOGNITION_QUESTIONS[currentBlock.technique_id].questions.map((q, qi) => (
                                     <div key={qi} className={`meta-check-question ${qi < METACOGNITION_QUESTIONS[currentBlock.technique_id].questions.length - 1 ? 'spaced' : ''}`}>
                                         {q}

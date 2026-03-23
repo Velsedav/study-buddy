@@ -503,11 +503,11 @@ export default function CalendarPanel({
                                 if (totalDays <= 7) cardClass += ' urgent';
                                 else if (totalDays <= 30) cardClass += ' soon';
 
-                                const linkedSubject = g.subject_id ? subjects.find(s => s.id === g.subject_id) : null;
+                                const linkedSubject = 'subject_id' in g && g.subject_id ? subjects.find(s => s.id === g.subject_id) : null;
                                 return (
                                     <div key={`${g.id}-${idx}`} className={cardClass}>
                                         <div className="deadline-card-title">{getDeadlineIcon(g.deadlineType)} {g.label}</div>
-                                        {linkedSubject && <div className="deadline-card-subject">{linkedSubject.name}{g.chapter_name ? ` › ${g.chapter_name}` : ''}</div>}
+                                        {linkedSubject && <div className="deadline-card-subject">{linkedSubject.name}{'chapter_name' in g && g.chapter_name ? ` › ${g.chapter_name}` : ''}</div>}
                                         <div className="deadline-card-date">{new Date(g.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                                         <div className="deadline-card-countdown">{countdown}</div>
                                         {g.sourceType === 'manual' && (

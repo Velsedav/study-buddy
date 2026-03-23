@@ -567,7 +567,7 @@ export default function Plan() {
                 <div className="glass planner-subjects-panel">
                     <h3>{t('plan.drag_subjects')}</h3>
                     <div className="planner-subjects-list">
-                        {subjects.map((s, idx) => (
+                        {subjects.map((s) => (
                             <div
                                 key={s.id}
                                 draggable

@@ -33,8 +33,26 @@ export const CATEGORY_LABELS: Record<MuscleGroup['category'], string> = {
 };
 
 const WORKOUT_LOG_KEY = 'study-buddy-workout-log';
+const WORKOUT_SETS_KEY = 'study-buddy-workout-sets';
 
 export type WorkoutLog = Record<string, string>; // id → ISO date string
+
+/** Free-text sets notes per muscle id, e.g. "3×12 80kg" */
+export type WorkoutSets = Record<string, string>;
+
+export function loadWorkoutSets(): WorkoutSets {
+    try {
+        const saved = localStorage.getItem(WORKOUT_SETS_KEY);
+        if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
+}
+
+export function saveWorkoutSet(id: string, value: string, current: WorkoutSets): WorkoutSets {
+    const next = { ...current, [id]: value };
+    localStorage.setItem(WORKOUT_SETS_KEY, JSON.stringify(next));
+    return next;
+}
 
 export function loadWorkoutLog(): WorkoutLog {
     try {

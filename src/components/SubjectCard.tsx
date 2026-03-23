@@ -5,6 +5,7 @@ import { Pin, Trash2 } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { getChaptersForSubject } from '../lib/chapters';
+import './SubjectCard.css';
 
 interface SubjectCardProps {
     subject: Subject;
@@ -46,78 +47,61 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
     const days = daysSince(subject.last_studied_at);
     const isNever = days === null;
     const [isDarkImage, setIsDarkImage] = useState(true);
-    const [chapterCount, setChapterCount] = useState(0);
-    const [isHovered, setIsHovered] = useState(false);
+
+    // Compute synchronously on every render — avoids stale count when chapters are added
+    // Sub-chapters (e.g. "  A. Ubuntu") are excluded from the main chapter count
+    const allChapters = getChaptersForSubject(subject.id);
+    const mainChapters = allChapters.filter(c => !/^\s+[A-Z]\./.test(c.name));
+    const chapterCount = mainChapters.length;
+    const isMusic = subject.subject_type === 'music';
+    const pieceCount = isMusic ? mainChapters.filter(c => c.totalMeasures && c.totalMeasures > 0).length : 0;
+    const skillCount = isMusic ? mainChapters.filter(c => !c.totalMeasures || c.totalMeasures === 0).length : 0;
 
     useEffect(() => {
         if (!coverUrl) { setIsDarkImage(true); return; }
         getImageLuminance(coverUrl).then(lum => setIsDarkImage(lum < 0.75));
     }, [coverUrl]);
 
-    useEffect(() => {
-        setChapterCount(getChaptersForSubject(subject.id).length);
-    }, [subject.id]);
-
     const hasCover = !!coverUrl;
     const textColor = hasCover
         ? (isTerminal ? 'var(--primary)' : (isDarkImage ? '#ffffff' : 'var(--text-dark)'))
-        : undefined;
+        : null;
 
     return (
         <div
             className={`subject-card glass ${subject.pinned ? 'pinned' : ''} ${subject.archived ? 'archived' : ''}`}
-            style={{ opacity: subject.archived ? 0.6 : 1, cursor: 'pointer', position: 'relative' }}
-            onMouseEnter={() => { setIsHovered(true); playSFX('hover_sound', theme); }}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={() => playSFX('glass_ui_hover', theme)}
             onClick={onClick}
         >
             {/* Hover action icons */}
-            {isHovered && (
-                <div style={{
-                    position: 'absolute', top: '8px', right: '8px', zIndex: 10,
-                    display: 'flex', gap: '6px',
-                }}>
-                    <button
-                        className="btn-icon"
-                        onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
-                        title={subject.pinned ? 'Unpin' : 'Pin'}
-                        style={{
-                            background: 'rgba(0,0,0,0.5)', borderRadius: '50%', width: '32px', height: '32px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: subject.pinned ? 'var(--accent)' : '#fff', border: 'none', cursor: 'pointer',
-                            transition: 'transform 0.15s ease',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-                    >
-                        <Pin size={16} />
-                    </button>
-                    <button
-                        className="btn-icon"
-                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                        title="Delete"
-                        style={{
-                            background: 'rgba(0,0,0,0.5)', borderRadius: '50%', width: '32px', height: '32px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'var(--danger)', border: 'none', cursor: 'pointer',
-                            transition: 'transform 0.15s ease',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-                    >
-                        <Trash2 size={16} />
-                    </button>
-                </div>
-            )}
+            <div className="subject-card-actions">
+                <button
+                    className={`subject-card-action-btn${subject.pinned ? ' pinned' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
+                    title={subject.pinned ? 'Unpin' : 'Pin'}
+                >
+                    <Pin size={16} />
+                </button>
+                <button
+                    className="subject-card-action-btn danger"
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    title="Delete"
+                >
+                    <Trash2 size={16} />
+                </button>
+            </div>
 
             {coverUrl && (
                 <div className="cover-image" style={{ backgroundImage: `url(${coverUrl})` }}>
                     <div className="cover-overlay"></div>
                 </div>
             )}
-            <div className="card-content" style={textColor ? { color: textColor } : undefined}>
-                <div className="card-header" style={{ paddingRight: '24px' }}>
-                    <h3 className="subject-name" style={{ wordBreak: 'break-word', flex: 1, ...(textColor ? { color: textColor } : {}) }}>{subject.name}</h3>
+            <div
+                className={`card-content${textColor ? ' card-content-colored' : ''}`}
+                style={textColor ? { '--card-text-color': textColor } as React.CSSProperties : undefined}
+            >
+                <div className="card-header">
+                    <h3 className={`subject-name${textColor ? ' subject-name-colored' : ''}`}>{subject.name}</h3>
                 </div>
 
                 <div className="tags-container">
@@ -135,14 +119,20 @@ export default function SubjectCard({ subject, tags, coverUrl, onDelete, onToggl
                 </div>
 
                 {subject.deadline && (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '6px', fontWeight: 'bold' }}>
+                    <div className="subject-card-deadline">
                         {isTerminal ? '[!]' : '⏳'} Deadline: {new Date(subject.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                 )}
 
-                {/* Compact chapter count */}
-                <div style={{ marginTop: '6px', fontSize: '0.8rem', color: textColor || 'var(--text-muted)' }}>
-                    {isTerminal ? '>>' : '📖'} {chapterCount} chapter{chapterCount !== 1 ? 's' : ''}
+                <div className={`subject-card-chapter-count${textColor ? ' with-cover' : ''}`}>
+                    {isMusic ? (
+                        <>
+                            {isTerminal ? '>>' : '🎵'} {pieceCount} morceau{pieceCount !== 1 ? 'x' : ''}
+                            {skillCount > 0 && ` · ${skillCount} compétence${skillCount !== 1 ? 's' : ''}`}
+                        </>
+                    ) : (
+                        <>{isTerminal ? '>>' : '📖'} {chapterCount} chapitre{chapterCount !== 1 ? 's' : ''}</>
+                    )}
                 </div>
 
                 {subject.pinned && <Pin className="pin-icon" size={16} />}

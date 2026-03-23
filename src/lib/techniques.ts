@@ -23,6 +23,7 @@ export interface Technique {
     advantage?: string;
     category?: TechCategory;
     externalLink?: string;
+    timerMode?: 'interval_30_30';
 }
 
 export const TECHNIQUES: Technique[] = [
@@ -34,10 +35,14 @@ export const TECHNIQUES: Technique[] = [
     { id: 's6', name: 'Faire des exercices', tier: 'S', hint: 'Résoudre des problèmes et exercices types pour s\'entraîner. La pratique active est le meilleur prédicteur de performance en examen.', defaultMinutes: 50, advantage: 'Direct practice = best exam performance predictor', category: 'faire' },
 
     // 🥇 A-TIER (Highly Effective for Comprehension)
+    { id: 'paper1', name: 'Reading a scientific paper (1st pass)', tier: 'A', hint: 'Bird\'s-eye view in 5–10 min: read title, abstract, intro → scan section headings → read conclusions → scan references. Identify the 5 Cs.', defaultMinutes: 10, advantage: 'Decides in <10 min whether an article is worth deep reading', category: 'comprendre', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7' },
     { id: 'c1', name: 'Filtrer le cours (Filtrage & Synthèse)', tier: 'A', hint: 'Trier délibérément le cours pour ne garder que l\'essentiel (concepts clés, zones denses, éléments insistés par le prof) au lieu de tout apprendre. C\'est l\'étape indispensable avant de créer des flashcards.', advantage: 'Eliminates noise & focuses on highest-value content', category: 'comprendre', externalLink: 'https://youtu.be/rzFJkuumZl8?t=282' },
     { id: 't3', name: 'Enseigner aux autres (Feynman)', tier: 'A', hint: 'Explaining a concept out loud helps you instantly identify your gaps in understanding.', advantage: 'Instantly exposes hidden gaps in understanding', category: 'comprendre', externalLink: 'https://www.youtube.com/watch?v=o_dSpOqGtrQ&pp=ygUWZmV5bm1hbiB0ZWNobmlxdWUgZXJ5bg%3D%3D' },
     { id: 'b2', name: 'Mind-mapping', tier: 'A', hint: 'Forces you to chunk info and draw relationships. Extremely effective if kept to keywords and visual links rather than long text.', defaultMinutes: 20, advantage: 'Creates a visual network that mirrors how the brain stores info', category: 'comprendre', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7?artifactId=f0bac232-39e4-4282-a80b-770a7d6716d5' },
     { id: 'a3', name: 'Priming', tier: 'A', hint: 'Skimming headings and diagrams before reading. It builds subconscious familiarity and speeds up deep reading', defaultMinutes: 10, advantage: 'Pre-builds a mental framework so deep reading sticks', category: 'comprendre' },
+
+    // 🎵 Music / Motor skill practice
+    { id: 'music1', name: 'Pratique 30/30', tier: 'A', hint: 'Pratique 30 secondes, pause 30 secondes — répéter. La pause active consolide la mémoire motrice entre les essais, ce qui améliore l\'acquisition plus vite qu\'une pratique continue.', advantage: 'La pause entre essais consolide la mémoire motrice (Shadmehr & Brashers-Krug, 1997)', category: 'faire', timerMode: 'interval_30_30' },
 
     // 🟡 C-TIER (Situational — useful with caveats)
     { id: 't5', name: 'Interleaving (Entrelacement)', tier: 'C', hint: 'Mélange différents types de problèmes ou chapitres dans une même session. Cela t\'apprend non seulement "comment" résoudre un problème, mais surtout "quand" utiliser la bonne méthode.', advantage: 'Teaches WHEN to use formulas, not just HOW', category: 'faire', externalLink: 'https://youtu.be/J4YazZUXT_A' },

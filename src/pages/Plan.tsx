@@ -40,6 +40,15 @@ const TEMPLATES: Record<string, { work: number, break: number, prep: number }> =
 
 const PIXELS_PER_MINUTE = 16;
 
+interface FlyingSubject {
+    id: string;
+    name: string;
+    fromX: number;
+    fromY: number;
+    dx: number;
+    dy: number;
+}
+
 export default function Plan() {
     const navigate = useNavigate();
     const { theme, isTerminal } = useSettings();
@@ -63,6 +72,8 @@ export default function Plan() {
     const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
     const [openMenuBlockId, setOpenMenuBlockId] = useState<string | null>(null);
     const [chapterGateBlockId, setChapterGateBlockId] = useState<string | null>(null);
+    const [landedBlockIds, setLandedBlockIds] = useState<Set<string>>(new Set());
+    const [flyingSubject, setFlyingSubject] = useState<FlyingSubject | null>(null);
 
     const dragRef = useRef<{ id: string, startY: number, startBlocks: Block[], lastDeltaSteps: number } | null>(null);
 
@@ -93,9 +104,9 @@ export default function Plan() {
 
             if (deltaSteps !== lastDeltaSteps) {
                 if (deltaSteps > lastDeltaSteps) {
-                    import('../lib/sounds').then(m => m.playSFX('drag_down', theme));
+                    import('../lib/sounds').then(m => m.playSFX('glass_ui_drag_down', theme));
                 } else {
-                    import('../lib/sounds').then(m => m.playSFX('drag_up', theme));
+                    import('../lib/sounds').then(m => m.playSFX('glass_ui_drag_up', theme));
                 }
                 dragRef.current.lastDeltaSteps = deltaSteps;
             }
@@ -256,7 +267,7 @@ export default function Plan() {
             }
         }
 
-        import('../lib/sounds').then(m => m.playSFX('drop_block', 'glassmorphism'));
+        import('../lib/sounds').then(m => m.playSFX('glass_ui_drop', 'glassmorphism'));
         setBlocks(newBlocks);
     };
 
@@ -265,6 +276,15 @@ export default function Plan() {
         e.dataTransfer.setData('subjectId', subjectId);
         setIsDragging(true);
         setDraggingSubjectId(subjectId);
+
+        // Custom drag ghost — bright visible pill instead of browser's semi-transparent snapshot
+        const subject = subjects.find(s => s.id === subjectId);
+        const ghost = document.createElement('div');
+        ghost.className = 'drag-ghost-pill';
+        ghost.textContent = subject?.name || '';
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, ghost.offsetWidth / 2, ghost.offsetHeight / 2);
+        setTimeout(() => { if (document.body.contains(ghost)) document.body.removeChild(ghost); }, 0);
     };
 
     const handleDragEnd = () => {
@@ -291,15 +311,39 @@ export default function Plan() {
         if (!subjectId) return;
 
         const newBlocks = blocks.map(b => b.id === blockId ? { ...b, subject_id: subjectId } : b);
-        import('../lib/sounds').then(m => m.playSFX('drop_block', 'glassmorphism'));
+        import('../lib/sounds').then(m => m.playSFX('glass_ui_drop', 'glassmorphism'));
         setBlocks(newBlocks);
 
-        const subjectChapters = getChaptersForSubject(subjectId);
-        if (subjectChapters.length > 0) {
-            setPickingChapterBlockId(blockId);
-        } else {
-            setPickingBlockId(blockId);
+        // Flying subject pill: from cursor drop position → block center
+        const blockEl = document.querySelector(`[data-block-id="${blockId}"]`);
+        const toRect = blockEl?.getBoundingClientRect();
+        const subject = subjects.find(s => s.id === subjectId);
+        if (toRect && subject) {
+            const fromX = e.clientX;
+            const fromY = e.clientY;
+            const toX = toRect.left + toRect.width / 2;
+            const toY = toRect.top + toRect.height / 2;
+            setFlyingSubject({ id: crypto.randomUUID(), name: subject.name, fromX, fromY, dx: toX - fromX, dy: toY - fromY });
+            setTimeout(() => setFlyingSubject(null), 400);
         }
+
+        // Block squish triggers when the pill "arrives" (~82% of 350ms flight = 287ms)
+        setTimeout(() => {
+            setLandedBlockIds(prev => new Set(prev).add(blockId));
+            setTimeout(() => {
+                setLandedBlockIds(prev => { const next = new Set(prev); next.delete(blockId); return next; });
+            }, 350);
+        }, 285);
+
+        // Delay modal until after flying animation completes
+        const subjectChapters = getChaptersForSubject(subjectId);
+        setTimeout(() => {
+            if (subjectChapters.length > 0) {
+                setPickingChapterBlockId(blockId);
+            } else {
+                setPickingBlockId(blockId);
+            }
+        }, 380);
 
         setHoveredBlockId(null);
     };
@@ -329,12 +373,25 @@ export default function Plan() {
     };
 
     const clearBlock = (id: string) => {
-        import('../lib/sounds').then(m => m.playSFX('cancelling', 'glassmorphism'));
+        import('../lib/sounds').then(m => m.playSFX('glass_ui_cancel', 'glassmorphism'));
         setBlocks(blocks.map(b => b.id === id ? { ...b, subject_id: null, technique_id: null, chapter_name: null, objective: '' } : b));
     };
 
     const handleChapterSelectedModal = (chapterName: string) => {
-        setBlocks(blocks.map(b => b.id === pickingChapterBlockId ? { ...b, chapter_name: chapterName } : b));
+        const block = blocks.find(b => b.id === pickingChapterBlockId);
+        let autoObjective = '';
+        if (block?.subject_id) {
+            const chapter = getChaptersForSubject(block.subject_id).find(c => c.name === chapterName);
+            if (chapter?.totalMeasures && chapter.totalMeasures > 0) {
+                const from = (chapter.currentMeasure ?? 0) + 1;
+                const to = Math.min(from + 7, chapter.totalMeasures);
+                autoObjective = `Mesures ${from}–${to}`;
+            }
+        }
+        setBlocks(blocks.map(b => b.id === pickingChapterBlockId
+            ? { ...b, chapter_name: chapterName, objective: autoObjective }
+            : b
+        ));
         setPickingBlockId(pickingChapterBlockId); // Trigger technique selection right after
         setPickingChapterBlockId(null);
     };
@@ -347,7 +404,7 @@ export default function Plan() {
         const block = blocks.find(b => b.id === id);
         if (!block) return;
 
-        import('../lib/sounds').then(m => m.playSFX('cancelling', 'glassmorphism'));
+        import('../lib/sounds').then(m => m.playSFX('glass_ui_cancel', 'glassmorphism'));
         const newBlocks = [...blocks];
         if (block.cycle_id) {
             const firstIdx = newBlocks.findIndex(b => b.cycle_id === block.cycle_id);
@@ -377,7 +434,7 @@ export default function Plan() {
 
     const startSession = () => {
         if (blocks.length === 0) return;
-        import('../lib/sounds').then(m => m.playSFX('start_study_session', 'glassmorphism'));
+        import('../lib/sounds').then(m => m.playSFX('glass_session_start', 'glassmorphism'));
         const plannedMinutes = blocks.reduce((acc, b) => acc + b.minutes, 0);
         const session = {
             sessionId: crypto.randomUUID(),
@@ -416,8 +473,12 @@ export default function Plan() {
         return () => document.removeEventListener('click', handleClickOutside);
     }, [openMenuBlockId]);
 
+    // All work blocks have a subject + objective filled
+    const workBlocks = blocks.filter(b => b.type === 'WORK');
+    const allFilled = workBlocks.length > 0 && workBlocks.every(b => b.subject_id && b.objective.trim().length > 0);
+
     // Summarize times
-    const totalWork = blocks.filter(b => b.type === 'WORK').reduce((acc, b) => acc + b.minutes, 0);
+    const totalWork = workBlocks.reduce((acc, b) => acc + b.minutes, 0);
     const totalBreak = blocks.filter(b => b.type !== 'WORK').reduce((acc, b) => acc + b.minutes, 0);
 
     const now = new Date();
@@ -463,16 +524,16 @@ export default function Plan() {
                     <div className="planner-repeats-group drag-dim">
                         <label className="planner-repeats-label">{t('plan.repeats')}</label>
                         <div className="planner-repeats-control">
-                            <button className="btn-repeat btn-repeat-minus" onClick={() => setRepeats(Math.max(1, repeats - 1))} onMouseEnter={() => playSFX('hover_sound', theme)}>-</button>
+                            <button className="btn-repeat btn-repeat-minus" onClick={() => setRepeats(Math.max(1, repeats - 1))} onMouseEnter={() => playSFX('glass_ui_hover', theme)}>-</button>
                             <span className="planner-repeats-value">{repeats}</span>
-                            <button className="btn-repeat btn-repeat-plus" onClick={() => setRepeats(Math.min(12, repeats + 1))} onMouseEnter={() => playSFX('hover_sound', theme)}>+</button>
+                            <button className="btn-repeat btn-repeat-plus" onClick={() => setRepeats(Math.min(12, repeats + 1))} onMouseEnter={() => playSFX('glass_ui_hover', theme)}>+</button>
                         </div>
                     </div>
 
                     <button
                         className={`btn btn-primary btn-holographic ${isMouseDownOnSubject && blocks.length === 0 ? 'btn-pulse-hint' : ''}`}
                         onClick={addBlocks}
-                        onMouseEnter={() => playSFX('hover_sound', theme)}
+                        onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                     >
                         {t('plan.add_to_timeline')}
                     </button>
@@ -480,7 +541,7 @@ export default function Plan() {
                     <div
                         className={`btn-start-session-wrapper ${blocks.length > 0 ? 'has-blocks' : ''} drag-dim`}
                         key={blocks.length > 0 ? 'active' : 'inactive'}
-                        onMouseEnter={() => playSFX('hover_sound', theme)}
+                        onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                     >
                         <img
                             src="/assets/images/01_mascot-pop-out.png"
@@ -489,7 +550,7 @@ export default function Plan() {
                             aria-hidden="true"
                         />
                         <button
-                            className={`btn btn-primary btn-start-session ${blocks.length > 0 ? 'btn-start-session-ready' : ''}`}
+                            className={`btn btn-primary btn-start-session ${blocks.length > 0 ? 'btn-start-session-ready' : ''} ${allFilled ? 'btn-start-session-full' : ''}`}
                             onClick={startSession}
                             disabled={blocks.length === 0}
                         >
@@ -514,7 +575,7 @@ export default function Plan() {
                                 onDragEnd={handleDragEnd}
                                 onMouseDown={() => handleSubjectMouseDown(s.id)}
                                 className={`drag-subject-item ${((isDragging || isMouseDownOnSubject) && draggingSubjectId === s.id) ? 'drag-active' : ''} ${((isDragging || isMouseDownOnSubject) && draggingSubjectId !== s.id) ? 'drag-dim' : ''}`}
-                                onMouseEnter={() => { if (!isDragging) playSFX('hover_sound', theme); }}
+                                onMouseEnter={() => { if (!isDragging) playSFX('glass_ui_hover', theme); }}
                             >
                                 <strong>{s.name}</strong>
                                 {prioritySubjectIds.has(s.id) && (
@@ -578,12 +639,13 @@ export default function Plan() {
                                 return (
                                     <div
                                         key={block.id}
+                                        data-block-id={block.id}
                                         onDrop={isWork ? e => handleDrop(e, block.id) : undefined}
                                         onDragOver={isWork ? handleDragOver : undefined}
                                         onDragEnter={isWork ? () => handleBlockDragEnter(block.id) : undefined}
                                         onDragLeave={isWork ? handleBlockDragLeave : undefined}
-                                        className={`planner-block ${isWork && block.subject_id ? (!isDropTarget ? 'bg-card border-solid' : 'bg-transparent border-dashed') : 'bg-transparent'} ${(isDragging || isMouseDownOnSubject) && isDropTarget ? 'drop-target' : ''} ${(isDragging || isMouseDownOnSubject) && !isDropTarget ? 'drag-dim' : ''} ${isHovered ? 'drop-hover' : ''}`}
-                                        onMouseEnter={() => { if (isWork && block.subject_id) playSFX('hover_sound', theme); }}
+                                        className={`planner-block block-type-${block.type.toLowerCase()} ${isWork && block.subject_id ? (!isDropTarget ? 'bg-card border-solid' : 'bg-transparent border-dashed') : 'bg-transparent'} ${(isDragging || isMouseDownOnSubject) && isDropTarget ? 'drop-target' : ''} ${(isDragging || isMouseDownOnSubject) && !isDropTarget ? 'drag-dim' : ''} ${isHovered ? 'drop-hover' : ''} ${landedBlockIds.has(block.id) ? 'block-drop-landed' : ''}`}
+                                        onMouseEnter={() => { if (isWork && block.subject_id) playSFX('glass_ui_hover', theme); }}
                                         style={{ '--block-min-height': isWork ? `${Math.max(heightPx, 130)}px` : '40px' } as React.CSSProperties}
                                     >
                                         {isWork && block.subject_id && (
@@ -766,6 +828,21 @@ export default function Plan() {
                     />
                 );
             })()}
+
+            {flyingSubject && (
+                <div
+                    className="flying-subject-pill"
+                    key={flyingSubject.id}
+                    style={{
+                        top: flyingSubject.fromY,
+                        left: flyingSubject.fromX,
+                        '--dx': `${flyingSubject.dx}px`,
+                        '--dy': `${flyingSubject.dy}px`,
+                    } as React.CSSProperties}
+                >
+                    {flyingSubject.name}
+                </div>
+            )}
         </div >
     );
 }

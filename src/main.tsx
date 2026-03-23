@@ -41,6 +41,16 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// F11: toggle fullscreen
+document.addEventListener('keydown', async (e) => {
+  if (e.key === 'F11') {
+    e.preventDefault();
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    const win = getCurrentWindow();
+    await win.setFullscreen(!(await win.isFullscreen()));
+  }
+});
+
 // Strip any native WebView zoom property if it gets applied
 const clearNativeZoom = () => {
   if (document.documentElement.style.zoom) document.documentElement.style.removeProperty('zoom');

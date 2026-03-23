@@ -163,6 +163,15 @@ async function ensureSchema(db: Database) {
     );
   `);
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS bingo_year_slots (
+      slot_index INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      objective_id TEXT NULL,
+      PRIMARY KEY (slot_index, year)
+    );
+  `);
+
   await ensureColumn(db, "objectives", "cover_data", "TEXT");
   await ensureColumn(db, "objectives", "pin_bottom", "INTEGER NOT NULL DEFAULT 0");
   await ensureColumn(db, "objectives", "frequency_days", "INTEGER");
@@ -191,6 +200,45 @@ async function ensureSchema(db: Database) {
   }
 }
 
+/** Ensures 16 slots exist for `year` in bingo_year_slots.
+ *  On first call ever, migrates existing `slots` data as the seed year. */
+export async function ensureYearSlots(year: number): Promise<void> {
+  const db = await getBingoDb();
+  const existing = await db.select<{ c: number }[]>(
+    `SELECT COUNT(*) as c FROM bingo_year_slots WHERE year = ?`, [year]
+  );
+  if ((existing?.[0]?.c ?? 0) >= 16) return;
+
+  // First time bingo_year_slots is populated — migrate legacy slots table
+  const total = await db.select<{ c: number }[]>(`SELECT COUNT(*) as c FROM bingo_year_slots`);
+  if ((total?.[0]?.c ?? 0) === 0) {
+    const legacySlots = await db.select<SlotRow[]>(`SELECT * FROM slots ORDER BY slot_index ASC`);
+    for (const s of legacySlots) {
+      await db.execute(
+        `INSERT OR IGNORE INTO bingo_year_slots (slot_index, year, objective_id) VALUES (?, ?, ?)`,
+        [s.slot_index, year, s.objective_id ?? null]
+      );
+    }
+  }
+
+  // Fill any remaining gaps
+  for (let i = 0; i < 16; i++) {
+    await db.execute(
+      `INSERT OR IGNORE INTO bingo_year_slots (slot_index, year, objective_id) VALUES (?, ?, NULL)`,
+      [i, year]
+    );
+  }
+}
+
+/** Returns all years that have a bingo board, sorted ascending. */
+export async function listBingoYears(): Promise<number[]> {
+  const db = await getBingoDb();
+  const rows = await db.select<{ year: number }[]>(
+    `SELECT DISTINCT year FROM bingo_year_slots ORDER BY year ASC`
+  );
+  return rows.map((r) => r.year);
+}
+
 export async function listSlotsWithObjectives() {
   const db = await getBingoDb();
   return db.select<(SlotRow & Partial<Objective>)[]>(
@@ -205,7 +253,8 @@ export async function listSlotsWithObjectives() {
 
 export async function createObjectiveAndAssignSlot(
   slotIndex: number,
-  patch: Partial<Objective> & { title: string }
+  patch: Partial<Objective> & { title: string },
+  year: number
 ) {
   const db = await getBingoDb();
   const id = crypto.randomUUID();
@@ -221,7 +270,10 @@ export async function createObjectiveAndAssignSlot(
      VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, 0, NULL)`,
     [id, patch.title, goal_kind, goal_target, goal_unit, cover_data, t, t]
   );
-  await db.execute(`UPDATE slots SET objective_id = ? WHERE slot_index = ?`, [id, slotIndex]);
+  await db.execute(
+    `UPDATE bingo_year_slots SET objective_id = ? WHERE slot_index = ? AND year = ?`,
+    [id, slotIndex, year]
+  );
   return id;
 }
 
@@ -363,7 +415,7 @@ export type DashboardRow = (SlotRow & Partial<Objective>) & {
   last_end: number | null;
 };
 
-export async function listDashboardRows(): Promise<DashboardRow[]> {
+export async function listDashboardRows(year: number): Promise<DashboardRow[]> {
   const db = await getBingoDb();
   return db.select<DashboardRow[]>(`
     SELECT
@@ -372,15 +424,16 @@ export async function listDashboardRows(): Promise<DashboardRow[]> {
       o.current_value, o.created_at, o.updated_at, o.pin_bottom, o.frequency_days,
       COALESCE(SUM(ts.duration_ms), 0) AS total_ms,
       MAX(ts.ended_at) AS last_end
-    FROM slots s
+    FROM bingo_year_slots s
     LEFT JOIN objectives o ON o.id = s.objective_id
     LEFT JOIN subobjectives so ON so.objective_id = o.id
     LEFT JOIN time_sessions ts ON ts.subobjective_id = so.id
+    WHERE s.year = ?
     GROUP BY s.slot_index, s.objective_id, o.id, o.title, o.goal_kind, o.goal_target,
              o.goal_unit, o.cover_data, o.current_value, o.created_at, o.updated_at,
              o.pin_bottom, o.frequency_days
     ORDER BY s.slot_index ASC
-  `);
+  `, [year]);
 }
 
 export async function addManualTimeDelta(subobjectiveId: string, deltaMs: number) {

@@ -35,7 +35,7 @@
 
 .planner-control-label {
     margin-right: 8px;
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .planner-custom-group {
@@ -67,7 +67,7 @@
 }
 
 .planner-repeats-label {
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .planner-repeats-control {
@@ -227,6 +227,21 @@
     animation: startWiggle 0.45s ease-in-out 1;
 }
 
+@keyframes startWiggleLoop {
+    /* Pause for 3.2s, then wiggle for 0.8s */
+    0%, 80%     { transform: rotate(0deg); }
+    83%         { transform: rotate(-6deg); }
+    88%         { transform: rotate(6deg); }
+    92%         { transform: rotate(-4deg); }
+    96%         { transform: rotate(4deg); }
+    100%        { transform: rotate(0deg); }
+}
+
+.btn-start-session-full {
+    animation: startWiggleLoop 4s ease-in-out infinite !important;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.3), 0 4px 16px rgba(var(--primary-rgb), 0.4);
+}
+
 .planner-compass {
     margin-bottom: 20px;
 }
@@ -320,6 +335,11 @@
     align-items: center;
     padding: 16px 0;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.05) 0%, transparent 100%);
+    cursor: grab;
+}
+
+.block-resize-handle.grabbing {
+    cursor: grabbing;
 }
 
 .block-resize-dots {
@@ -342,6 +362,22 @@
     width: 80px;
     font-weight: bold;
     color: var(--text-muted);
+}
+
+/* ── Block type color indicators ── */
+.block-type-work .block-time-info {
+    border-left: 3px solid var(--primary);
+    padding-left: 10px;
+}
+
+.block-type-break .block-time-info {
+    border-left: 3px solid var(--success);
+    padding-left: 10px;
+}
+
+.block-type-prep .block-time-info {
+    border-left: 3px solid var(--accent);
+    padding-left: 10px;
 }
 
 .block-time-small {
@@ -454,8 +490,22 @@
     min-height: auto;
 }
 
+@keyframes objectiveNudge {
+    0%, 100% {
+        border-color: rgba(var(--primary-rgb), 0.25);
+        outline-color: rgba(var(--primary-rgb), 0);
+    }
+    50% {
+        border-color: rgba(var(--primary-rgb), 0.7);
+        outline-color: rgba(var(--primary-rgb), 0.28);
+    }
+}
+
 .block-objective-input.empty {
-    animation: glow-rainbow 3s linear infinite;
+    border: 1px dashed rgba(var(--primary-rgb), 0.4);
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    animation: objectiveNudge 2.5s ease-in-out infinite;
 }
 
 .block-drop-prompt {
@@ -476,6 +526,7 @@
     right: 0;
     top: 100%;
     background: var(--card-bg);
+    border: 1px solid var(--glass-border);
     box-shadow: var(--shadow-md);
     border-radius: 8px;
     z-index: 1000;
@@ -495,6 +546,7 @@
     border: none;
     background: transparent;
     cursor: pointer;
+    color: var(--text-dark);
 }
 
 .block-menu-btn.danger {
@@ -509,14 +561,14 @@
 
 /* Study Block Group */
 .study-block-group {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed var(--border);
-    border-radius: 16px;
+    background: rgba(var(--primary-rgb), 0.04);
+    border: none;
+    border-left: 3px solid rgba(var(--primary-rgb), 0.35);
+    border-radius: 0 16px 16px 0;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .study-block-group-header {
@@ -580,6 +632,23 @@
     background: var(--card-bg);
 }
 
+/* ── Custom drag ghost (replaces browser's faded snapshot) ── */
+.drag-ghost-pill {
+    position: fixed;
+    top: -200px;
+    left: 0;
+    z-index: -1;
+    background: var(--primary);
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 24px;
+    font-weight: 700;
+    font-size: 1rem;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.5);
+}
+
 .drag-subject-item {
     padding: 18px 20px;
     background: var(--card-bg);
@@ -641,6 +710,56 @@
     opacity: 1 !important;
     filter: none !important;
     pointer-events: auto !important;
+}
+
+/* ── Flying subject pill ── */
+.flying-subject-pill {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    background: var(--primary);
+    color: #fff;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.5);
+    transform: translate(-50%, -50%);
+    animation: flyToBlock 0.35s cubic-bezier(0.55, 0, 0.9, 0.8) forwards;
+}
+
+@keyframes flyToBlock {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    45% {
+        transform: translate(calc(-50% + var(--dx) / 2), calc(-50% + var(--dy) / 2 - 48px)) scale(0.88);
+        opacity: 1;
+    }
+    82% {
+        transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.25, 0.3);
+        opacity: 0.85;
+    }
+    100% {
+        transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0);
+        opacity: 0;
+    }
+}
+
+/* ── Block squish on landing (triggered ~280ms after drop = pill arrival at 82% of 350ms) ── */
+@keyframes blockDropLand {
+    0%   { transform: scaleY(1)    scaleX(1);    }
+    20%  { transform: scaleY(0.83) scaleX(1.1);  }
+    42%  { transform: scaleY(1.07) scaleX(0.96); }
+    62%  { transform: scaleY(0.97) scaleX(1.02); }
+    80%  { transform: scaleY(1.01) scaleX(0.99); }
+    100% { transform: scaleY(1)    scaleX(1);    }
+}
+
+.block-drop-landed {
+    animation: blockDropLand 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .planner-page.is-dragging .drop-target {

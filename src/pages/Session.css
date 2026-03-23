@@ -25,10 +25,11 @@
     align-items: center;
     width: 100%;
     max-width: 600px;
+    min-height: 520px;
     border-radius: 32px;
 }
 
-.session-panel > * {
+.session-panel>* {
     width: 100%;
 }
 
@@ -75,12 +76,6 @@
     text-align: left;
 }
 
-.session-tech-card strong {
-    font-size: 18px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-}
 
 .session-tech-hint {
     font-size: 1rem;
@@ -90,6 +85,78 @@
 
 .session-focus-text {
     color: var(--text-muted);
+}
+
+/* 30/30 interval technique panel */
+.interval-3030-panel {
+    background: rgba(var(--primary-rgb), 0.06);
+    border: 1px solid rgba(var(--primary-rgb), 0.15);
+    padding: 14px 18px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.interval-phase-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    margin: 12px 0;
+    border-radius: 10px;
+    transition: background 0.4s ease;
+}
+
+.interval-phase-display.work {
+    background: rgba(var(--primary-rgb), 0.12);
+    border: 1px solid rgba(var(--primary-rgb), 0.25);
+}
+
+.interval-phase-display.rest {
+    background: rgba(var(--success-rgb, 34, 197, 94), 0.1);
+    border: 1px solid rgba(var(--success-rgb, 34, 197, 94), 0.25);
+}
+
+.interval-phase-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.interval-tick {
+    font-size: 2.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.interval-phase-display.rest .interval-tick {
+    color: var(--success);
+}
+
+.interval-phase-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(var(--primary-rgb), 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.interval-phase-fill {
+    height: 100%;
+    width: var(--fill-pct, 100%);
+    border-radius: 3px;
+    transition: width 0.9s linear;
+}
+
+.interval-phase-fill.work {
+    background: var(--primary);
+}
+
+.interval-phase-fill.rest {
+    background: var(--success);
 }
 
 .meta-check-card {
@@ -164,9 +231,57 @@
 }
 
 .prep-item-checkbox {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Terminal theme forces all checkboxes to 18px visible — re-hide the sr-only native input */
+[data-theme^="terminal-"] .prep-item-checkbox {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+}
+
+.prep-item-label {
+    position: relative;
+}
+
+.prep-item-checkmark {
     width: 18px;
     height: 18px;
-    accent-color: var(--primary);
+    flex-shrink: 0;
+    border: 2px solid rgba(var(--primary-rgb), 0.4);
+    border-radius: 4px;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.prep-item-checkbox:checked+.prep-item-checkmark {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.prep-item-checkbox:checked+.prep-item-checkmark::after {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 9px;
+    border: 2px solid white;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg) translate(-1px, -2px);
 }
 
 .prep-item-text {
@@ -225,29 +340,68 @@
     margin-bottom: 12px;
 }
 
+.session-timer-footer {
+    margin-top: auto;
+    padding-top: 16px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+@keyframes colon-blink {
+    50% {
+        opacity: 0.15;
+    }
+}
+
+.timer-colon {
+    animation: colon-blink 1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .timer-colon {
+        animation: none;
+    }
+}
+
 .timer-display {
     font-size: 7rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     font-family: monospace;
-    margin: 24px 0;
+    margin: 8px 0 0;
     text-align: center;
     text-shadow: 2px 4px 12px rgba(var(--primary-rgb), 0.3);
+    transition: color 0.4s ease;
 }
 
 .timer-display.paused {
     color: var(--text-muted);
 }
 
+.timer-display.paused .timer-colon {
+    animation: none;
+    opacity: 1;
+}
+
 .timer-display.running {
     color: var(--text-dark);
+}
+
+.timer-display.warning {
+    color: var(--accent);
+}
+
+.timer-display.critical {
+    color: var(--danger);
 }
 
 .session-controls {
     display: flex;
     gap: 16px;
     justify-content: center;
-    margin-top: 32px;
+    margin-top: 16px;
 }
 
 .pause-resume-btn {
@@ -263,7 +417,7 @@
 .timeline-container {
     display: flex;
     gap: 8px;
-    margin-top: 40px;
+    margin-bottom: 8px;
     flex-wrap: wrap;
     max-width: 800px;
     justify-content: center;
@@ -292,7 +446,8 @@
 }
 
 .confirm-modal-content {
-    max-width: 420px;
+    max-width: 502px;
+    /* min-width: fit-content; */
     text-align: center;
 }
 
@@ -327,9 +482,16 @@
 
 .total-rest-subtitle {
     color: var(--text-dark);
-    margin-bottom: 12px;
+    margin-bottom: 6px;
     font-size: 1.2rem;
     font-weight: bold;
+}
+
+.total-rest-summary {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    letter-spacing: 0.03em;
 }
 
 .total-rest-img {
@@ -337,6 +499,14 @@
     height: auto;
     margin: 0 auto 16px auto;
     display: block;
+    -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
+}
+
+.total-rest-work-mins {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--primary);
 }
 
 .total-rest-desc {
@@ -344,6 +514,62 @@
     margin-bottom: 20px;
     font-size: 1rem;
     line-height: 1.6;
+    text-align: left;
+}
+
+.total-rest-desc p {
+    margin-bottom: 8px;
+}
+
+.total-rest-nothing {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 10px 0 4px;
+}
+
+@keyframes rest-item-in {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.total-rest-no-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 10px 0;
+}
+
+.total-rest-no-item {
+    padding: 4px 0;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    opacity: 0;
+    animation: rest-item-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.total-rest-no-item:nth-child(1) {
+    animation-delay: 200ms;
+}
+
+.total-rest-no-item:nth-child(2) {
+    animation-delay: 320ms;
+}
+
+.total-rest-no-item:nth-child(3) {
+    animation-delay: 440ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .total-rest-no-item {
+        animation: none;
+        opacity: 1;
+    }
 }
 
 .total-rest-countdown {
@@ -359,8 +585,16 @@
     color: var(--success);
 }
 
-.total-rest-countdown.running {
+.total-rest-countdown.calm {
+    color: var(--success);
+}
+
+.total-rest-countdown.mid {
     color: var(--primary-hover);
+}
+
+.total-rest-countdown.urgent {
+    color: var(--danger);
 }
 
 .total-rest-actions {
@@ -372,4 +606,250 @@
 .total-rest-btn {
     padding: 12px 32px;
     font-size: 1.1rem;
+}
+
+/* ─── Paper reading panel ─── */
+
+.paper-panel {
+    background: rgba(var(--primary-rgb), 0.06);
+    border: 1px solid rgba(var(--primary-rgb), 0.15);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.paper-section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.paper-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.paper-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.paper-step-label {
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    line-height: 1.4;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.paper-step.checked .paper-step-label {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.paper-questions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.paper-question {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.paper-question-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.paper-question-textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    color: var(--text-dark);
+    line-height: 1.4;
+    resize: vertical;
+    font-family: inherit;
+    transition: border-color 0.15s ease;
+    box-sizing: border-box;
+}
+
+.paper-question-textarea:focus {
+    outline: none;
+    border-color: rgba(var(--primary-rgb), 0.5);
+}
+
+.paper-question-textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.paper-title-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease;
+}
+
+.paper-title-input:focus {
+    outline: none;
+    border-color: rgba(var(--primary-rgb), 0.5);
+}
+
+.paper-title-input::placeholder {
+    color: var(--text-muted);
+    font-weight: 400;
+    opacity: 0.6;
+}
+
+.paper-copy-row {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.paper-copy-btn {
+    font-size: 0.85rem;
+}
+
+/* ─── Paper notes card on REPOS TOTAL ─── */
+
+.total-rest-paper-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(var(--primary-rgb), 0.06);
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+}
+
+.total-rest-paper-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+/* ─── Workout / Musculation card ─── */
+
+.workout-card {
+    background: rgba(var(--primary-rgb), 0.04);
+    border: 1px solid rgba(var(--primary-rgb), 0.12);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    text-align: left;
+    width: 100%;
+}
+
+.workout-card-title {
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.workout-section {
+    margin-bottom: 10px;
+}
+
+.workout-section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.workout-muscle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.workout-muscle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.workout-sets-input {
+    flex: 1;
+    max-width: 120px;
+    background: rgba(var(--primary-rgb), 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 0.82rem;
+    color: var(--text-dark);
+    outline: none;
+}
+
+.workout-sets-input::placeholder {
+    color: var(--text-muted);
+}
+
+.workout-sets-input:focus {
+    border-color: rgba(var(--primary-rgb), 0.5);
+}
+
+.workout-muscle-btn {
+    background: rgba(var(--primary-rgb), 0.08);
+    border: 1px solid rgba(var(--primary-rgb), 0.22);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text-dark);
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.workout-muscle-btn:hover {
+    background: rgba(var(--primary-rgb), 0.18);
+}
+
+.workout-muscle-btn:active {
+    transform: scale(0.95);
+}
+
+.workout-card-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 10px;
+    line-height: 1.4;
 }

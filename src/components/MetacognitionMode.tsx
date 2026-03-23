@@ -366,7 +366,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                         <div className="glass" style={{ padding: '40px' }}>
                             <h2 style={{ fontSize: '1.6rem', marginBottom: '8px' }}>{isTerminal ? '[*]' : '⚙️'} Mise à Jour du Système</h2>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '32px', lineHeight: 1.6 }}>
-                                Le design de ton environnement bat ta volonté. Crée une règle stricte.
+                                Le design de ton environnement est plus important que ta volonté. Crée une règle stricte.
                             </p>
 
                             <div className="form-group">

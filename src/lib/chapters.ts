@@ -23,6 +23,8 @@ export interface Chapter {
     createdAt: string;
     focusType: FocusType;
     spacingOverride?: string; // e.g. "1 1 2 5 7", overrides the global default
+    totalMeasures?: number;   // music: total number of measures in a piece
+    currentMeasure?: number;  // music: frontier measure (how far the student has reached)
 }
 
 const LS_KEY = 'study-buddy-chapters';
@@ -67,7 +69,7 @@ export function getChaptersForSubject(subjectId: string): Chapter[] {
     return loadAll().filter(c => c.subjectId === subjectId);
 }
 
-export function addChapter(subjectId: string, name: string): Chapter {
+export function addChapter(subjectId: string, name: string, totalMeasures?: number): Chapter {
     const all = loadAll();
     const ch: Chapter = {
         id: crypto.randomUUID(),
@@ -77,10 +79,20 @@ export function addChapter(subjectId: string, name: string): Chapter {
         lastStudiedAt: null,
         createdAt: new Date().toISOString(),
         focusType: null,
+        ...(totalMeasures && totalMeasures > 0 ? { totalMeasures, currentMeasure: 0 } : {}),
     };
     all.push(ch);
     saveAll(all);
     return ch;
+}
+
+export function updateChapterMeasure(id: string, currentMeasure: number) {
+    const all = loadAll();
+    const ch = all.find(c => c.id === id);
+    if (ch) {
+        ch.currentMeasure = Math.max(0, Math.min(currentMeasure, ch.totalMeasures ?? currentMeasure));
+    }
+    saveAll(all);
 }
 
 export function deleteChapter(id: string) {

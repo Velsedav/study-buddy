@@ -1,0 +1,87 @@
+/* SubjectCard.css */
+
+.subject-card {
+    cursor: pointer;
+    position: relative;
+    opacity: 1;
+    transition: opacity 0.2s;
+}
+
+.subject-card.archived {
+    opacity: 0.6;
+}
+
+/* ── Hover action buttons ── */
+
+.subject-card-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.subject-card:hover .subject-card-actions,
+.subject-card:focus-within .subject-card-actions {
+    opacity: 1;
+}
+
+.subject-card-action-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    transition: transform 0.15s ease;
+}
+
+.subject-card-action-btn:hover {
+    transform: scale(1.15);
+}
+
+.subject-card-action-btn.danger {
+    color: var(--danger);
+}
+
+.subject-card-action-btn.pinned {
+    color: var(--accent);
+}
+
+/* ── Card content ── */
+
+.card-content-colored {
+    color: var(--card-text-color, inherit);
+}
+
+.subject-name-colored {
+    color: var(--card-text-color, inherit);
+}
+
+/* ── Deadline line ── */
+
+.subject-card-deadline {
+    font-size: 0.8rem;
+    color: var(--danger);
+    margin-top: 6px;
+    font-weight: bold;
+}
+
+/* ── Chapter count line ── */
+
+.subject-card-chapter-count {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.subject-card-chapter-count.with-cover {
+    color: var(--card-text-color, var(--text-muted));
+}

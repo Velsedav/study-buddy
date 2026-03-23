@@ -182,7 +182,7 @@ export default function TechniquePickerModal({ onClose, onSelect, currentSelecti
                                             key={t.id}
                                             className={`glass tech-card${currentSelection === t.id ? ' selected' : ''}${isRecommended ? ' recommended-technique' : ''}`}
                                             onClick={() => { onSelect(t.id); onClose(); }}
-                                            onMouseEnter={() => playSFX('hover_sound', theme)}
+                                            onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                                         >
                                             <div className="tech-card-header">
                                                 <span className="tech-card-name">{t.name}</span>
@@ -195,15 +195,19 @@ export default function TechniquePickerModal({ onClose, onSelect, currentSelecti
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="tech-card-hint">{t.hint}</div>
-                                            {t.advantage && (
-                                                <div className="tech-advantage-pill">✦ {t.advantage}</div>
-                                            )}
-                                            <div className="tech-learn-btn-group">
-                                                {renderLearnButton(
-                                                    t.externalLink ?? 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7',
-                                                    t.id
+                                            <div className="tech-card-summary">
+                                                {t.advantage && (
+                                                    <div className="tech-advantage-pill">✦ {t.advantage}</div>
                                                 )}
+                                                <div className="tech-learn-btn-group">
+                                                    {renderLearnButton(
+                                                        t.externalLink ?? 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7',
+                                                        t.id
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="tech-card-detail">
+                                                <div className="tech-card-hint">{t.hint}</div>
                                             </div>
                                         </div>
                                     );

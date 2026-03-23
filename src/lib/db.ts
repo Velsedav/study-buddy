@@ -9,6 +9,34 @@ export async function getDb(): Promise<Database> {
     return dbInstance;
 }
 
+/** 
+ * Safe migration fallback. 
+ * Since sqlite-plugin migrations might sometimes fail/skip if multi-statement ALTER TABLE is used,
+ * we proactively try to add all columns that might be missing. 
+ */
+export async function patchSchema() {
+    const db = await getDb();
+    const cols = [
+        { name: 'deadline', type: 'TEXT NULL' },
+        { name: 'archived', type: 'INT DEFAULT 0' },
+        { name: 'focus_type', type: 'TEXT NULL' },
+        { name: 'chapters', type: 'TEXT NULL' },
+        { name: 'result', type: 'TEXT NULL' },
+        { name: 'deleted_at', type: 'TEXT NULL' },
+        { name: 'subject_type', type: 'TEXT NULL' }
+    ];
+
+    for (const c of cols) {
+        try {
+            await db.execute(`ALTER TABLE subjects ADD COLUMN ${c.name} ${c.type}`);
+            console.log(`[SchemaPatch] Added column ${c.name}`);
+        } catch (e) {
+            // Ignore error - column likely already exists
+        }
+    }
+}
+
+
 export interface Subject {
     id: string;
     name: string;
@@ -21,6 +49,7 @@ export interface Subject {
     result: string | null;
     archived: boolean;
     deleted_at: string | null;
+    subject_type: string | null;
 }
 
 export interface Tag {
@@ -51,6 +80,14 @@ export async function getSubjects(): Promise<Subject[]> {
     const db = await getDb();
     const rows = await db.select<Subject[]>(`SELECT * FROM subjects WHERE deleted_at IS NULL`);
     return rows.map(r => ({ ...r, pinned: Boolean(r.pinned), archived: Boolean(r.archived) }));
+}
+
+export async function getSubject(id: string): Promise<Subject | null> {
+    const db = await getDb();
+    const rows = await db.select<Subject[]>(`SELECT * FROM subjects WHERE id = $1 AND deleted_at IS NULL`, [id]);
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return { ...r, pinned: Boolean(r.pinned), archived: Boolean(r.archived) };
 }
 
 export async function getTrashedSubjects(): Promise<Subject[]> {
@@ -92,9 +129,9 @@ export async function getAllTags(): Promise<Tag[]> {
 export async function createSubject(subject: Omit<Subject, 'pinned' | 'archived'> & { pinned: boolean, archived: boolean }, tags: string[]) {
     const db = await getDb();
     await db.execute(
-        `INSERT INTO subjects (id, name, cover_path, pinned, created_at, last_studied_at, total_minutes, deadline, result, archived)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [subject.id, subject.name, subject.cover_path, subject.pinned ? 1 : 0, subject.created_at, subject.last_studied_at, subject.total_minutes, subject.deadline, subject.result, subject.archived ? 1 : 0]
+        `INSERT INTO subjects (id, name, cover_path, pinned, created_at, last_studied_at, total_minutes, deadline, result, archived, subject_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [subject.id, subject.name, subject.cover_path, subject.pinned ? 1 : 0, subject.created_at, subject.last_studied_at, subject.total_minutes, subject.deadline, subject.result, subject.archived ? 1 : 0, subject.subject_type ?? null]
     );
 
     for (const tName of tags) {
@@ -103,7 +140,7 @@ export async function createSubject(subject: Omit<Subject, 'pinned' | 'archived'
         if (!normalized) continue;
 
         // Quick and dirty upsert using ignore or checking
-        let tagRows = await db.select<Tag[]>(`SELECT * FROM tags WHERE name = $1`, [normalized]);
+        let tagRows = await db.select<Tag[]>(`SELECT * FROM tags WHERE LOWER(name) = $1`, [normalized]);
         let tagId = tagRows[0]?.id;
         if (!tagId) {
             tagId = crypto.randomUUID();
@@ -129,11 +166,11 @@ export async function updateSubjectCover(id: string, path: string | null) {
     await db.execute(`UPDATE subjects SET cover_path = $1 WHERE id = $2`, [path, id]);
 }
 
-export async function updateSubject(id: string, name: string, coverPath: string | null, tags: string[], deadline: string | null, result: string | null, archived: boolean) {
+export async function updateSubject(id: string, name: string, coverPath: string | null, tags: string[], deadline: string | null, result: string | null, archived: boolean, subjectType?: string | null) {
     const db = await getDb();
     await db.execute(
-        `UPDATE subjects SET name = $1, cover_path = $2, deadline = $3, result = $4, archived = $5 WHERE id = $6`,
-        [name, coverPath, deadline, result, archived ? 1 : 0, id]
+        `UPDATE subjects SET name = $1, cover_path = $2, deadline = $3, result = $4, archived = $5, subject_type = $6 WHERE id = $7`,
+        [name, coverPath, deadline, result, archived ? 1 : 0, subjectType ?? null, id]
     );
 
     // Replace all tag associations
@@ -141,7 +178,7 @@ export async function updateSubject(id: string, name: string, coverPath: string 
     for (const tName of tags) {
         const normalized = tName.trim().toLowerCase();
         if (!normalized) continue;
-        let tagRows = await db.select<Tag[]>(`SELECT * FROM tags WHERE name = $1`, [normalized]);
+        let tagRows = await db.select<Tag[]>(`SELECT * FROM tags WHERE LOWER(name) = $1`, [normalized]);
         let tagId = tagRows[0]?.id;
         if (!tagId) {
             tagId = crypto.randomUUID();

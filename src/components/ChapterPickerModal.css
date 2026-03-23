@@ -118,3 +118,46 @@
     font-size: 0.85rem;
     color: var(--text-muted);
 }
+
+.chapter-picker-piece-badge {
+    background: rgba(var(--primary-rgb), 0.15);
+    color: var(--primary);
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.chapter-picker-measure-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.chapter-picker-measure-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.chapter-picker-measure-bar {
+    flex: 1;
+    height: 5px;
+    background: rgba(var(--primary-rgb), 0.12);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.chapter-picker-measure-fill {
+    height: 100%;
+    width: var(--measure-pct, 0%);
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+.chapter-picker-item.piece {
+    border-left: 3px solid var(--primary);
+}

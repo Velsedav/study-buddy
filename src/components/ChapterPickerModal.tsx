@@ -50,26 +50,32 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                 <div className="chapter-picker-list">
                     {chapters.length === 0 ? (
                         <div className="chapter-picker-empty">
-                            No chapters defined for this subject.
+                            {t('chapter_picker.empty')}
                         </div>
                     ) : (
                         chapters.map(ch => {
                             const isSelected = currentSelection === ch.name;
                             const isRecommended = recommendedIds.has(ch.id);
                             const isSubChapter = /^\s+[A-Z]\./.test(ch.name);
+                            const isPiece = (ch.totalMeasures ?? 0) > 0;
                             return (
                                 <div
                                     key={ch.id}
-                                    className={`glass chapter-picker-item${isSelected ? ' selected' : ''}${isRecommended ? ' recommendation-highlight recommended' : ''}${isSubChapter ? ' sub-chapter' : ''}`}
+                                    className={`glass chapter-picker-item${isSelected ? ' selected' : ''}${isRecommended ? ' recommendation-highlight recommended' : ''}${isSubChapter ? ' sub-chapter' : ''}${isPiece ? ' piece' : ''}`}
                                     onClick={() => { onSelect(ch.name); }}
-                                    onMouseEnter={() => playSFX('hover_sound', theme)}
+                                    onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                                 >
                                     <div className="chapter-picker-item-header">
                                         <div className="chapter-picker-item-labels">
                                             <span className={`chapter-picker-item-name${isSubChapter ? ' sub-chapter' : ''}`}>{ch.name}</span>
+                                            {isPiece && (
+                                                <span className="chapter-picker-piece-badge">
+                                                    🎵 {t('chapter_picker.piece_badge')}
+                                                </span>
+                                            )}
                                             {isRecommended && (
                                                 <span className="recommendation-badge">
-                                                    ✨ Recommended
+                                                    ✨ {t('chapter_picker.recommended')}
                                                 </span>
                                             )}
                                             {ch.focusType && (
@@ -87,9 +93,26 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="chapter-picker-study-count">
-                                        Studied {ch.studyCount} {ch.studyCount === 1 ? 'time' : 'times'}
-                                    </div>
+                                    {isPiece ? (
+                                        <div className="chapter-picker-measure-row">
+                                            <span className="chapter-picker-measure-label">
+                                                {t('chapter_picker.measure_progress')
+                                                    .replace('{current}', String(ch.currentMeasure ?? 0))
+                                                    .replace('{total}', String(ch.totalMeasures))}
+                                            </span>
+                                            <div className="chapter-picker-measure-bar">
+                                                <div
+                                                    className="chapter-picker-measure-fill"
+                                                    style={{ '--measure-pct': `${((ch.currentMeasure ?? 0) / ch.totalMeasures!) * 100}%` } as React.CSSProperties}
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="chapter-picker-study-count">
+                                            {(ch.studyCount === 1 ? t('chapter_picker.studied_once') : t('chapter_picker.studied_many'))
+                                                .replace('{n}', String(ch.studyCount))}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })

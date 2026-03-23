@@ -92,6 +92,14 @@ pub fn run() {
       ALTER TABLE subjects ADD COLUMN deleted_at TEXT NULL;
       ",
       kind: MigrationKind::Up,
+    },
+    Migration {
+      version: 9,
+      description: "add_subject_type_to_subjects",
+      sql: "
+      ALTER TABLE subjects ADD COLUMN subject_type TEXT NULL;
+      ",
+      kind: MigrationKind::Up,
     }
   ];
 

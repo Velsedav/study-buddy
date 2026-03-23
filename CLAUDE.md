@@ -77,6 +77,17 @@ If you encounter hardcoded text in existing JSX (strings not going through `t()`
 
 ---
 
+## Releases
+
+**Before creating any GitHub release or tag**, both version files must be updated to match:
+
+1. `package.json` → `"version": "X.Y.Z"`
+2. `src-tauri/tauri.conf.json` → `"version": "X.Y.Z"`
+
+Commit the version bump **first**, then create the tag and release on that commit. The git tag and the version in these files must always match. The CI build uses these files to name the installer artifacts — a mismatched tag produces installers with the wrong version number.
+
+---
+
 ## CSS Custom Properties (theme tokens)
 
 Use these — never hardcode color values:

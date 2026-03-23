@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap } from 'lucide-react';
-import { playSFX } from '../lib/sounds';
+import { playSFX, SFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { curriculum } from '../lib/learningContent';
 import type { Section, QuizOption } from '../lib/learningContent';
@@ -426,7 +426,7 @@ export default function LearningTab() {
             if (isPerfect) clearSectionQuiz(section);
         }
 
-        playSFX('entering_lesson', theme);
+        playSFX('glass_session_enter_lesson', theme);
         setAnimating(true);
         setTimeout(() => {
             setSelectedSection(section);
@@ -477,7 +477,7 @@ export default function LearningTab() {
             }
         }
 
-        playSFX('hover_sound', theme);
+        playSFX('glass_ui_hover', theme);
         setAnimating(true);
         setTimeout(() => {
             setSelectedSection(null);
@@ -546,7 +546,7 @@ export default function LearningTab() {
         setQuizState(newQuizState);
 
         if (option.isCorrect) {
-            playSFX('checklist_sound', theme);
+            playSFX('glass_ui_check', theme);
             // Check if this completes the section perfectly
             const perfect = isSectionPerfect(selectedSection, newQuizState);
             if (perfect) {
@@ -554,7 +554,7 @@ export default function LearningTab() {
 
                 if (!hasWrong) {
                     // 🎉 PERFECT SCORE
-                    playSFX('perfect_score', theme);
+                    playSFX('glass_reward_perfect', theme);
                     setShowCelebration(true);
 
                     const entry = srsState[selectedSection.id];
@@ -575,7 +575,7 @@ export default function LearningTab() {
                 // Lockout will happen when user exits via handleBackClick
             }
         } else {
-            playSFX('cancelling', theme);
+            playSFX('glass_ui_cancel', theme);
             // DON'T lock immediately — just record the wrong answer.
             // The lockout happens on exit (handleBackClick).
         }
@@ -687,7 +687,7 @@ export default function LearningTab() {
                                         key={lesson.id}
                                         className={`lesson-nav-item status-${statusClass}${currentLessonId === lesson.id ? ' active' : ''}`}
                                         onClick={() => {
-                                            playSFX('hover_sound', theme);
+                                            playSFX('glass_ui_hover', theme);
                                             const idx = flatLessons.findIndex(({ lesson: l }) => l.id === lesson.id);
                                             if (idx >= 0) setActiveLessonIdx(idx);
                                         }}
@@ -801,6 +801,7 @@ export default function LearningTab() {
                                                                 <div
                                                                     key={opt.id}
                                                                     className={optClass}
+                                                                    onMouseEnter={() => { if (!isSolved && !locked) playSFX(SFX.HOVER, theme); }}
                                                                     onClick={() => handleOptionClick(lesson.question.id, opt)}
                                                                 >
                                                                     <span>{opt.text}</span>
@@ -872,7 +873,7 @@ export default function LearningTab() {
                     <div className="lesson-carousel-nav">
                         <button
                             className="btn-icon lesson-carousel-btn"
-                            onClick={() => { playSFX('hover_sound', theme); setActiveLessonIdx(prev => Math.max(0, prev - 1)); }}
+                            onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(prev => Math.max(0, prev - 1)); }}
                             disabled={activeLessonIdx === 0}
                             aria-label="Previous lesson"
                         >
@@ -891,7 +892,7 @@ export default function LearningTab() {
                                     <button
                                         key={lesson.id}
                                         className={dotClass}
-                                        onClick={() => { playSFX('hover_sound', theme); setActiveLessonIdx(dotIdx); }}
+                                        onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(dotIdx); }}
                                         aria-label={lesson.title}
                                         aria-selected={dotIdx === activeLessonIdx}
                                         role="tab"
@@ -901,7 +902,7 @@ export default function LearningTab() {
                         </div>
                         <button
                             className="btn-icon lesson-carousel-btn"
-                            onClick={() => { playSFX('hover_sound', theme); setActiveLessonIdx(prev => Math.min(flatLessons.length - 1, prev + 1)); }}
+                            onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(prev => Math.min(flatLessons.length - 1, prev + 1)); }}
                             disabled={activeLessonIdx === flatLessons.length - 1}
                             aria-label="Next lesson"
                         >
@@ -956,7 +957,7 @@ export default function LearningTab() {
                             className={cardClass}
                             style={{ '--animation-order': idx } as any}
                             onClick={() => handleSectionClick(section)}
-                            onMouseEnter={() => { if (!locked) playSFX('hover_sound', theme); }}
+                            onMouseEnter={() => { if (!locked) playSFX('glass_ui_hover', theme); }}
                         >
                             <div className="section-icon-badge" style={{ background: locked ? 'var(--text-muted)' : section.color }}>
                                 {locked ? <Lock size={20} /> : (isTerminal ? `[${String(idx + 1).padStart(2, '0')}]` : section.icon)}

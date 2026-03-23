@@ -153,10 +153,19 @@
     white-space: nowrap;
 }
 
+.chapter-focus-btn:hover {
+    background: rgba(0, 0, 0, 0.13);
+    color: var(--text-dark);
+}
+
 .chapter-focus-btn.active {
     background: var(--focus-color);
     color: #fff;
     font-weight: 700;
+}
+
+.chapter-focus-btn.active:hover {
+    opacity: 0.82;
 }
 
 .chapter-spacing-row {
@@ -192,8 +201,25 @@
     text-decoration: underline dotted;
 }
 
+.chapter-spacing-btn:hover {
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--text-dark);
+}
+
 .chapter-spacing-btn.has-override {
     color: var(--primary);
+}
+
+.chapter-spacing-btn.has-override:hover {
+    background: rgba(var(--primary-rgb), 0.12);
+}
+
+.chapter-study-btn:hover {
+    opacity: 0.7;
+}
+
+.chapter-delete-btn:hover {
+    opacity: 0.7;
 }
 
 .chapter-add-row {
@@ -224,6 +250,71 @@
     font-size: 0.75rem;
     color: var(--text-muted);
     line-height: 1.4;
+}
+
+/* Music: measures input */
+.chapter-measures-input {
+    width: 80px;
+    flex-shrink: 0;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Subject type picker */
+.subject-type-picker {
+    display: flex;
+    gap: 8px;
+}
+
+.subject-type-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--glass-border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.subject-type-btn.active {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+/* Chapter measure progress row */
+.chapter-measure-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.chapter-measure-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.chapter-measure-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(var(--primary-rgb), 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.chapter-measure-fill {
+    height: 100%;
+    width: var(--measure-pct, 0%);
+    background: var(--primary);
+    border-radius: 2px;
 }
 
 .chapter-preview {

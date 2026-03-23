@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Maximize, Minimize, Pencil, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import BingoModal from "../../components/bingoals/BingoModal";
 import type { MediaItem, Objective, Subobjective } from "../../lib/bingoals/db";
@@ -22,6 +22,7 @@ import { clamp01, daysAgo } from "../../lib/bingoals/format";
 import { fileToCompressedDataUrl } from "../../lib/bingoals/image";
 import { computeObjectivePercent } from "../../lib/bingoals/progress";
 import { useTranslation } from "../../lib/i18n";
+import { playSFX, SFX } from "../../lib/sounds";
 
 function computeAutoDone(s: Subobjective) {
   const hasTarget = (s.target_total ?? 0) > 0;
@@ -120,7 +121,7 @@ export default function BingoObjectivePage() {
             </Link>
             <h1 className="page-header-title">{obj.title}</h1>
           </div>
-          <button className="btn btn-primary" onClick={() => setAddOpen(true)}>{t('bingoals.add_subobjective')}</button>
+          <button className="btn btn-primary" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => setAddOpen(true)}>{t('bingoals.add_subobjective')}</button>
         </div>
 
         <div className="panel">
@@ -173,6 +174,10 @@ export default function BingoObjectivePage() {
           })}
         </div>
 
+        <button className="btn bingo-add-sub-bottom" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => setAddOpen(true)}>
+          {t('bingoals.add_subobjective')}
+        </button>
+
         <AddSubobjectiveModal
           open={addOpen}
           onClose={() => setAddOpen(false)}
@@ -220,6 +225,7 @@ function AddSubobjectiveModal(props: {
               setBusy(true);
               try {
                 await createSubobjective(props.objective.id, title.trim(), unit.trim() || null, total || null);
+                playSFX(SFX.BINGO_ADD);
                 props.onAdded();
               } finally { setBusy(false); }
             }}
@@ -272,9 +278,11 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
 }) {
   const { s, timeStats, subs, setSubs, running, playingSubId, setPlayingSubId, subMedia, reload, stopTimerIfRunning, setRunning } = props;
   const { t } = useTranslation();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [timeEditOpen, setTimeEditOpen] = useState(false);
   const [timeEditMs, setTimeEditMs] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [isEditingCount, setIsEditingCount] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
 
   const last = Math.max(timeStats.last_end ?? 0, s.updated_at ?? 0) || null;
@@ -288,140 +296,141 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
   const isPlaying = playingSubId === s.id;
   const isRunning = running?.subId === s.id;
 
+  // Compute adaptive tick count: find smallest "nice" step giving ≤ 20 ticks
+  const tickCount = (() => {
+    const target = s.target_total ?? 0;
+    if (target <= 0) return 10;
+    const steps = [1, 2, 5, 10, 20, 25, 50, 100, 250, 500, 1000];
+    for (const step of steps) {
+      const ticks = Math.ceil(target / step);
+      if (ticks <= 20) return ticks;
+    }
+    return Math.ceil(target / 20);
+  })();
+
   return (
     <div className={`panel ${autoDone ? "panelDone" : ""} ${isRunning ? "panelRecording" : ""}`}>
       <div className="row bingo-panel-header-row">
-        <input
-          className="titleInput"
-          aria-label="Subobjective title"
-          value={s.title}
-          onChange={(e) => setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, title: e.target.value } : x)))}
-          onBlur={async () => {
-            const fresh = subs.find((x) => x.id === s.id);
-            if (fresh) await updateSubobjective(s.id, { title: fresh.title });
-            await reload();
-          }}
-        />
+        {isEditingTitle ? (
+          <input
+            className="titleInput"
+            aria-label={t('bingoals.sub_title_aria')}
+            value={s.title}
+            autoFocus
+            onChange={(e) => setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, title: e.target.value } : x)))}
+            onBlur={async () => {
+              setIsEditingTitle(false);
+              const fresh = subs.find((x) => x.id === s.id);
+              if (fresh) await updateSubobjective(s.id, { title: fresh.title });
+              await reload();
+            }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur(); }}
+          />
+        ) : (
+          <div
+            className="titleDisplay"
+            onClick={() => setIsEditingTitle(true)}
+            role="button"
+            tabIndex={0}
+            aria-label={t('bingoals.sub_title_aria')}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setIsEditingTitle(true); }}
+          >
+            {s.title}
+          </div>
+        )}
         <div className="pill">{Math.round(ratio * 100)}%</div>
       </div>
 
-      <div className="row bingo-sub-meta-row">
-        <div className="mini">
-          <div className="muted">{t('bingoals.time_label')}</div>
-          <div className="row bingo-gap-sm">
-            <TimerDisplay totalMs={initialTotalMs} isRunning={isRunning} startedAt={isRunning ? running!.startedAt : null} />
-            <button
-              className="btn btn-icon"
-              onClick={async (e) => {
-                e.stopPropagation();
-                await stopTimerIfRunning();
-                const ms = (timeStats.total_ms ?? 0) + (running?.subId === s.id ? Math.max(0, Date.now() - running.startedAt) : 0);
-                setTimeEditMs(ms);
-                setTimeEditOpen(true);
-              }}
-              title={t('bingoals.time_edit_title')}
-              aria-label={t('bingoals.time_edit_title')}
-            >
-              <Pencil size={14} />
-            </button>
-          </div>
+      <div className="bingo-panel-body">
+      <div className="bingo-panel-left">
+        {/* Instrument face: big timer display */}
+        <div className="bingo-instrument-face">
+          <TimerDisplay
+            totalMs={initialTotalMs}
+            isRunning={isRunning}
+            startedAt={isRunning ? running!.startedAt : null}
+            className="bingo-instrument-timer"
+          />
+          <button
+            className="btn btn-icon bingo-instrument-edit"
+            onMouseEnter={() => playSFX(SFX.HOVER)}
+            onClick={async (e) => {
+              e.stopPropagation();
+              await stopTimerIfRunning();
+              const ms = (timeStats.total_ms ?? 0) + (running?.subId === s.id ? Math.max(0, Date.now() - running.startedAt) : 0);
+              setTimeEditMs(ms);
+              setTimeEditOpen(true);
+            }}
+            title={t('bingoals.time_edit_title')}
+            aria-label={t('bingoals.time_edit_title')}
+          >
+            <Pencil size={12} />
+          </button>
         </div>
 
-        <div className="mini">
-          <div className="muted">{t('bingoals.last_label')}</div>
-          <div>{formatDaysAgo(d, t)}</div>
-        </div>
+        {/* START / STOP — physical button */}
+        {isRunning ? (
+          <button className="btn btn-danger bingo-start-btn" onClick={() => { playSFX(SFX.CANCEL); stopTimerIfRunning(); }} onMouseEnter={() => playSFX(SFX.HOVER)} title={t('bingoals.stop')}>
+            <span className="bingo-stop-square" aria-hidden="true" />
+            {t('bingoals.stop')}
+          </button>
+        ) : (
+          <button className="btn btn-primary bingo-start-btn" onClick={async () => { playSFX(SFX.SESSION_START); await stopTimerIfRunning(); setRunning({ subId: s.id, startedAt: Date.now() }); }} onMouseEnter={() => playSFX(SFX.HOVER)}>
+            <span className="bingo-rec-dot" aria-hidden="true" />
+            {t('bingoals.start')}
+          </button>
+        )}
 
-        <div className="mini">
-          <div className="muted">{t('bingoals.progress_label')}</div>
-          <div className="row bingo-gap-sm">
-            <div className="bingo-counter">
-              <button
-                className="bingo-counter-btn"
-                aria-label={t('bingoals.decrement')}
-                onClick={async () => {
-                  const fresh = subs.find((x) => x.id === s.id);
-                  if (!fresh) return;
-                  const next = Math.max(0, (fresh.progress_current ?? 0) - 1);
-                  setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: next } : x)));
-                  const { hasTarget: ht, autoDone: ad } = computeAutoDone({ ...fresh, progress_current: next });
-                  await updateSubobjective(s.id, { progress_current: next, is_done: ht ? (ad ? 1 : 0) : fresh.is_done });
-                  await reload();
-                }}
-              >−</button>
-              <input
-                className="numInput"
-                type="number"
-                aria-label={t('bingoals.aria_current')}
-                value={s.progress_current ?? 0}
-                onChange={(e) => { const v = Number(e.target.value); setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: v } : x))); }}
-                onBlur={async () => {
-                  const fresh = subs.find((x) => x.id === s.id);
-                  if (!fresh) return;
-                  const { hasTarget, autoDone } = computeAutoDone(fresh);
-                  await updateSubobjective(s.id, { progress_current: fresh.progress_current, is_done: hasTarget ? (autoDone ? 1 : 0) : fresh.is_done });
-                  await reload();
-                }}
-              />
-              <button
-                className="bingo-counter-btn"
-                aria-label={t('bingoals.increment')}
-                onClick={async () => {
-                  const fresh = subs.find((x) => x.id === s.id);
-                  if (!fresh) return;
-                  const next = (fresh.progress_current ?? 0) + 1;
-                  setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: next } : x)));
-                  const { hasTarget: ht, autoDone: ad } = computeAutoDone({ ...fresh, progress_current: next });
-                  await updateSubobjective(s.id, { progress_current: next, is_done: ht ? (ad ? 1 : 0) : fresh.is_done });
-                  await reload();
-                }}
-              >+</button>
-            </div>
-            <span className="muted">/</span>
-            <div className="bingo-counter">
-              <button
-                className="bingo-counter-btn"
-                aria-label={t('bingoals.decrement')}
-                onClick={async () => {
-                  const fresh = subs.find((x) => x.id === s.id);
-                  if (!fresh) return;
-                  const next = Math.max(0, (fresh.target_total ?? 0) - 1);
-                  setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, target_total: next } : x)));
-                  const { hasTarget: ht, autoDone: ad } = computeAutoDone({ ...fresh, target_total: next });
-                  await updateSubobjective(s.id, { target_total: next, is_done: ht ? (ad ? 1 : 0) : fresh.is_done });
-                  await reload();
-                }}
-              >−</button>
-              <input
-                className="numInput"
-                type="number"
-                aria-label={t('bingoals.aria_target')}
-                value={s.target_total ?? 0}
-                onChange={(e) => { const v = Number(e.target.value); setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, target_total: v } : x))); }}
-                onBlur={async () => {
-                  const fresh = subs.find((x) => x.id === s.id);
-                  if (!fresh) return;
-                  const { hasTarget, autoDone } = computeAutoDone(fresh);
-                  await updateSubobjective(s.id, { target_total: fresh.target_total, is_done: hasTarget ? (autoDone ? 1 : 0) : fresh.is_done });
-                  await reload();
-                }}
-              />
-              <button
-                className="bingo-counter-btn"
-                aria-label={t('bingoals.increment')}
-                onClick={async () => {
-                  const fresh = subs.find((x) => x.id === s.id);
-                  if (!fresh) return;
-                  const next = (fresh.target_total ?? 0) + 1;
-                  setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, target_total: next } : x)));
-                  const { hasTarget: ht, autoDone: ad } = computeAutoDone({ ...fresh, target_total: next });
-                  await updateSubobjective(s.id, { target_total: next, is_done: ht ? (ad ? 1 : 0) : fresh.is_done });
-                  await reload();
-                }}
-              >+</button>
-            </div>
+        {/* Count display: large number + target/unit caption */}
+        <div className="bingo-count-block">
+          {isEditingCount ? (
             <input
-              className="unitInput"
+              className="numInput bingo-count-input"
+              type="number"
+              autoFocus
+              aria-label={t('bingoals.aria_current')}
+              value={s.progress_current ?? 0}
+              onChange={(e) => { const v = Number(e.target.value); setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: v } : x))); }}
+              onBlur={async () => {
+                setIsEditingCount(false);
+                const fresh = subs.find((x) => x.id === s.id);
+                if (!fresh) return;
+                const { hasTarget, autoDone } = computeAutoDone(fresh);
+                await updateSubobjective(s.id, { progress_current: fresh.progress_current, is_done: hasTarget ? (autoDone ? 1 : 0) : fresh.is_done });
+                await reload();
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") (e.target as HTMLInputElement).blur(); }}
+            />
+          ) : (
+            <div
+              className="bingo-count-value"
+              onClick={() => setIsEditingCount(true)}
+              role="button"
+              tabIndex={0}
+              aria-label={t('bingoals.aria_current')}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setIsEditingCount(true); }}
+            >
+              {s.progress_current ?? 0}
+            </div>
+          )}
+          <div className="bingo-count-caption">
+            <span>/</span>
+            <input
+              className="numInput bingo-target-caption"
+              type="number"
+              aria-label={t('bingoals.aria_target')}
+              value={s.target_total ?? 0}
+              onChange={(e) => { const v = Number(e.target.value); setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, target_total: v } : x))); }}
+              onBlur={async () => {
+                const fresh = subs.find((x) => x.id === s.id);
+                if (!fresh) return;
+                const { hasTarget, autoDone } = computeAutoDone(fresh);
+                await updateSubobjective(s.id, { target_total: fresh.target_total, is_done: hasTarget ? (autoDone ? 1 : 0) : fresh.is_done });
+                await reload();
+              }}
+            />
+            <input
+              className="unitInput bingo-unit-caption"
               aria-label={t('bingoals.unit_label')}
               value={s.unit ?? ""}
               placeholder={t('bingoals.unit_placeholder')}
@@ -435,61 +444,90 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
           </div>
         </div>
 
-        <div className="row bingo-sub-actions">
-          <button className="btn" onClick={async () => {
-            if (hasTarget) {
-              const next = autoDone ? Math.max(0, (s.target_total ?? 1) - 1) : (s.target_total ?? 1);
+        {/* Wide [−] [+] tap buttons */}
+        <div className="bingo-tap-strip">
+          <button
+            className="bingo-tap-btn"
+            aria-label={t('bingoals.decrement')}
+            onMouseEnter={() => playSFX(SFX.HOVER)}
+            onClick={async () => {
+              const fresh = subs.find((x) => x.id === s.id);
+              if (!fresh) return;
+              const next = Math.max(0, (fresh.progress_current ?? 0) - 1);
+              playSFX(SFX.CANCEL);
               setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: next } : x)));
-              const { autoDone: ad } = computeAutoDone({ ...s, progress_current: next });
-              await updateSubobjective(s.id, { progress_current: next, is_done: ad ? 1 : 0 });
-            } else {
-              await updateSubobjective(s.id, { is_done: s.is_done ? 0 : 1 });
-            }
-            await reload();
-          }}>
-            {(autoDone || (!hasTarget && s.is_done)) ? t('bingoals.undone') : t('bingoals.done')}
-          </button>
+              const { hasTarget: ht, autoDone: ad } = computeAutoDone({ ...fresh, progress_current: next });
+              await updateSubobjective(s.id, { progress_current: next, is_done: ht ? (ad ? 1 : 0) : fresh.is_done });
+              await reload();
+            }}
+          >−</button>
+          <button
+            className="bingo-tap-btn"
+            aria-label={t('bingoals.increment')}
+            onMouseEnter={() => playSFX(SFX.HOVER)}
+            onClick={async () => {
+              const fresh = subs.find((x) => x.id === s.id);
+              if (!fresh) return;
+              const next = (fresh.progress_current ?? 0) + 1;
+              const { hasTarget: ht, autoDone: ad } = computeAutoDone({ ...fresh, progress_current: next });
+              playSFX(ad ? SFX.BINGO_COMPLETE : SFX.BINGO_CHECK);
+              setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: next } : x)));
+              await updateSubobjective(s.id, { progress_current: next, is_done: ht ? (ad ? 1 : 0) : fresh.is_done });
+              await reload();
+            }}
+          >+</button>
+        </div>
 
-          {isRunning ? (
-            <button className="btn btn-danger recBtn" onClick={stopTimerIfRunning} title={t('bingoals.rec_stop')}>
-              <span className="recDot" aria-hidden="true" />
-              {t('bingoals.rec_stop')}
-            </button>
-          ) : (
-            <button className="btn btn-primary" onClick={async () => { await stopTimerIfRunning(); setRunning({ subId: s.id, startedAt: Date.now() }); }}>
-              {t('bingoals.start')}
-            </button>
-          )}
+        {/* Tick-mark progress bar — tick count adapts to target */}
+        <div className="bingo-tick-bar" style={{ '--bingo-ticks': tickCount } as React.CSSProperties}>
+          <div className="bingo-tick-fill" style={{ '--bingo-fill': `${ratio * 100}%` } as React.CSSProperties} />
+        </div>
 
-          {deleteConfirm ? (
-            <>
-              <button className="btn btn-danger" onClick={async () => {
-                if (running?.subId === s.id) await stopTimerIfRunning();
-                if (playingSubId === s.id) setPlayingSubId(null);
-                await deleteSubobjective(s.id);
-                await reload();
-              }}>{t('bingoals.yes_delete')}</button>
-              <button className="btn" onClick={() => setDeleteConfirm(false)}>{t('bingoals.cancel')}</button>
-            </>
-          ) : (
-            <button className="btn-icon bingo-delete-btn" onClick={() => setDeleteConfirm(true)} aria-label={t('bingoals.delete')}>
-              <Trash2 size={14} />
+        {/* Footer: last practiced + done + delete */}
+        <div className="bingo-instrument-footer">
+          <span className="muted">{formatDaysAgo(d, t)}</span>
+          <div className="row bingo-sub-actions">
+            <button className="btn bingo-mark-done-btn" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={async () => {
+              if (hasTarget) {
+                const next = autoDone ? Math.max(0, (s.target_total ?? 1) - 1) : (s.target_total ?? 1);
+                const { autoDone: ad } = computeAutoDone({ ...s, progress_current: next });
+                playSFX(ad ? SFX.BINGO_COMPLETE : SFX.BINGO_CHECK);
+                setSubs((prev) => prev.map((x) => (x.id === s.id ? { ...x, progress_current: next } : x)));
+                await updateSubobjective(s.id, { progress_current: next, is_done: ad ? 1 : 0 });
+              } else {
+                playSFX(s.is_done ? SFX.CANCEL : SFX.BINGO_COMPLETE);
+                await updateSubobjective(s.id, { is_done: s.is_done ? 0 : 1 });
+              }
+              await reload();
+            }}>
+              {(autoDone || (!hasTarget && s.is_done)) ? t('bingoals.undone') : t('bingoals.done')}
             </button>
-          )}
+            {deleteConfirm ? (
+              <>
+                <button className="btn btn-danger" onClick={async () => {
+                  if (running?.subId === s.id) await stopTimerIfRunning();
+                  if (playingSubId === s.id) setPlayingSubId(null);
+                  await deleteSubobjective(s.id);
+                  await reload();
+                }}>{t('bingoals.yes_delete')}</button>
+                <button className="btn" onClick={() => setDeleteConfirm(false)}>{t('bingoals.cancel')}</button>
+              </>
+            ) : (
+              <button className="btn-icon bingo-delete-btn" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => setDeleteConfirm(true)} aria-label={t('bingoals.delete')}>
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className="bar bingo-bar-mt">
-        <div className="barFill" style={{ width: `${ratio * 100}%` }} />
-      </div>
-
+      <div className="bingo-panel-right">
       <div className="memories">
         <div className="row bingo-panel-header-row">
-          <div className="muted">{t('bingoals.memories_label')}</div>
+          <div className="muted bingo-section-label">{t('bingoals.memories_label')}</div>
           <div className="memories-actions">
-            <button className="btn" onClick={() => setQuoteOpen(true)}>{t('bingoals.add_quote')}</button>
+            <button className="btn bingo-memory-action-btn" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => setQuoteOpen(true)}>{t('bingoals.add_quote')}</button>
 
-            <label className="btn">
+            <label className="btn bingo-memory-action-btn" onMouseEnter={() => playSFX(SFX.HOVER)}>
               {t('bingoals.add_images')}
               <input
                 type="file"
@@ -515,6 +553,7 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
               className="btn bingo-memories-play"
               disabled={subMedia.length < 2}
               title={subMedia.length < 2 ? t('bingoals.play_requires_two') : undefined}
+              onMouseEnter={() => playSFX(SFX.HOVER)}
               onClick={() => setPlayingSubId((prev) => (prev === s.id ? null : s.id))}
             >
               {isPlaying ? t('bingoals.pause') : t('bingoals.play')}
@@ -528,6 +567,8 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
           onRequestStop={() => setPlayingSubId(null)}
           onDelete={async (mediaId) => { await deleteMediaItem(mediaId); await reload(); }}
         />
+      </div>
+      </div>
       </div>
 
       <AddQuoteModal
@@ -562,7 +603,9 @@ function Slideshow(props: {
   const { t } = useTranslation();
   const [i, setI] = useState(0);
   const [deleteMediaId, setDeleteMediaId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const slideRef = useRef<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(true);
 
   useEffect(() => {
@@ -583,6 +626,12 @@ function Slideshow(props: {
     return () => window.clearInterval(id);
   }, [props.playing, inView, props.items.length]);
 
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
   if (props.items.length === 0) {
     return <div className="muted bingo-mt-sm">{t('bingoals.no_memories')}</div>;
   }
@@ -592,12 +641,24 @@ function Slideshow(props: {
 
   return (
     <div className="slideshow" ref={rootRef}>
-      <div className="slide">
+      <div className="slide" ref={slideRef}>
         <button
           className="mediaTrashBtn"
           title={t('bingoals.delete')}
           onClick={() => { props.onRequestStop(); setDeleteMediaId(item.id); }}
-        >🗑</button>
+        ><Trash2 size={16} /></button>
+        <button
+          className="mediaFullscreenBtn"
+          title={isFullscreen ? t('bingoals.fullscreen_exit') : t('bingoals.fullscreen')}
+          aria-label={isFullscreen ? t('bingoals.fullscreen_exit') : t('bingoals.fullscreen')}
+          onClick={async () => {
+            if (document.fullscreenElement) {
+              await document.exitFullscreen();
+            } else {
+              await slideRef.current?.requestFullscreen();
+            }
+          }}
+        >{isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}</button>
 
         <div key={item.id} className="mediaFade">
           {item.kind === "image"
@@ -608,9 +669,9 @@ function Slideshow(props: {
       </div>
 
       <div className="row bingo-slideshow-nav">
-        <button className="btn" onClick={() => { props.onRequestStop(); setI((x) => (x - 1 + props.items.length) % props.items.length); }}>Prev</button>
-        <div className="muted">{safeIndex + 1} / {props.items.length}{props.playing && inView ? " • Playing" : ""}</div>
-        <button className="btn" onClick={() => { props.onRequestStop(); setI((x) => (x + 1) % props.items.length); }}>Next</button>
+        <button className="btn" onClick={() => { props.onRequestStop(); setI((x) => (x - 1 + props.items.length) % props.items.length); }}>{t('bingoals.prev')}</button>
+        <div className="muted">{safeIndex + 1} / {props.items.length}{props.playing && inView ? ` • ${t('bingoals.playing')}` : ""}</div>
+        <button className="btn" onClick={() => { props.onRequestStop(); setI((x) => (x + 1) % props.items.length); }}>{t('bingoals.next')}</button>
       </div>
 
       <BingoModal open={deleteMediaId !== null} title={t('bingoals.delete')} onClose={() => setDeleteMediaId(null)}>
@@ -630,7 +691,7 @@ function Slideshow(props: {
   );
 }
 
-function TimerDisplay(props: { totalMs: number; isRunning: boolean; startedAt: number | null }) {
+function TimerDisplay(props: { totalMs: number; isRunning: boolean; startedAt: number | null; className?: string }) {
   const [displayMs, setDisplayMs] = useState(props.totalMs);
 
   useEffect(() => {
@@ -640,7 +701,7 @@ function TimerDisplay(props: { totalMs: number; isRunning: boolean; startedAt: n
     return () => window.clearInterval(id);
   }, [props.isRunning, props.startedAt, props.totalMs]);
 
-  return <div>{msToHHMMSS(displayMs)}</div>;
+  return <div className={props.className}>{msToHHMMSS(displayMs)}</div>;
 }
 
 function msToHHMMSS(ms: number) {

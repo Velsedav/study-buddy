@@ -1,5 +1,5 @@
 import { useSettings } from '../lib/settings';
-import type { Theme, WeekStart } from '../lib/settings';
+import type { Theme, WeekStart, MetacognitionDay } from '../lib/settings';
 import { useState, useEffect } from 'react';
 import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play, Brain, Power, Settings as SettingsIcon } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
@@ -7,7 +7,7 @@ import { deleteAllData } from '../lib/db';
 import { getDefaultSpacing, setDefaultSpacing, parseSpacing, DEFAULT_SPACING } from '../lib/chapters';
 import { getAutostart, setAutostart } from '../lib/autostart';
 import { CustomSelect } from '../components/CustomSelect';
-import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, stopAllSounds, playSFX } from '../lib/sounds';
+import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, playSFX } from '../lib/sounds';
 import type { SoundEffect, VolumeSettings } from '../lib/sounds';
 import './Settings.css';
 
@@ -15,7 +15,8 @@ export default function SettingsTab() {
     const {
         theme, setTheme,
         weekStart, setWeekStart,
-        language, setLanguage
+        language, setLanguage,
+        metacognitionDay, setMetacognitionDay
     } = useSettings();
     const { t } = useTranslation();
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -43,11 +44,6 @@ export default function SettingsTab() {
     useEffect(() => {
         saveVolumeSettings(volumeSettings);
     }, [volumeSettings]);
-
-    // Stop all sounds when leaving Settings
-    useEffect(() => {
-        return () => stopAllSounds();
-    }, []);
 
     const handleMasterVolume = (val: number) => {
         setVolumeSettings(prev => ({ ...prev, master: val }));
@@ -133,7 +129,7 @@ export default function SettingsTab() {
 
     const handleDeleteAll = async () => {
         if (deleteInput.toLowerCase() === t('settings.delete_keyword').toLowerCase()) {
-            playSFX('cancelling', theme);
+            playSFX('glass_ui_cancel', theme);
             await deleteAllData();
             alert("Database Cleared!");
             window.location.reload();
@@ -170,13 +166,14 @@ export default function SettingsTab() {
                             className="danger-modal-input"
                         />
                         <div className="danger-modal-actions">
-                            <button className="btn btn-secondary" onClick={() => {
+                            <button className="btn btn-secondary" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => {
                                 setShowDeleteModal(false);
                                 setDeleteInput('');
                             }}>{t('settings.cancel')}</button>
                             <button
                                 className="btn btn-danger-outline btn-danger-outline-solid"
                                 disabled={deleteInput.toLowerCase() !== t('settings.delete_keyword').toLowerCase()}
+                                onMouseEnter={() => playSFX(SFX.HOVER)}
                                 onClick={handleDeleteAll}
                             >
                                 <Trash2 size={18} style={{ marginRight: '8px' }} />
@@ -213,7 +210,7 @@ export default function SettingsTab() {
                                                 key={th.id}
                                                 className={`theme-color-select ${theme === th.id ? 'active' : ''}`}
                                                 style={{ background: th.background || th.color }}
-                                                onMouseEnter={() => handleThemeHover(th.id)}
+                                                onMouseEnter={() => { handleThemeHover(th.id); playSFX(SFX.HOVER); }}
                                                 onClick={() => setTheme(th.id)}
                                                 title={th.name}
                                                 aria-label={th.name}
@@ -242,6 +239,18 @@ export default function SettingsTab() {
                             options={[
                                 { value: "monday", label: t('settings.monday') },
                                 { value: "sunday", label: t('settings.sunday') }
+                            ]}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>{t('settings.metacognition_day')}</label>
+                        <CustomSelect
+                            value={metacognitionDay}
+                            onChange={(val) => setMetacognitionDay(val as MetacognitionDay)}
+                            options={[
+                                { value: "friday", label: t('settings.metacognition_day_friday') },
+                                { value: "saturday", label: t('settings.metacognition_day_saturday') },
+                                { value: "sunday", label: t('settings.metacognition_day_sunday') },
                             ]}
                         />
                     </div>
@@ -308,6 +317,7 @@ export default function SettingsTab() {
                             <button
                                 className="btn btn-secondary"
                                 style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                                onMouseEnter={() => playSFX(SFX.HOVER)}
                                 onClick={() => handleSpacingChange(DEFAULT_SPACING)}
                             >
                                 {t('settings.reset')}
@@ -342,7 +352,7 @@ export default function SettingsTab() {
                             <kbd>Ctrl+Scroll</kbd>
                         </div>
                     </div>
-                    <button className="btn btn-secondary w-full shortcut-btn">{t('settings.modify_shortcuts')}</button>
+                    <button className="btn btn-secondary w-full shortcut-btn" onMouseEnter={() => playSFX(SFX.HOVER)}>{t('settings.modify_shortcuts')}</button>
                 </div>
             </div>
 
@@ -384,6 +394,7 @@ export default function SettingsTab() {
                                 />
                                 <button
                                     className="btn-icon audio-test-btn"
+                                    onMouseEnter={() => playSFX(SFX.HOVER)}
                                     onClick={() => testSFX(effect)}
                                     title={`Test ${SFX_LABELS[effect]}`}
                                 >
@@ -404,8 +415,8 @@ export default function SettingsTab() {
                     </div>
                     <p className="settings-desc">{t('settings.backup_desc')}</p>
                     <div className="data-actions">
-                        <button className="btn btn-secondary w-full" onClick={handleExport}>{t('settings.export')}</button>
-                        <button className="btn btn-secondary w-full" onClick={handleImport}>{t('settings.import')}</button>
+                        <button className="btn btn-secondary w-full" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={handleExport}>{t('settings.export')}</button>
+                        <button className="btn btn-secondary w-full" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={handleImport}>{t('settings.import')}</button>
                     </div>
                 </div>
 
@@ -417,6 +428,7 @@ export default function SettingsTab() {
                     <p className="settings-desc settings-danger-desc">{t('settings.delete_all_data')}</p>
                     <button
                         className="btn btn-danger-outline w-full delete-all-btn"
+                        onMouseEnter={() => playSFX(SFX.HOVER)}
                         onClick={() => setShowDeleteModal(true)}
                     >
                         <Trash2 size={18} style={{ marginRight: '8px' }} />

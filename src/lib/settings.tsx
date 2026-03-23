@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { setAudioTheme } from './sounds';
 
 export type Theme = 'pastel' | 'neumorphism' | 'neobrutalism' | 'terminal-orange' | 'terminal-green' | 'terminal-red' | 'terminal-cyan' | 'terminal-amber' | 'terminal-purple' | 'terminal-blue' | 'classic-uniform' | 'cosmic-manicure' | 'chibi-moon' | 'transformation-ribbon' | 'honey-lemon' | 'ai-pro' | 'cyber-scan';
 
@@ -8,12 +9,14 @@ export function isTerminalTheme(theme: Theme | string): boolean {
     return theme.startsWith('terminal-');
 }
 export type WeekStart = 'monday' | 'sunday';
+export type MetacognitionDay = 'friday' | 'saturday' | 'sunday';
 
 interface Settings {
     theme: Theme;
     weekStart: WeekStart;
     language: string;
     zoomLevel: number;
+    metacognitionDay: MetacognitionDay;
 }
 
 const defaultSettings: Settings = {
@@ -21,6 +24,7 @@ const defaultSettings: Settings = {
     weekStart: 'monday',
     language: 'en',
     zoomLevel: 100,
+    metacognitionDay: 'saturday',
 };
 
 interface SettingsContextType extends Settings {
@@ -29,6 +33,7 @@ interface SettingsContextType extends Settings {
     setWeekStart: (w: WeekStart) => void;
     setLanguage: (l: string) => void;
     setZoomLevel: (z: number) => void;
+    setMetacognitionDay: (d: MetacognitionDay) => void;
     updateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
 }
 
@@ -52,6 +57,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
         // Apply theme map
         document.documentElement.setAttribute('data-theme', settings.theme);
+        setAudioTheme(settings.theme);
 
         // Apply zoom using the zoom CSS property
         // The zoom property expects a number where 1 is 100%, 1.5 is 150%, etc.
@@ -88,6 +94,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setWeekStart: (w) => updateSetting('weekStart', w),
             setLanguage: (l) => updateSetting('language', l),
             setZoomLevel: (z) => updateSetting('zoomLevel', z),
+            setMetacognitionDay: (d) => updateSetting('metacognitionDay', d),
             updateSetting
         }}>
             {children}

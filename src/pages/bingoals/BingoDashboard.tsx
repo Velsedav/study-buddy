@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { Target, Pencil, ArrowUp, ArrowDown } from "lucide-react";
+import { Target, Pencil, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BingoModal from "../../components/bingoals/BingoModal";
 import type { DashboardRow, Objective, Subobjective } from "../../lib/bingoals/db";
 import {
   createObjectiveAndAssignSlot,
+  ensureYearSlots,
   getBingoDb,
   listDashboardRows,
   updateObjective
@@ -13,6 +14,7 @@ import { daysAgo, formatDuration } from "../../lib/bingoals/format";
 import { fileToCompressedDataUrl } from "../../lib/bingoals/image";
 import { computeObjectivePercent } from "../../lib/bingoals/progress";
 import { useTranslation } from "../../lib/i18n";
+import { playSFX, SFX } from "../../lib/sounds";
 
 type Cell = {
   slot_index: number;
@@ -23,7 +25,8 @@ type Cell = {
   percent: number | null;
 };
 
-let DASH_CACHE: Cell[] | null = null;
+const CURRENT_YEAR = new Date().getFullYear();
+let DASH_CACHE: Record<number, Cell[]> = {};
 
 function statusTitle(status: string) {
   if (status === "green") return "On track";
@@ -44,13 +47,14 @@ function lastStatus(days: number | null, freqDays: number | null) {
 export default function BingoDashboard() {
   const nav = useNavigate();
   const { t } = useTranslation();
-  const [cells, setCells] = useState<Cell[]>(() => DASH_CACHE ?? []);
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR);
+  const [cells, setCells] = useState<Cell[]>(() => DASH_CACHE[CURRENT_YEAR] ?? []);
   const [createSlot, setCreateSlot] = useState<number | null>(null);
   const [editObj, setEditObj] = useState<Objective | null>(null);
 
-  async function load() {
-    await getBingoDb();
-    const rows: DashboardRow[] = await listDashboardRows();
+  async function load(year = selectedYear) {
+    await ensureYearSlots(year);
+    const rows: DashboardRow[] = await listDashboardRows(year);
     const objectiveIds = rows
       .map((r) => r.objective_id)
       .filter((x): x is string => typeof x === "string" && x.length > 0);
@@ -88,11 +92,15 @@ export default function BingoDashboard() {
       return { slot_index: r.slot_index, objective_id: r.objective_id, objective, total_ms: r.total_ms ?? 0, last_progress_at, percent };
     });
 
-    DASH_CACHE = out;
+    DASH_CACHE[year] = out;
     setCells(out);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    setCells(DASH_CACHE[selectedYear] ?? []);
+    load(selectedYear);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear]);
 
   const viewCells = useMemo(() => {
     const clone = [...cells];
@@ -122,7 +130,35 @@ export default function BingoDashboard() {
       <div className="page-header">
           <div className="page-title-group">
             <div className="icon-wrapper bg-blue"><Target size={20} /></div>
-            <h1 className="page-header-title">{t('bingoals.page_title')}</h1>
+            <h1 className="page-header-title">
+              {t('bingoals.page_title')} <span className="bingo-title-year">{selectedYear}</span>
+            </h1>
+          </div>
+          <div className="bingo-year-nav">
+            {selectedYear !== CURRENT_YEAR && (
+              <button
+                className="btn bingo-year-return"
+                onClick={() => setSelectedYear(CURRENT_YEAR)}
+              >
+                {t('bingoals.return_year').replace('{year}', String(CURRENT_YEAR))}
+              </button>
+            )}
+            <button
+              className="btn btn-icon bingo-year-btn"
+              aria-label={t('bingoals.prev_year')}
+              onClick={() => setSelectedYear(y => y - 1)}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="bingo-year-label">{selectedYear}</span>
+            <button
+              className="btn btn-icon bingo-year-btn"
+              aria-label={t('bingoals.next_year')}
+              disabled={selectedYear >= CURRENT_YEAR}
+              onClick={() => setSelectedYear(y => y + 1)}
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
 
@@ -134,7 +170,8 @@ export default function BingoDashboard() {
                   key={c.slot_index}
                   className="add-subject-card bingo-add-card"
                   aria-label={t('bingoals.add_objective')}
-                  onClick={() => setCreateSlot(c.slot_index)}
+                  onMouseEnter={() => playSFX(SFX.HOVER)}
+                  onClick={() => { playSFX(SFX.BINGO_ADD); setCreateSlot(c.slot_index); }}
                 >
                   {t('bingoals.add_objective')}
                 </button>
@@ -155,14 +192,15 @@ export default function BingoDashboard() {
 
         <CreateObjectiveModal
           slotIndex={createSlot}
+          year={selectedYear}
           onClose={() => setCreateSlot(null)}
-          onCreated={() => { setCreateSlot(null); load(); }}
+          onCreated={() => { setCreateSlot(null); load(selectedYear); }}
         />
 
         <EditObjectiveModal
           objective={editObj}
           onClose={() => setEditObj(null)}
-          onSaved={() => { setEditObj(null); load(); }}
+          onSaved={() => { setEditObj(null); load(selectedYear); }}
         />
     </div>
   );
@@ -182,42 +220,42 @@ async function fetchSubobjectivesByObjective(objectiveIds: string[]) {
   return map;
 }
 
-function CreateObjectiveModal(props: { slotIndex: number | null; onClose: () => void; onCreated: () => void }) {
+function CreateObjectiveModal(props: { slotIndex: number | null; year: number; onClose: () => void; onCreated: () => void }) {
   const { t } = useTranslation();
   const open = props.slotIndex !== null;
   const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<Objective["goal_kind"]>("count");
-  const [target, setTarget] = useState<number>(12);
-  const [unit, setUnit] = useState<string>("items");
+  const [targetStr, setTargetStr] = useState("");
+  const [unit, setUnit] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (open) { setTitle(""); setKind("count"); setTarget(12); setUnit("items"); }
+    if (open) { setTitle(""); setTargetStr(""); setUnit(""); }
   }, [open]);
 
   return (
     <BingoModal open={open} title={t('bingoals.create_modal_title')} onClose={props.onClose}>
       <div className="form">
         <label htmlFor="bingo-create-title">{t('bingoals.title_label')}</label>
-        <input id="bingo-create-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Learn 10 recipes" />
+        <input id="bingo-create-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('bingoals.create_title_placeholder')} />
 
-        <label htmlFor="bingo-create-kind">{t('bingoals.goal_type_label')}</label>
-        <select id="bingo-create-kind" value={kind} onChange={(e) => setKind(e.target.value as any)}>
-          <option value="count">{t('bingoals.goal_count')}</option>
-          <option value="metric">{t('bingoals.goal_metric')}</option>
-          <option value="amount">{t('bingoals.goal_amount')}</option>
-          <option value="manual">{t('bingoals.goal_manual')}</option>
-        </select>
-
-        {kind !== "manual" && (
-          <>
-            <label htmlFor="bingo-create-target">{t('bingoals.goal_target_label')}</label>
-            <input id="bingo-create-target" type="number" value={target} onChange={(e) => setTarget(Number(e.target.value))} />
-
-            <label htmlFor="bingo-create-unit">{t('bingoals.unit_label')}</label>
-            <input id="bingo-create-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="books / € / % / wpm" />
-          </>
-        )}
+        <label>{t('bingoals.create_goal_section')}</label>
+        <div className="bingo-create-goal-row">
+          <input
+            id="bingo-create-target"
+            type="number"
+            min="0"
+            value={targetStr}
+            onChange={(e) => setTargetStr(e.target.value)}
+            placeholder="12"
+          />
+          <input
+            id="bingo-create-unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            placeholder={t('bingoals.create_unit_placeholder')}
+          />
+        </div>
+        <p className="bingo-create-goal-helper">{t('bingoals.create_goal_helper')}</p>
 
         <div className="row">
           <button className="btn" onClick={props.onClose}>{t('bingoals.cancel')}</button>
@@ -226,10 +264,16 @@ function CreateObjectiveModal(props: { slotIndex: number | null; onClose: () => 
             disabled={busy || title.trim().length === 0 || props.slotIndex === null}
             onClick={async () => {
               setBusy(true);
+              const hasTarget = targetStr.trim() !== "" && Number(targetStr) > 0;
+              const kind: Objective["goal_kind"] = hasTarget ? "count" : "manual";
               try {
                 await createObjectiveAndAssignSlot(props.slotIndex!, {
-                  title: title.trim(), goal_kind: kind, goal_target: target, goal_unit: unit.trim() || null
-                });
+                  title: title.trim(),
+                  goal_kind: kind,
+                  goal_target: hasTarget ? Number(targetStr) : null,
+                  goal_unit: unit.trim() || null,
+                }, props.year);
+                playSFX(SFX.BINGO_ADD);
                 props.onCreated();
               } finally { setBusy(false); }
             }}
@@ -401,26 +445,27 @@ const DashboardCard = memo(function DashboardCard({
         role="link"
         tabIndex={0}
         aria-label={c.objective!.title}
-        onClick={() => nav(`/bingoals/objective/${c.objective!.id}`)}
-        onKeyDown={(e) => { if (e.key === "Enter") nav(`/bingoals/objective/${c.objective!.id}`); }}
+        onMouseEnter={() => playSFX(SFX.HOVER)}
+        onClick={() => { playSFX(SFX.ENTER_MENU); nav(`/bingoals/objective/${c.objective!.id}`); }}
+        onKeyDown={(e) => { if (e.key === "Enter") { playSFX(SFX.ENTER_MENU); nav(`/bingoals/objective/${c.objective!.id}`); } }}
       >
         <div className="cardTitle">{c.objective!.title}</div>
         <div className="cardMeta">
-          <div><span className="muted">{t('bingoals.time_label')}:</span> {formatDuration(c.total_ms)}</div>
           <div>
             <span className="muted">{t('bingoals.last_label')}:</span>{" "}
             <span className={`lastAge ${status}`} title={statusTitle(status)}>{lastLabel(d)}</span>
           </div>
-          <div><span className="muted">{t('bingoals.progress_label')}:</span> {percentText}</div>
+          <div><span className="muted">{t('bingoals.time_label')}:</span> {formatDuration(c.total_ms)}</div>
+        </div>
+
+        <div className="cardProgressBar">
+          <div className="cardProgressFill" style={{ width: `${(c.percent ?? 0) * 100}%` }} />
         </div>
 
         <div className="hoverProgress">
           <div className="hoverRow">
             <div className="muted">{t('bingoals.progress_label')}</div>
             <div className="pill">{percentText}</div>
-          </div>
-          <div className="bar">
-            <div className="barFill" style={{ width: `${(c.percent ?? 0) * 100}%` }} />
           </div>
         </div>
       </div>
@@ -430,7 +475,7 @@ const DashboardCard = memo(function DashboardCard({
           className="btn btn-icon"
           title={pinned ? t('bingoals.unpin') : t('bingoals.pin')}
           aria-label={pinned ? t('bingoals.unpin') : t('bingoals.pin')}
-          onClick={async () => { await updateObjective(c.objective!.id, { pin_bottom: pinned ? 0 : 1 }); await load(); }}
+          onClick={async () => { playSFX(SFX.CHECK); await updateObjective(c.objective!.id, { pin_bottom: pinned ? 0 : 1 }); await load(); }}
         >
           {pinned ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
         </button>
@@ -438,7 +483,7 @@ const DashboardCard = memo(function DashboardCard({
           className="btn btn-icon"
           title={t('bingoals.edit_objective')}
           aria-label={t('bingoals.edit_objective')}
-          onClick={() => setEditObj(c.objective!)}
+          onClick={() => { playSFX(SFX.ENTER_MENU); setEditObj(c.objective!); }}
         >
           <Pencil size={14} />
         </button>

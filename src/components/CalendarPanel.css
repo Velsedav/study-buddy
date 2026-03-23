@@ -32,3 +32,169 @@
 .deadline-remove-btn {
     color: var(--danger);
 }
+
+/* ── Deadline type colors ── */
+
+.deadline-type-exam {
+    border-left: 3px solid var(--danger);
+}
+
+.deadline-type-deadline {
+    border-left: 3px solid var(--primary);
+}
+
+.deadline-type-challenge {
+    border-left: 3px solid var(--success);
+}
+
+/* ── Goal item type indicator ── */
+
+.goal-item-exam .goal-item-icon { color: var(--danger); }
+.goal-item-challenge .goal-item-icon { color: var(--success); }
+.goal-item-deadline .goal-item-icon { color: var(--primary); }
+
+/* ── Type picker in goal modal ── */
+
+.goal-type-picker {
+    display: flex;
+    gap: 8px;
+}
+
+.goal-type-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 8px;
+    border: 2px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.goal-type-btn:hover {
+    border-color: var(--text-muted);
+    color: var(--text-dark);
+}
+
+.goal-type-icon {
+    font-size: 1.3rem;
+}
+
+.goal-type-btn-exam.active {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: rgba(var(--danger-rgb), 0.08);
+}
+
+.goal-type-btn-deadline.active {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+.goal-type-btn-challenge.active {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+/* ── Subject search in goal modal ── */
+
+.goal-subject-search-wrapper {
+    position: relative;
+}
+
+.goal-subject-linked {
+    border-color: var(--primary);
+    padding-right: 28px;
+}
+
+.goal-subject-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    line-height: 1;
+    padding: 0;
+}
+
+.goal-subject-clear:hover {
+    color: var(--danger);
+}
+
+.goal-subject-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    z-index: 50;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.goal-subject-dropdown-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.1s;
+}
+
+.goal-subject-dropdown-item:hover {
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary);
+}
+
+/* ── Chapter list in goal modal ── */
+
+.goal-chapter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    max-height: 140px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.goal-chapter-item {
+    padding: 4px 10px;
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    white-space: nowrap;
+}
+
+.goal-chapter-item:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.goal-chapter-item.active {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.1);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* Subject chip on deadline card */
+.deadline-card-subject {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}

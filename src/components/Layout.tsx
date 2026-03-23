@@ -49,11 +49,12 @@ export default function Layout() {
         { path: '/plan', label: t('nav.planner'), icon: Calendar },
         { path: '/learning', label: t('nav.learning'), icon: Lightbulb },
         { path: '/analytics', label: t('nav.analytics'), icon: BarChart2 },
+        { path: '/bingoals', label: t('nav.bingoals'), icon: Target },
         { path: '/metacognition-logs', label: t('nav.metacognition_logs'), icon: Wrench },
         { path: '/settings', label: t('nav.settings'), icon: SettingsIcon },
     ];
     const navItems = devNavVisible
-        ? [...baseNavItems, { path: '/bingoals', label: t('nav.bingoals'), icon: Target }, { path: '/dev', label: 'Dev', icon: FlaskConical }]
+        ? [...baseNavItems, { path: '/dev', label: 'Dev', icon: FlaskConical }]
         : baseNavItems;
 
     useEffect(() => {
@@ -150,6 +151,7 @@ export default function Layout() {
         : 'Let\'s do our best today! ✨';
 
     function handleNavClick(e: React.MouseEvent, path: string) {
+        playSFX('glass_enter_menu', theme);
         if (localStorage.getItem('activeSession')) {
             e.preventDefault();
             setPendingNavPath(path);
@@ -272,7 +274,7 @@ export default function Layout() {
                                     to={item.path}
                                     className={`nav-link ${active ? 'active' : ''}`}
                                     aria-current={active ? 'page' : undefined}
-                                    onMouseEnter={() => playSFX('hover_sound', theme)}
+                                    onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                                     onClick={(e) => handleNavClick(e, item.path)}
                                 >
                                     <Icon size={20} />

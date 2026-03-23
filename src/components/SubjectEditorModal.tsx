@@ -6,7 +6,7 @@ import { resizeImage } from '../lib/image';
 import type { Subject, Tag } from '../lib/db';
 import TagPicker from './TagPicker';
 import { X, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { playSFX } from '../lib/sounds';
+import { playSFX, SFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { useTranslation } from '../lib/i18n';
 import {
@@ -15,6 +15,8 @@ import {
     getDefaultSpacing, parseSpacing,
     type Chapter, type FocusType, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS
 } from '../lib/chapters';
+
+type SubjectType = 'academic' | 'music';
 import './SubjectEditorModal.css';
 
 interface SubjectEditorModalProps {
@@ -36,6 +38,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     const [deadline, setDeadline] = useState<string>(editingSubject?.deadline ?? '');
     const [result, setResult] = useState<string>(editingSubject?.result ?? '');
     const [archived, setArchived] = useState<boolean>(editingSubject?.archived ?? false);
+    const [subjectType, setSubjectType] = useState<SubjectType>((editingSubject?.subject_type as SubjectType) ?? 'academic');
     const [coverExpanded, setCoverExpanded] = useState<boolean>(!!editingSubject?.cover_path);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -59,16 +62,22 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     }, [coverPath]);
 
     // Chapter management
-    const [newSubjectId] = useState(() => crypto.randomUUID());
+    const [newSubjectId, setNewSubjectId] = useState(() => crypto.randomUUID());
     const effectiveSubjectId = editingSubject?.id ?? newSubjectId;
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [newChapterName, setNewChapterName] = useState('');
+    const [newChapterMeasures, setNewChapterMeasures] = useState('');
     const [editingSpacingId, setEditingSpacingId] = useState<string | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const chaptersPreview = useMemo(() => {
         const val = newChapterName.trim();
         if (!val) return [];
+
+        if (subjectType === 'music') {
+            const measures = parseInt(newChapterMeasures.trim());
+            return [`${val}${!isNaN(measures) && measures > 0 ? ` (${measures} mesures)` : ''}`];
+        }
 
         const existingMain = chapters.filter(c => /^Chapt\.\s*\d+/.test(c.name)).length;
         const parsed = parseInt(val);
@@ -113,7 +122,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
             preview.push(`Chapt. ${existingMain + 1} ${val}`);
         }
         return preview;
-    }, [newChapterName, chapters]);
+    }, [newChapterName, newChapterMeasures, subjectType, chapters]);
 
     useEffect(() => {
         setChapters(getChaptersForSubject(effectiveSubjectId));
@@ -193,7 +202,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
         if (!name.trim()) return;
         try {
             if (isEditing) {
-                await updateSubject(editingSubject!.id, name.trim(), coverPath, selectedTags, deadline || null, result || null, archived);
+                await updateSubject(editingSubject!.id, name.trim(), coverPath, selectedTags, deadline || null, result || null, archived, subjectType);
             } else {
                 const newSubj = {
                     id: newSubjectId,
@@ -207,15 +216,21 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                     result: result || null,
                     archived,
                     deleted_at: null,
+                    subject_type: subjectType,
                 };
                 await createSubject(newSubj, selectedTags);
             }
-            playSFX('checklist_sound', theme);
+            playSFX('glass_ui_check', theme);
             onSaved();
             onClose();
-        } catch (e) {
-            console.error(e);
-            setSaveError(t('subject_editor.save_error'));
+        } catch (e: any) {
+            console.error('Save error:', e);
+            // Regenerate ID so the next click doesn't hit a "already exists" error if the previous attempt 
+            // partially succeeded (e.g. subject created but tags failed)
+            if (!isEditing) setNewSubjectId(crypto.randomUUID());
+            
+            const msg = typeof e === 'string' ? e : (e?.message || JSON.stringify(e));
+            setSaveError(`${t('subject_editor.save_error')} (${msg})`);
         }
     }
 
@@ -223,6 +238,10 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     const handleAddChapter = () => {
         const val = newChapterName.trim();
         if (!val) return;
+
+        const measuresVal = newChapterMeasures.trim();
+        const parsedMeasures = measuresVal ? parseInt(measuresVal) : NaN;
+        const totalMeasures = !isNaN(parsedMeasures) && parsedMeasures > 0 ? parsedMeasures : undefined;
 
         const existingMain = chapters.filter(c => /^Chapt\.\s*\d+/.test(c.name)).length;
         const parsed = parseInt(val);
@@ -233,7 +252,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                 newChaps.push(addChapter(effectiveSubjectId, `Chapt. ${existingMain + i}`));
             }
             setChapters([...chapters, ...newChaps]);
-        } else if (val.includes('(')) {
+        } else if (val.includes('(') && subjectType !== 'music') {
             const groups: { name: string; subs: string[] }[] = [];
             let depth = 0, current = '';
             for (const char of val + ',') {
@@ -267,11 +286,13 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
             }
             setChapters([...chapters, ...newChaps]);
         } else {
-            const ch = addChapter(effectiveSubjectId, `Chapt. ${existingMain + 1} ${val}`);
+            const chName = subjectType === 'music' ? val : `Chapt. ${existingMain + 1} ${val}`;
+            const ch = addChapter(effectiveSubjectId, chName, totalMeasures);
             setChapters([...chapters, ch]);
         }
         setNewChapterName('');
-        playSFX('checklist_sound', theme);
+        setNewChapterMeasures('');
+        playSFX('glass_ui_check', theme);
     };
 
     const handleDeleteChapter = (id: string) => {
@@ -302,7 +323,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     const handleStudyChapter = (id: string) => {
         incrementStudyCount(id);
         setChapters(getChaptersForSubject(effectiveSubjectId));
-        playSFX('checklist_sound', theme);
+        playSFX('glass_ui_check', theme);
     };
 
     const handleFocusTypeChange = (id: string, focusType: FocusType) => {
@@ -343,12 +364,35 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                     {/* ── Subject Details ── */}
                     <div className="form-group">
                         <label>{t('subject_editor.name')}</label>
-                        <input value={name} onChange={e => setName(e.target.value)} placeholder={t('subject_editor.name_placeholder')} autoFocus />
+                        <input
+                            value={name}
+                            onChange={e => { setName(e.target.value); if (saveError) setSaveError(null); }}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+                            placeholder={t('subject_editor.name_placeholder')}
+                            autoFocus
+                        />
                     </div>
 
                     <div className="form-group">
                         <label>{t('subject_editor.tags')}</label>
                         <TagPicker selectedTags={selectedTags} onChange={setSelectedTags} />
+                    </div>
+
+                    <div className="form-group">
+                        <label>{t('subject_editor.type_label')}</label>
+                        <div className="subject-type-picker">
+                            {(['academic', 'music'] as SubjectType[]).map(type => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    className={`subject-type-btn${subjectType === type ? ' active' : ''}`}
+                                    onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                    onClick={() => { setSubjectType(type); if (saveError) setSaveError(null); }}
+                                >
+                                    {type === 'academic' ? `🎓 ${t('subject_editor.type_academic')}` : `🎵 ${t('subject_editor.type_music')}`}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     {!isEditing && (
@@ -380,9 +424,11 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                     {/* ── CHAPTERS SECTION ── */}
                     <div className="chapters-section">
                         <h3>
-                            {t('subject_editor.chapters_section')
-                                .replace('{main}', String(mainChapterCount))
-                                .replace('{sub}', String(subChapterCount))}
+                            {subjectType === 'music'
+                                ? t('subject_editor.music_pieces_section').replace('{count}', String(mainChapterCount))
+                                : t('subject_editor.chapters_section')
+                                    .replace('{main}', String(mainChapterCount))
+                                    .replace('{sub}', String(subChapterCount))}
                         </h3>
 
                         <div className="chapter-list">
@@ -404,11 +450,13 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                             </div>
                                             <button
                                                 onClick={() => handleStudyChapter(ch.id)}
+                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
                                                 className="chapter-study-btn"
                                                 title={t('subject_editor.mark_studied')}
                                             >+1</button>
                                             <button
                                                 onClick={() => handleDeleteChapter(ch.id)}
+                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
                                                 className="chapter-delete-btn"
                                                 title={t('subject_editor.delete_chapter')}
                                             >
@@ -422,6 +470,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                                     <button
                                                         key={ft}
                                                         onClick={() => handleFocusTypeChange(ch.id, isActive ? null : ft)}
+                                                        onMouseEnter={() => playSFX(SFX.HOVER, theme)}
                                                         className={`chapter-focus-btn${isActive ? ' active' : ''}`}
                                                         style={{ '--focus-color': FOCUS_TYPE_COLORS[ft] } as React.CSSProperties}
                                                         title={FOCUS_TYPE_LABELS[ft]}
@@ -431,6 +480,21 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                                 );
                                             })}
                                         </div>
+                                        {ch.totalMeasures && ch.totalMeasures > 0 && (
+                                            <div className="chapter-measure-row">
+                                                <span className="chapter-measure-label">
+                                                    {t('subject_editor.measure_progress')
+                                                        .replace('{current}', String(ch.currentMeasure ?? 0))
+                                                        .replace('{total}', String(ch.totalMeasures))}
+                                                </span>
+                                                <div className="chapter-measure-bar">
+                                                    <div
+                                                        className="chapter-measure-fill"
+                                                        style={{ '--measure-pct': `${((ch.currentMeasure ?? 0) / ch.totalMeasures) * 100}%` } as React.CSSProperties}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="chapter-spacing-row">
                                             <span className="chapter-spacing-label">{t('subject_editor.schedule')}</span>
                                             {editingSpacingId === ch.id ? (
@@ -449,6 +513,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                             ) : (
                                                 <button
                                                     onClick={() => setEditingSpacingId(ch.id)}
+                                                    onMouseEnter={() => playSFX(SFX.HOVER, theme)}
                                                     className={`chapter-spacing-btn${ch.spacingOverride ? ' has-override' : ''}`}
                                                     title={t('subject_editor.chapter_spacing_hint')}
                                                 >
@@ -462,24 +527,37 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                         </div>
 
                         {/* Add chapter input */}
-                        <div className="chapter-add-row">
+                        <div className={`chapter-add-row${subjectType === 'music' ? ' music' : ''}`}>
                             <input
                                 type="text"
-                                placeholder={t('subject_editor.chapter_input_placeholder')}
+                                placeholder={subjectType === 'music' ? t('subject_editor.music_piece_placeholder') : t('subject_editor.chapter_input_placeholder')}
                                 value={newChapterName}
                                 onChange={e => setNewChapterName(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') handleAddChapter(); }}
                                 aria-describedby="chapter-input-help"
                             />
+                            {subjectType === 'music' && (
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="9999"
+                                    placeholder={t('subject_editor.music_measures_placeholder')}
+                                    value={newChapterMeasures}
+                                    onChange={e => setNewChapterMeasures(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleAddChapter(); }}
+                                    className="chapter-measures-input"
+                                />
+                            )}
                             <button
                                 onClick={handleAddChapter}
+                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
                                 className="chapter-add-btn"
                             >
                                 <Plus size={16} />
                             </button>
                         </div>
                         <p id="chapter-input-help" className="chapter-input-help">
-                            {t('subject_editor.chapter_help')}
+                            {subjectType === 'music' ? t('subject_editor.music_piece_help') : t('subject_editor.chapter_help')}
                         </p>
 
                         {/* Chapter Preview */}
@@ -560,8 +638,8 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                         </p>
                     )}
                     <div className="subject-editor-footer-actions">
-                        <button className="btn btn-secondary" onClick={handleClose}>{t('subject_editor.cancel')}</button>
-                        <button className="btn btn-primary" onClick={handleSave}>{isEditing ? t('subject_editor.save') : t('subject_editor.create')}</button>
+                        <button className="btn btn-secondary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={handleClose}>{t('subject_editor.cancel')}</button>
+                        <button className="btn btn-primary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={handleSave}>{isEditing ? t('subject_editor.save') : t('subject_editor.create')}</button>
                     </div>
                 </div>
             </div>

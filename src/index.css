@@ -1,8 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
 
 :root {
-  --font-main: 'Outfit', sans-serif;
+  --font-main: 'Plus Jakarta Sans', sans-serif;
+  --font-heading: 'Lora', Georgia, serif;
 
   /* Magical Girl / Javanese Pastel Palette — punched up */
   --bg-color: #fce8f2;
@@ -1367,6 +1369,7 @@ h4 {
 
 h1 {
   font-size: 2.5rem;
+  font-family: var(--font-heading);
   letter-spacing: -0.02em;
 }
 
@@ -1685,7 +1688,9 @@ h2 {
 
 .planner-page.fade-in,
 .settings-tab.fade-in,
-.analytics-tab.fade-in {
+.analytics-tab.fade-in,
+.bingoals-root.fade-in,
+.home-page.fade-in {
   animation: pageFadeIn 0.35s ease forwards;
 }
 
@@ -2294,6 +2299,7 @@ input[type="checkbox"] {
 .heatmap-cell:hover:not(.empty) {
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  outline: 2px solid rgba(var(--primary-rgb), 0.55);
   z-index: 5;
 }
 
@@ -3726,6 +3732,11 @@ input[type="checkbox"] {
   border-radius: 0 !important;
 }
 
+/* ── Terminal: heading font reverts to monospace (no serif) ── */
+[data-theme^="terminal-"] h1 {
+  font-family: var(--font-main);
+}
+
 /* ── Terminal: hide mascot, use code logo, Sixtyfour font ── */
 [data-theme^="terminal-"] .btn-start-mascot {
   display: none !important;
@@ -4947,7 +4958,7 @@ input[type="checkbox"] {
    ══════════════════════════════════════════════════════════════════ */
 
 [data-theme="cyber-scan"] {
-  --font-main: 'Outfit', sans-serif;
+  --font-main: 'Plus Jakarta Sans', sans-serif;
   --bg-color: #050510;
   --bg-gradient: linear-gradient(160deg, #050510 0%, #080828 60%, #0a0518 100%);
   --card-bg: rgba(8, 12, 38, 0.88);

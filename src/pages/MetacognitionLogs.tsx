@@ -3,6 +3,7 @@ import { Wrench, ChevronLeft, ChevronRight, ClipboardCopy, Check } from 'lucide-
 import { getMetacognitionLogs, type MetacognitionLog } from '../lib/db';
 import { useTranslation } from '../lib/i18n';
 import { useSettings } from '../lib/settings';
+import { playSFX, SFX } from '../lib/sounds';
 import './MetacognitionLogs.css';
 
 function getMonthKey(dateStr: string): string {
@@ -85,6 +86,7 @@ export default function MetacognitionLogs() {
                     <div className="month-nav-container">
                         <button
                             className={`btn-icon month-nav-btn ${monthIndex >= monthKeys.length - 1 ? 'disabled' : ''}`}
+                            onMouseEnter={() => playSFX(SFX.HOVER)}
                             onClick={() => setMonthIndex(i => i + 1)}
                             disabled={monthIndex >= monthKeys.length - 1}
                         >
@@ -95,6 +97,7 @@ export default function MetacognitionLogs() {
                         </h2>
                         <button
                             className={`btn-icon month-nav-btn ${monthIndex <= 0 ? 'disabled' : ''}`}
+                            onMouseEnter={() => playSFX(SFX.HOVER)}
                             onClick={() => setMonthIndex(i => i - 1)}
                             disabled={monthIndex <= 0}
                         >
@@ -107,6 +110,7 @@ export default function MetacognitionLogs() {
                         <div className="copy-btn-container">
                             <button
                                 className={`btn btn-secondary copy-lm-btn ${copied ? 'copy-lm-btn-success' : ''}`}
+                                onMouseEnter={() => playSFX(SFX.HOVER)}
                                 onClick={() => {
                                     const text = formatForNotebookLM(monthLogs, currentMonthKey ? formatMonthLabel(currentMonthKey) : '');
                                     navigator.clipboard.writeText(text);
@@ -123,6 +127,7 @@ export default function MetacognitionLogs() {
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="btn btn-primary open-lm-btn"
+                                        onMouseEnter={() => playSFX(SFX.HOVER)}
                                     >
                                         Open in NotebookLM →
                                     </a>
@@ -200,6 +205,7 @@ export default function MetacognitionLogs() {
                             {monthKeys.map((_, i) => (
                                 <button
                                     key={i}
+                                    onMouseEnter={() => playSFX(SFX.HOVER)}
                                     onClick={() => setMonthIndex(i)}
                                     className={`dot-btn ${i === monthIndex ? 'active' : 'inactive'}`}
                                     aria-label={monthKeys[i] ? formatMonthLabel(monthKeys[i]) : ''}

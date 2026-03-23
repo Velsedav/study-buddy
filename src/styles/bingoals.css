@@ -11,7 +11,7 @@
   --white:  #ffffff;
   --black:  #4a4453;
   --green:  #8ed85e;
-  --mono:   'Outfit', sans-serif;
+  --mono:   'Plus Jakarta Sans', sans-serif;
   --border: 2px solid var(--black);
   --shadow: 4px 4px 0 var(--black);
   font-family: var(--mono);
@@ -147,7 +147,7 @@
   --green:  #00ff88;
   --border: 1px solid rgba(184, 255, 0, 0.4);
   --shadow: 0 0 14px rgba(184, 255, 0, 0.3);
-  --mono:   'Outfit', sans-serif;
+  --mono:   'Plus Jakarta Sans', sans-serif;
   color: #b8ff00;
 }
 
@@ -172,12 +172,18 @@
 
 /* ── Hide browser number spinners on counter inputs ── */
 .bingo-counter .numInput::-webkit-inner-spin-button,
-.bingo-counter .numInput::-webkit-outer-spin-button {
+.bingo-counter .numInput::-webkit-outer-spin-button,
+.bingoals-root .bingo-count-input::-webkit-inner-spin-button,
+.bingoals-root .bingo-count-input::-webkit-outer-spin-button,
+.bingoals-root .bingo-target-caption::-webkit-inner-spin-button,
+.bingoals-root .bingo-target-caption::-webkit-outer-spin-button {
   -webkit-appearance: none;
   appearance: none;
   margin: 0;
 }
-.bingo-counter .numInput[type=number] {
+.bingo-counter .numInput[type=number],
+.bingoals-root .bingo-count-input[type=number],
+.bingoals-root .bingo-target-caption[type=number] {
   -moz-appearance: textfield;
 }
 
@@ -258,6 +264,12 @@
   gap: 2px;
 }
 
+.bingoals-root .mini > *:last-child {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+
 /* ── Dashboard Grid ── */
 
 .bingoals-root .grid {
@@ -306,7 +318,7 @@
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  background: rgba(0,0,0,0.35);
+  background: linear-gradient(to bottom, rgba(var(--primary-rgb), 0.18), rgba(0,0,0,0.55));
   transition: opacity 120ms linear;
 }
 
@@ -325,6 +337,7 @@
 
 .bingoals-root .cardTitle,
 .bingoals-root .cardMeta,
+.bingoals-root .cardProgressBar,
 .bingoals-root .hoverProgress {
   position: relative;
   z-index: 2;
@@ -359,10 +372,23 @@
   opacity: .9;
 }
 
-.bingoals-root .hoverProgress {
+.bingoals-root .cardProgressBar {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  padding: 10px 12px;
+  height: 3px;
+  background: rgba(var(--primary-rgb), 0.15);
+}
+
+.bingoals-root .cardProgressFill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 300ms ease;
+}
+
+.bingoals-root .hoverProgress {
+  position: absolute;
+  left: 0; right: 0; bottom: 3px;
+  padding: 8px 12px;
   background: var(--card-bg);
   border-top: 1px solid var(--glass-border);
   color: var(--text-dark);
@@ -376,7 +402,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
 }
 
 /* ── Pills / bars ── */
@@ -409,33 +434,41 @@
 
 /* ── Buttons ── */
 
-/* ── Recording ── */
+/* ── Recording / Stop icons ── */
 
-@keyframes bingoRecBlink {
-  0%, 49%  { opacity: 1; }
-  50%, 100% { opacity: 0.25; }
+/* Red dot on DÉMARRER — pre-signals that clicking will start recording.
+   border-radius needs !important to beat the terminal theme's global `border-radius: 0 !important` reset. */
+.bingoals-root .bingo-rec-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50% !important;
+  background: #e53935;
+  flex-shrink: 0;
 }
 
-.bingoals-root .recBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+/* Terminal themes: global `border-radius: 0 !important` in index.css kills the circle.
+   Embrace the square but use --black (the dark contrasting color per terminal theme). */
+[data-theme^="terminal-"] .bingoals-root .bingo-rec-dot {
+  background: var(--black);
 }
 
-.bingoals-root .recDot {
-  width: 14px;
-  height: 14px;
-  background: var(--red);
-  border: var(--border);
-  outline: 2px solid var(--white);
-  outline-offset: -2px;
-  box-shadow: 2px 2px 0 var(--black);
-  animation: bingoRecBlink 900ms steps(1,end) infinite;
+/* Square on STOP — universal stop symbol */
+.bingoals-root .bingo-stop-square {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .bingoals-root .panelRecording {
   outline: 4px solid var(--white);
   outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bingoals-root .bingo-rec-dot { animation: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -474,12 +507,53 @@
 .bingoals-root .titleInput {
   font-size: 14px;
   font-weight: 900;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   text-transform: uppercase;
+}
+
+.bingoals-root .titleDisplay {
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  flex: 1;
+  min-width: 0;
+  cursor: text;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-sm);
+  transition: border-color 120ms ease, background 120ms ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bingoals-root .titleDisplay:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bingoals-root .bingo-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .bingoals-root .numInput  { width: 90px; }
 .bingoals-root .unitInput { width: 120px; }
+
+.bingoals-root .bingo-target-input {
+  width: 52px;
+  opacity: 0.55;
+  border-style: dashed;
+  transition: opacity 120ms ease, border-style 0ms;
+}
+
+.bingoals-root .bingo-target-input:focus {
+  opacity: 1;
+  border-style: solid;
+}
 
 .bingoals-root .bingo-delete-btn {
   opacity: 0.45;
@@ -536,6 +610,18 @@
 .bingoals-root .form {
   display: grid;
   gap: 8px;
+}
+
+.bingoals-root .bingo-create-goal-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 8px;
+}
+
+.bingoals-root .bingo-create-goal-helper {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.5;
 }
 
 /* ── Panels / lists ── */
@@ -604,12 +690,15 @@
 .bingoals-root .mediaTrashBtn {
   position: absolute;
   top: 10px; right: 10px;
+  z-index: 2;
   border: var(--border);
   background: var(--white);
   color: var(--black);
   width: 42px; height: 42px;
   cursor: pointer;
-  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 3px 3px 0 var(--black);
   opacity: 0;
   pointer-events: none;
@@ -618,6 +707,44 @@
 
 .bingoals-root .slide:hover .mediaTrashBtn { opacity: 1; pointer-events: auto; }
 .bingoals-root .mediaTrashBtn:hover { transform: translate(-1px,-1px); }
+
+.bingoals-root .mediaFullscreenBtn {
+  position: absolute;
+  top: 10px; left: 10px;
+  z-index: 2;
+  border: var(--border);
+  background: var(--white);
+  color: var(--black);
+  width: 42px; height: 42px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 3px 3px 0 var(--black);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 90ms linear, transform 90ms linear;
+}
+
+.bingoals-root .slide:hover .mediaFullscreenBtn { opacity: 1; pointer-events: auto; }
+.bingoals-root .mediaFullscreenBtn:hover { transform: translate(-1px,-1px); }
+
+/* Fullscreen: slide fills the screen */
+.bingoals-root .slide:fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  padding: 0;
+}
+
+.bingoals-root .slide:fullscreen .mediaFade { max-height: 100vh; }
+.bingoals-root .slide:fullscreen .slideImg { max-height: 100vh; max-width: 100vw; object-fit: contain; }
+.bingoals-root .slide:fullscreen .quote { font-size: 3rem; color: #fff; padding: 2rem; }
+.bingoals-root .slide:fullscreen .mediaTrashBtn,
+.bingoals-root .slide:fullscreen .mediaFullscreenBtn { opacity: 0; }
+.bingoals-root .slide:fullscreen:hover .mediaTrashBtn,
+.bingoals-root .slide:fullscreen:hover .mediaFullscreenBtn { opacity: 1; }
 
 /* ── Frequency badge ── */
 
@@ -642,11 +769,17 @@
 
 .bingoals-root .cardWrap:hover .cardActions { opacity: 1; pointer-events: auto; }
 
-.bingoals-root .cardActions .btn-icon { position: static; width: 30px; height: 30px; padding: 0; }
-
 .bingoals-root .cardActions .btn-icon {
+  position: static;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   opacity: 0;
   pointer-events: none;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border-radius: 6px;
+  color: #fff;
 }
 
 .bingoals-root .cardWrap:hover .btn-icon { opacity: 1; pointer-events: auto; }
@@ -860,6 +993,59 @@
   opacity: 0.6;
 }
 
+/* ── Title year badge ── */
+
+.bingoals-root .bingo-title-year {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Year navigation ── */
+
+.bingoals-root .bingo-year-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bingoals-root .bingo-year-label {
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5ch;
+  text-align: center;
+  color: var(--text-dark);
+}
+
+.bingoals-root .bingo-year-btn {
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+
+.bingoals-root .bingo-year-btn:hover {
+  color: var(--primary);
+}
+
+.bingoals-root .bingo-year-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
+}
+
+.bingoals-root .bingo-year-return {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+  color: var(--primary);
+  border-color: rgba(var(--primary-rgb), 0.35);
+  animation: bingoYearReturnIn 0.15s ease-out both;
+}
+
+@keyframes bingoYearReturnIn {
+  from { opacity: 0; transform: translateX(6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 /* ── Add objective card ── */
 
 .bingoals-root .bingo-add-card {
@@ -874,9 +1060,43 @@
 /* ── Utility layout classes (replaces inline styles) ── */
 
 .bingoals-root .bingo-panel-header-row { justify-content: space-between; align-items: center; }
-.bingoals-root .bingo-sub-meta-row { gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.bingoals-root .bingo-sub-meta-row { gap: 12px; flex-wrap: wrap; margin-top: 8px; align-items: flex-start; }
 .bingoals-root .bingo-gap-sm { gap: 8px; }
-.bingoals-root .bingo-sub-actions { gap: 8px; margin-left: auto; }
+.bingoals-root .bingo-sub-actions {
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.bingoals-root .panel .bingo-mark-done-btn {
+  font-size: 0.83em;
+  opacity: 0.65;
+  transition: opacity 120ms ease;
+}
+
+.bingoals-root .panel .bingo-mark-done-btn:hover {
+  opacity: 1;
+}
+
+.bingoals-root .panel .bingo-memory-action-btn,
+.bingoals-root .panel label.bingo-memory-action-btn {
+  font-size: 0.78em;
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+.bingoals-root .panel .bingo-memory-action-btn:hover,
+.bingoals-root .panel label.bingo-memory-action-btn:hover {
+  opacity: 1;
+}
+
+.bingoals-root .bingo-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
 .bingoals-root .bingo-bar-mt { margin-top: 10px; }
 .bingoals-root .bingo-form-mt { margin-top: 12px; }
 .bingoals-root .bingo-mt-sm { margin-top: 8px; }
@@ -891,6 +1111,373 @@
 .bingoals-root .bingo-time-field { width: 64px; text-align: center; font-size: 2rem; font-weight: 900; padding: 8px 0; }
 .bingoals-root .bingo-time-sep { font-size: 2rem; font-weight: 900; padding-bottom: 22px; line-height: 1; }
 
+/* ── Panel two-column layout (wide screens) ── */
+
+.bingoals-root .bingo-panel-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.bingoals-root .bingo-panel-left {
+  min-width: 0;
+}
+
+.bingoals-root .bingo-panel-right .memories {
+  margin-top: 12px;
+}
+
+.bingoals-root .bingo-start-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  /* physical press styles in analog section below */
+}
+
+@media (min-width: 900px) {
+  .bingoals-root .bingo-panel-body {
+    flex-direction: row;
+    gap: 20px;
+    align-items: flex-start;
+    margin-top: 10px;
+  }
+
+  /* Left: compact tracking widget */
+  .bingoals-root .bingo-panel-left {
+    flex: 0 0 260px;
+    min-width: 0;
+  }
+
+  /* Right: memories takes all remaining space */
+  .bingoals-root .bingo-panel-right {
+    flex: 1;
+    min-width: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding-left: 16px;
+  }
+
+  .bingoals-root .bingo-panel-right .memories {
+    margin-top: 0;
+  }
+
+  .bingoals-root .bingo-panel-left .bingo-bar-mt {
+    margin-top: 10px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .bingoals-root .bingo-panel-left {
+    flex-basis: 300px;
+  }
+}
+
+/* ── Add subobjective bottom button ── */
+
+.bingoals-root .bingo-add-sub-bottom {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  text-align: center;
+  opacity: 0.4;
+  border: 1px dashed var(--glass-border) !important;
+  border-radius: var(--border-radius);
+  transition: opacity 120ms ease, border-color 120ms ease;
+}
+
+.bingoals-root .bingo-add-sub-bottom:hover {
+  opacity: 1;
+  border-color: rgba(var(--primary-rgb), 0.5) !important;
+}
+
 /* ── Hidden file inputs ── */
 
 .bingo-file-input { display: none; }
+
+/* ── Analog instrument panel ── */
+
+/* Timer face: inset display panel */
+.bingoals-root .bingo-instrument-face {
+  position: relative;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  padding: 14px 12px 10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+/* Big monospace timer */
+.bingoals-root .bingo-instrument-timer {
+  font-size: 2.4rem;
+  font-family: 'JetBrains Mono', 'Cascadia Mono', 'Courier New', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--white);
+}
+
+/* Tiny edit pencil — visible only on face hover */
+.bingoals-root .bingo-instrument-edit {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  opacity: 0.25;
+  transition: opacity 120ms ease;
+}
+
+.bingoals-root .bingo-instrument-face:hover .bingo-instrument-edit {
+  opacity: 0.75;
+}
+
+/* Physical press feel on START/STOP */
+.bingoals-root .bingo-start-btn {
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  transition: transform 80ms ease, box-shadow 80ms ease, background 120ms ease;
+}
+
+.bingoals-root .bingo-start-btn:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+/* Count block: centered large number + caption */
+.bingoals-root .bingo-count-block {
+  margin: 12px 0 8px;
+  text-align: center;
+}
+
+.bingoals-root .bingo-count-value {
+  font-size: 2.2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: text;
+  transition: border-color 120ms ease, background 120ms ease;
+  color: var(--white);
+}
+
+.bingoals-root .bingo-count-value:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bingoals-root .bingo-count-input {
+  font-size: 2.2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  width: 100px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: var(--white);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Muted target/unit below the big count */
+.bingoals-root .bingo-count-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  opacity: 0.55;
+}
+
+.bingoals-root .bingo-target-caption {
+  width: 40px;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+  color: var(--white);
+  font-size: 0.8rem;
+  padding: 0 2px;
+  font-family: inherit;
+  border-radius: 0;
+}
+
+.bingoals-root .bingo-target-caption:focus {
+  outline: none;
+  border-bottom-color: rgba(255, 255, 255, 0.7);
+  opacity: 1;
+}
+
+.bingoals-root .bingo-unit-caption {
+  width: 80px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+  color: var(--white);
+  font-size: 0.8rem;
+  padding: 0 2px;
+  font-family: inherit;
+  border-radius: 0;
+}
+
+.bingoals-root .bingo-unit-caption:focus {
+  outline: none;
+  border-bottom-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Wide [−] [+] tap strip */
+.bingoals-root .bingo-tap-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.bingoals-root .bingo-tap-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  color: var(--white);
+  user-select: none;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  transition: background 80ms ease, transform 80ms ease, box-shadow 80ms ease;
+}
+
+.bingoals-root .bingo-tap-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.bingoals-root .bingo-tap-btn:active {
+  transform: translateY(2px);
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Tick-mark progress bar */
+.bingoals-root .bingo-tick-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.bingoals-root .bingo-tick-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: var(--bingo-fill, 0%);
+  background: var(--primary);
+  transition: width 300ms ease;
+}
+
+/* Tick notches overlay — divisions driven by --bingo-ticks (default 10) */
+.bingoals-root .bingo-tick-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0px,
+    transparent calc(100% / var(--bingo-ticks, 10) - 1px),
+    rgba(0, 0, 0, 0.35) calc(100% / var(--bingo-ticks, 10) - 1px),
+    rgba(0, 0, 0, 0.35) calc(100% / var(--bingo-ticks, 10))
+  );
+  pointer-events: none;
+}
+
+/* Instrument footer: last date left, actions right */
+.bingoals-root .bingo-instrument-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ── panelDone overrides for analog instrument elements ── */
+
+.bingoals-root .panelDone .bingo-instrument-face {
+  background: rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.bingoals-root .panelDone .bingo-instrument-timer,
+.bingoals-root .panelDone .bingo-count-value {
+  color: var(--black);
+}
+
+.bingoals-root .panelDone .bingo-count-caption {
+  color: var(--black);
+}
+
+.bingoals-root .panelDone .bingo-target-caption,
+.bingoals-root .panelDone .bingo-unit-caption {
+  color: var(--black);
+  border-bottom-color: rgba(0, 0, 0, 0.25);
+}
+
+.bingoals-root .panelDone .bingo-tap-btn {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.18);
+  color: var(--black);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.bingoals-root .panelDone .bingo-tap-btn:hover {
+  background: rgba(0, 0, 0, 0.18);
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.bingoals-root .panelDone .bingo-tap-btn:active {
+  box-shadow: none;
+}
+
+.bingoals-root .panelDone .bingo-tick-bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.bingoals-root .panelDone .bingo-tick-fill {
+  background: var(--black);
+}
+
+.bingoals-root .panelDone .bingo-tick-bar::after {
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0px,
+    transparent calc(100% / var(--bingo-ticks, 10) - 1px),
+    rgba(0, 0, 0, 0.2) calc(100% / var(--bingo-ticks, 10) - 1px),
+    rgba(0, 0, 0, 0.2) calc(100% / var(--bingo-ticks, 10))
+  );
+}
+
+.bingoals-root .panelDone .bingo-panel-right {
+  border-left-color: rgba(0, 0, 0, 0.12);
+}
+
+.bingoals-root .panelDone .bingo-instrument-edit {
+  color: var(--black);
+}
+
+.bingoals-root .panelDone .slide {
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--black);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.bingoals-root .panelDone .quote {
+  color: var(--black);
+}

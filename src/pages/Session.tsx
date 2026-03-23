@@ -4,14 +4,14 @@ import { formatSecondsMMSS } from '../lib/time';
 import { updateSubjectStats, saveSession } from '../lib/db';
 import { TECHNIQUES } from '../lib/techniques';
 import { open as openExternal } from '@tauri-apps/plugin-shell';
-import { playSFX } from '../lib/sounds';
+import { playSFX, SFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { useTranslation } from '../lib/i18n';
 import { METACOGNITION_QUESTIONS } from '../lib/metacognitionQuestions';
 import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
 import { isWorkoutMode } from '../lib/devMode';
-import { MUSCLE_GROUPS, CATEGORY_LABELS, loadWorkoutLog, markMuscleWorked, isMuscleEligible } from '../lib/workout';
-import type { WorkoutLog } from '../lib/workout';
+import { MUSCLE_GROUPS, CATEGORY_LABELS, loadWorkoutLog, markMuscleWorked, isMuscleEligible, loadWorkoutSets, saveWorkoutSet } from '../lib/workout';
+import type { WorkoutLog, WorkoutSets } from '../lib/workout';
 import './Session.css';
 
 interface PrepItem {
@@ -67,6 +67,35 @@ function saveCustomBreakItems(items: PrepItem[]) {
     localStorage.setItem(CUSTOM_BREAK_KEY, JSON.stringify(items));
 }
 
+const PAPER_NOTES_KEY = 'study-buddy-paper-notes';
+
+const PAPER_STEPS = [
+    'Titre + résumé + introduction',
+    'Titres de sections et sous-sections',
+    'Conclusions',
+    'Références bibliographiques',
+];
+
+interface PaperQuestion { id: string; label: string; placeholder: string; callout: string; }
+const PAPER_QUESTIONS: PaperQuestion[] = [
+    { id: 'cat', label: 'Catégorie',    placeholder: 'Type d\'étude : mesure, analyse, prototype…',       callout: 'info' },
+    { id: 'ctx', label: 'Contexte',     placeholder: 'Relation avec d\'autres travaux, bases théoriques…', callout: 'abstract' },
+    { id: 'cor', label: 'Correction',   placeholder: 'Les hypothèses semblent-elles valides ?',            callout: 'warning' },
+    { id: 'con', label: 'Contributions',placeholder: 'Principaux apports de l\'article…',                 callout: 'success' },
+    { id: 'cla', label: 'Clarté',       placeholder: 'Qualité de la rédaction…',                          callout: 'note' },
+];
+
+function loadPaperNotes(): { checked: boolean[]; notes: Record<string, string>; title: string } {
+    try {
+        const saved = localStorage.getItem(PAPER_NOTES_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return { checked: parsed.checked ?? [], notes: parsed.notes ?? {}, title: parsed.title ?? '' };
+        }
+    } catch {}
+    return { checked: [], notes: {}, title: '' };
+}
+
 export default function Session() {
     const navigate = useNavigate();
     const [session, setSession] = useState<any>(null);
@@ -80,10 +109,19 @@ export default function Session() {
     const allBreakItems = [...BREAK_CHECKLIST, ...customBreakItems];
     const [breakCheckedItems, setBreakCheckedItems] = useState<boolean[]>(allBreakItems.map(() => false));
     const [workoutLog, setWorkoutLog] = useState<WorkoutLog>(loadWorkoutLog);
+    const [workoutSets, setWorkoutSets] = useState<WorkoutSets>(loadWorkoutSets);
     const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'total-rest'>('none');
     const [restCountdown, setRestCountdown] = useState(600); // 10 minutes in seconds
     const [newCustomItem, setNewCustomItem] = useState('');
     const [newCustomBreakItem, setNewCustomBreakItem] = useState('');
+    const [displayedWorkMins, setDisplayedWorkMins] = useState(0);
+    const [paperChecked, setPaperChecked] = useState<boolean[]>(() => loadPaperNotes().checked);
+    const [paperNotes, setPaperNotes] = useState<Record<string, string>>(() => loadPaperNotes().notes);
+    const [paperTitle, setPaperTitle] = useState<string>(() => loadPaperNotes().title);
+    const [paperCopied, setPaperCopied] = useState(false);
+    const [obsidianCopied, setObsidianCopied] = useState(false);
+    const [intervalPhase, setIntervalPhase] = useState<'work' | 'rest'>('work');
+    const [intervalTick, setIntervalTick] = useState(30);
     const { theme, isTerminal } = useSettings();
     const { t } = useTranslation();
 
@@ -106,6 +144,11 @@ export default function Session() {
             paused
         }));
     }, [remaining, paused, session]);
+
+    // Persist paper reading notes to localStorage
+    useEffect(() => {
+        localStorage.setItem(PAPER_NOTES_KEY, JSON.stringify({ checked: paperChecked, notes: paperNotes, title: paperTitle }));
+    }, [paperChecked, paperNotes, paperTitle]);
 
     // Timer loop: only counts down, never triggers side effects
     useEffect(() => {
@@ -138,9 +181,38 @@ export default function Session() {
     // 10s Cooldown Warning Sound
     useEffect(() => {
         if (remaining === 10 && !paused) {
-            playSFX('10sec-cooldown', theme);
+            playSFX('glass_timer_warn10', theme);
         }
     }, [remaining, paused, theme]);
+
+    // 30/30 sub-timer: alternates 30s work/rest phases within a WORK block
+    const currentTechForInterval = session ? TECHNIQUES.find(t => t.id === session.draft[session.nowBlockIdx]?.technique_id) : null;
+    const is3030 = currentTechForInterval?.timerMode === 'interval_30_30' && session?.draft[session.nowBlockIdx]?.type === 'WORK';
+
+    useEffect(() => {
+        if (!is3030 || paused) return;
+        const timer = setTimeout(() => {
+            setIntervalTick(prev => {
+                if (prev <= 1) {
+                    setIntervalPhase(p => {
+                        const next = p === 'work' ? 'rest' : 'work';
+                        playSFX(next === 'rest' ? 'glass_timer_interval_rest' : 'glass_timer_interval_work', theme);
+                        return next;
+                    });
+                    return 30;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [is3030, paused, intervalTick]);
+
+    // Reset 30/30 state when switching blocks
+    useEffect(() => {
+        setIntervalPhase('work');
+        setIntervalTick(30);
+    }, [session?.nowBlockIdx]);
 
     async function handleBlockComplete() {
         if (!session) return;
@@ -158,7 +230,7 @@ export default function Session() {
         if (nextIdx >= session.draft.length) {
             handleSessionComplete();
         } else {
-            playSFX('switch-task', theme);
+            playSFX('glass_session_switch', theme);
             const newSession = {
                 ...session,
                 nowBlockIdx: nextIdx,
@@ -168,7 +240,7 @@ export default function Session() {
         }
     }
     function handleSessionComplete() {
-        playSFX('pause_theme', theme);
+        playSFX('glass_session_end', theme);
         setRestCountdown(600);
         setEndConfirmStep('total-rest');
         setPaused(true);
@@ -181,6 +253,26 @@ export default function Session() {
         const timer = setTimeout(() => setRestCountdown(r => r - 1), 1000);
         return () => clearTimeout(timer);
     }, [endConfirmStep, restCountdown]);
+
+    // Animate work minutes counter from 0 → total when rest screen opens
+    useEffect(() => {
+        if (endConfirmStep !== 'total-rest') return;
+        const total = Object.values(completedWorkMinutes).reduce((s, m) => s + m, 0);
+        if (total === 0) return;
+        setDisplayedWorkMins(0);
+        let rafId: number;
+        const startTime = performance.now();
+        const duration = 1000;
+        const animate = (now: number) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplayedWorkMins(Math.round(eased * total));
+            if (progress < 1) rafId = requestAnimationFrame(animate);
+        };
+        rafId = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(rafId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [endConfirmStep]);
 
     async function finishSession(completedAll = false, saveProgress = true) {
         if (!session) return;
@@ -253,6 +345,36 @@ export default function Session() {
         navigate('/');
     }
 
+    const hasPaperNotes = PAPER_QUESTIONS.some(q => (paperNotes[q.id] || '').trim().length > 0);
+
+    const paperHeader = paperTitle.trim() || 'Lecture article';
+
+    function generatePaperMarkdown(): string {
+        const steps = PAPER_STEPS.map((s, i) => `- [${paperChecked[i] ? 'x' : ' '}] ${s}`).join('\n');
+        const fiveC = PAPER_QUESTIONS.map(q => `**${q.label} :** ${paperNotes[q.id]?.trim() || '—'}`).join('\n\n');
+        return `## ${paperHeader}\n\n### Étapes\n${steps}\n\n### Les 5 C\n${fiveC}`;
+    }
+
+    function generateObsidianMarkdown(): string {
+        const steps = PAPER_STEPS.map((s, i) => `- [${paperChecked[i] ? 'x' : ' '}] ${s}`).join('\n');
+        const callouts = PAPER_QUESTIONS.map(q =>
+            `> [!${q.callout}] ${q.label}\n> ${paperNotes[q.id]?.trim() || '—'}`
+        ).join('\n\n');
+        return `## ${paperHeader}\n\n### Étapes\n${steps}\n\n${callouts}\n`;
+    }
+
+    function handleCopyPaperNotes() {
+        navigator.clipboard.writeText(generatePaperMarkdown());
+        setPaperCopied(true);
+        setTimeout(() => setPaperCopied(false), 2000);
+    }
+
+    function handleCopyObsidian() {
+        navigator.clipboard.writeText(generateObsidianMarkdown());
+        setObsidianCopied(true);
+        setTimeout(() => setObsidianCopied(false), 2000);
+    }
+
     if (!session) {
         return (
             <div className="session-page session-page-container">
@@ -287,9 +409,81 @@ export default function Session() {
                                 <div className="session-info-value">{currentBlock.objective}</div>
                             </div>
                         )}
-                        {tech ? (
+                        {tech?.timerMode === 'interval_30_30' ? (
+                            <div className="interval-3030-panel">
+                                <div className="session-info-label">{isTerminal ? '[T]' : '⚡'} {tech.name}</div>
+                                <div className={`interval-phase-display ${intervalPhase}`}>
+                                    <div className="interval-phase-label">
+                                        {intervalPhase === 'work'
+                                            ? (isTerminal ? '[>] Pratique' : '🎯 Pratique')
+                                            : (isTerminal ? '[~] Pause' : '😮‍💨 Pause')}
+                                    </div>
+                                    <div className="interval-tick">{intervalTick}s</div>
+                                    <div className="interval-phase-bar">
+                                        <div
+                                            className={`interval-phase-fill ${intervalPhase}`}
+                                            style={{ '--fill-pct': `${(intervalTick / 30) * 100}%` } as React.CSSProperties}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="session-tech-hint">{tech.hint}</div>
+                            </div>
+                        ) : tech?.id === 'paper1' ? (
+                            <div className="paper-panel">
+                                <div className="session-info-label">{isTerminal ? '[T]' : '⚡'} {tech.name}</div>
+                                <input
+                                    className="paper-title-input"
+                                    placeholder={t('session.paper_title_placeholder')}
+                                    value={paperTitle}
+                                    onChange={e => setPaperTitle(e.target.value)}
+                                />
+                                <div className="paper-section-label">{t('session.paper_steps_label')}</div>
+                                <div className="paper-steps">
+                                    {PAPER_STEPS.map((step, i) => (
+                                        <label key={i} className={`paper-step ${paperChecked[i] ? 'checked' : ''}`}>
+                                            <input
+                                                type="checkbox"
+                                                className="prep-item-checkbox"
+                                                checked={!!paperChecked[i]}
+                                                onChange={() => {
+                                                    const next = [...paperChecked];
+                                                    next[i] = !next[i];
+                                                    setPaperChecked(next);
+                                                    if (next[i]) playSFX('glass_ui_check', theme);
+                                                }}
+                                            />
+                                            <span className="prep-item-checkmark" />
+                                            <span className="paper-step-label">{step}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="paper-section-label">{t('session.paper_5c_label')}</div>
+                                <div className="paper-questions">
+                                    {PAPER_QUESTIONS.map(q => (
+                                        <div key={q.id} className="paper-question">
+                                            <label className="paper-question-label">{q.label}</label>
+                                            <textarea
+                                                className="paper-question-textarea"
+                                                placeholder={q.placeholder}
+                                                value={paperNotes[q.id] || ''}
+                                                onChange={e => setPaperNotes(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                                rows={2}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="paper-copy-row">
+                                    <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyPaperNotes}>
+                                        {paperCopied ? t('session.paper_copied') : t('session.paper_copy_btn')}
+                                    </button>
+                                    <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyObsidian}>
+                                        {obsidianCopied ? t('session.paper_copied') : t('session.paper_obsidian_btn')}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : tech ? (
                             <div className="session-tech-card">
-                                <strong>{tech.name}</strong>
+                                <div className="session-info-label">{isTerminal ? '[T]' : '⚡'} {tech.name}</div>
                                 <div className="session-tech-hint">{tech.hint}</div>
                             </div>
                         ) : (
@@ -326,11 +520,12 @@ export default function Session() {
                                         next[idx] = !next[idx];
                                         setCheckedItems(next);
                                         if (next[idx]) {
-                                            playSFX('checklist_sound', theme);
+                                            playSFX('glass_ui_check', theme);
                                         }
                                     }}
                                     className="prep-item-checkbox"
                                 />
+                                <span className="prep-item-checkmark" />
                                 <span className="prep-item-text">
                                     {item.emoji} {item.url ? (
                                         <a
@@ -419,11 +614,12 @@ export default function Session() {
                                         next[idx] = !next[idx];
                                         setBreakCheckedItems(next);
                                         if (next[idx]) {
-                                            playSFX('checklist_sound', theme);
+                                            playSFX('glass_ui_check', theme);
                                         }
                                     }}
                                     className="prep-item-checkbox"
                                 />
+                                <span className="prep-item-checkmark" />
                                 <span className="prep-item-text">
                                     {item.emoji} {item.url ? (
                                         <a
@@ -507,13 +703,21 @@ export default function Session() {
                                     <div className="workout-section-label">{CATEGORY_LABELS[cat]}</div>
                                     <div className="workout-muscle-list">
                                         {muscles.map(m => (
-                                            <button
-                                                key={m.id}
-                                                className="workout-muscle-btn"
-                                                onClick={() => setWorkoutLog(markMuscleWorked(m.id, workoutLog))}
-                                            >
-                                                {m.emoji} {m.label}
-                                            </button>
+                                            <div key={m.id} className="workout-muscle-row">
+                                                <button
+                                                    className="workout-muscle-btn"
+                                                    onClick={() => setWorkoutLog(markMuscleWorked(m.id, workoutLog))}
+                                                >
+                                                    {m.emoji} {m.label}
+                                                </button>
+                                                <input
+                                                    className="workout-sets-input"
+                                                    type="text"
+                                                    placeholder="3×12 80kg"
+                                                    value={workoutSets[m.id] ?? ''}
+                                                    onChange={e => setWorkoutSets(saveWorkoutSet(m.id, e.target.value, workoutSets))}
+                                                />
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
@@ -523,55 +727,57 @@ export default function Session() {
                     );
                 })()}
 
-                <div className={`timer-display ${paused ? 'paused' : 'running'}`}>
-                    {formatSecondsMMSS(remaining)}
+                <div className="session-timer-footer">
+                    {/* Mini timeline */}
+                    <div className="timeline-container">
+                        {session.draft.map((b: any, i: number) => {
+                            const isActive = i === session.nowBlockIdx;
+                            const isDone = i < session.nowBlockIdx;
+                            let blockClass = 'pending';
+                            if (isActive) blockClass = 'active';
+                            else if (isDone) blockClass = 'done';
+
+                            return (
+                                <div
+                                    key={i}
+                                    title={`${b.type} - ${b.minutes}m`}
+                                    className={`timeline-block ${blockClass}`}
+                                />
+                            );
+                        })}
+                    </div>
+
+                    <div className={`timer-display ${paused ? 'paused' : 'running'}${!paused && remaining < 60 ? ' critical' : !paused && remaining < 300 ? ' warning' : ''}`}>
+                        {(() => { const [mm, ss] = formatSecondsMMSS(remaining).split(':'); return <>{mm}<span className="timer-colon">:</span>{ss}</>; })()}
+                    </div>
+
+                    <div className="session-controls">
+                        <button
+                            className={`btn pause-resume-btn ${paused ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => { playSFX('glass_session_end', theme); setPaused(!paused); }}
+                        >
+                            {paused ? t('session.resume') : t('session.pause')}
+                        </button>
+                        <button className="btn btn-secondary" onClick={() => { playSFX('glass_ui_cancel', theme); handleBlockComplete(); }}>
+                            {t('session.skip_block')}
+                        </button>
+                        <button
+                            className="btn end-session-btn"
+                            onClick={() => {
+                                playSFX('glass_ui_cancel', theme);
+                                setPaused(true);
+                                setEndConfirmStep('confirm-stop');
+                            }}
+                        >
+                            {t('session.end_session')}
+                        </button>
+                    </div>
                 </div>
-
-                <div className="session-controls">
-                    <button
-                        className={`btn pause-resume-btn ${paused ? 'btn-primary' : 'btn-secondary'}`}
-                        onClick={() => { playSFX('pause_theme', theme); setPaused(!paused); }}
-                    >
-                        {paused ? t('session.resume') : t('session.pause')}
-                    </button>
-                    <button className="btn btn-secondary" onClick={() => { playSFX('cancelling', theme); handleBlockComplete(); }}>
-                        {t('session.skip_block')}
-                    </button>
-                    <button
-                        className="btn end-session-btn"
-                        onClick={() => {
-                            playSFX('cancelling', theme);
-                            setPaused(true);
-                            setEndConfirmStep('confirm-stop');
-                        }}
-                    >
-                        {t('session.end_session')}
-                    </button>
-                </div>
-            </div>
-
-            {/* Mini timeline */}
-            <div className="timeline-container">
-                {session.draft.map((b: any, i: number) => {
-                    const isActive = i === session.nowBlockIdx;
-                    const isDone = i < session.nowBlockIdx;
-                    let blockClass = 'pending';
-                    if (isActive) blockClass = 'active';
-                    else if (isDone) blockClass = 'done';
-
-                    return (
-                        <div
-                            key={i}
-                            title={`${b.type} - ${b.minutes}m`}
-                            className={`timeline-block ${blockClass}`}
-                        />
-                    );
-                })}
             </div>
 
             {/* End Session Confirmation Modal */}
             {endConfirmStep !== 'none' && (
-                <div className="modal-overlay" onClick={() => { setEndConfirmStep('none'); setPaused(false); }}>
+                <div className="modal-overlay" onClick={() => { playSFX(SFX.CANCEL, theme); setEndConfirmStep('none'); setPaused(false); }}>
                     <div className="modal-content confirm-modal-content" onClick={e => e.stopPropagation()}>
                         {endConfirmStep === 'confirm-stop' && (
                             <>
@@ -580,10 +786,10 @@ export default function Session() {
                                     {t('session.stop_text')}
                                 </p>
                                 <div className="confirm-modal-actions">
-                                    <button className="btn btn-primary" onClick={() => { setEndConfirmStep('none'); setPaused(false); }}>
+                                    <button className="btn btn-primary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={() => { setEndConfirmStep('none'); setPaused(false); }}>
                                         {t('session.keep_studying')}
                                     </button>
-                                    <button className="btn btn-secondary confirm-btn-danger" onClick={() => setEndConfirmStep('confirm-save')}>
+                                    <button className="btn btn-secondary confirm-btn-danger" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={() => { playSFX(SFX.SESSION_END, theme); setEndConfirmStep('confirm-save'); }}>
                                         {t('session.yes_stop')}
                                     </button>
                                 </div>
@@ -597,10 +803,10 @@ export default function Session() {
                                     {t('session.save_text')}
                                 </p>
                                 <div className="confirm-modal-actions">
-                                    <button className="btn btn-primary" onClick={() => finishSession(false, true)}>
+                                    <button className="btn btn-primary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={() => { playSFX(SFX.CHECK, theme); finishSession(false, true); }}>
                                         {t('session.save_progress')}
                                     </button>
-                                    <button className="btn btn-secondary" onClick={() => finishSession(false, false)}>
+                                    <button className="btn btn-secondary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={() => { playSFX(SFX.CANCEL, theme); finishSession(false, false); }}>
                                         {t('session.discard')}
                                     </button>
                                 </div>
@@ -614,21 +820,49 @@ export default function Session() {
                                     {t('session.session_complete')}
                                 </p>
 
+                                {Object.keys(completedWorkMinutes).length > 0 && (
+                                    <div className="total-rest-summary">
+                                        <span className="total-rest-work-mins">{displayedWorkMins}</span> {t('session.rest_min_label')}
+                                        {Object.keys(completedWorkMinutes).length > 1 && (
+                                            <> · {Object.keys(completedWorkMinutes).length} {t('session.rest_subjects')}</>
+                                        )}
+                                    </div>
+                                )}
+
                                 <img
                                     src="/assets/images/learning center/01_mascot-diffuse-mode.png"
                                     alt="Diffuse mode rest"
                                     className="total-rest-img"
                                 />
 
-                                <p className="total-rest-desc">
-                                    {t('session.rest_desc').split('\n').map((line, i) => (
-                                        <span key={i}>{line}{i < t('session.rest_desc').split('\n').length - 1 && <br />}</span>
-                                    ))}
-                                </p>
+                                <div className="total-rest-desc">
+                                    <p>{t('session.rest_desc').split('\n\n')[0]}</p>
+                                    <p className="total-rest-nothing">{t('session.rest_nothing')}</p>
+                                    <ul className="total-rest-no-list">
+                                        {t('session.rest_no_list').split('|').map((item, i) => (
+                                            <li key={i} className="total-rest-no-item">{item}</li>
+                                        ))}
+                                    </ul>
+                                    <p>{t('session.rest_desc').split('\n\n')[1]}</p>
+                                </div>
+
+                                {hasPaperNotes && (
+                                    <div className="total-rest-paper-card">
+                                        <div className="total-rest-paper-label">{isTerminal ? '[N]' : '📄'} {paperTitle.trim() || t('session.paper_notes_card')}</div>
+                                        <div className="paper-copy-row">
+                                            <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyPaperNotes}>
+                                                {paperCopied ? t('session.paper_copied') : t('session.paper_copy_btn')}
+                                            </button>
+                                            <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyObsidian}>
+                                                {obsidianCopied ? t('session.paper_copied') : t('session.paper_obsidian_btn')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Countdown */}
-                                <div className={`total-rest-countdown ${restCountdown === 0 ? 'done' : 'running'}`}>
-                                    {String(Math.floor(restCountdown / 60)).padStart(2, '0')}:{String(restCountdown % 60).padStart(2, '0')}
+                                <div className={`total-rest-countdown ${restCountdown === 0 ? 'done' : restCountdown < 120 ? 'urgent' : restCountdown < 360 ? 'mid' : 'calm'}`}>
+                                    {String(Math.floor(restCountdown / 60)).padStart(2, '0')}<span className="timer-colon">:</span>{String(restCountdown % 60).padStart(2, '0')}
                                 </div>
 
                                 <div className="total-rest-actions">

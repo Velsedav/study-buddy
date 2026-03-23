@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { playSFX, SFX } from '../lib/sounds';
 
 export interface SelectOption {
     value: string;
@@ -35,7 +36,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, opt
             className={`custom-select-container ${className || ''}`}
             ref={containerRef}
             style={style}
-            onClick={() => setIsOpen(!isOpen)}
+            onMouseEnter={() => playSFX(SFX.HOVER)}
+            onClick={() => { if (!isOpen) playSFX(SFX.ENTER_MENU); setIsOpen(!isOpen); }}
         >
             <div className={`custom-select-value ${isOpen ? 'open' : ''}`}>
                 <span>{selectedOption?.label}</span>
@@ -47,8 +49,10 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, opt
                         <div
                             key={opt.value}
                             className={`custom-select-option ${opt.value === value ? 'selected' : ''}`}
+                            onMouseEnter={() => playSFX(SFX.HOVER)}
                             onClick={(e) => {
                                 e.stopPropagation();
+                                playSFX(SFX.CHECK);
                                 onChange(opt.value);
                                 setIsOpen(false);
                             }}

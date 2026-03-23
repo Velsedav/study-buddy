@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, X, Flag, Trash2 } from 'lucide-react';
 import type { Session, Subject, SessionBlock } from '../lib/db';
 import type { Chapter } from '../lib/chapters';
+import { getChaptersForSubject } from '../lib/chapters';
 import { useSettings } from '../lib/settings';
 import { useTranslation } from '../lib/i18n';
 import { playSFX } from '../lib/sounds';
@@ -9,18 +10,36 @@ import { formatHM } from '../lib/time';
 import './CalendarPanel.css';
 
 // ── Goal Dates ──
+type DeadlineType = 'exam' | 'deadline' | 'challenge';
+
 interface GoalDate {
     id: string;
     date: string;
     label: string;
+    type?: DeadlineType;
+    subject_id?: string;
+    chapter_name?: string;
 }
 
 const GOAL_DATES_KEY = 'study-buddy-goal-dates';
 
+const DEADLINE_ICONS: Record<DeadlineType, string> = {
+    exam: '🎓',
+    deadline: '📋',
+    challenge: '⚡',
+};
+
+function getDeadlineIcon(type?: DeadlineType): string {
+    return DEADLINE_ICONS[type ?? 'deadline'];
+}
+
 function loadGoalDates(): GoalDate[] {
     try {
         const saved = localStorage.getItem(GOAL_DATES_KEY);
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return parsed.map((g: GoalDate) => ({ ...g, type: g.type ?? 'deadline' }));
+        }
     } catch { }
     return [];
 }
@@ -73,6 +92,11 @@ export default function CalendarPanel({
     const [showGoalModal, setShowGoalModal] = useState(false);
     const [newGoalDate, setNewGoalDate] = useState('');
     const [newGoalLabel, setNewGoalLabel] = useState('');
+    const [newGoalType, setNewGoalType] = useState<DeadlineType>('deadline');
+    const [newGoalSubjectQuery, setNewGoalSubjectQuery] = useState('');
+    const [newGoalSubjectId, setNewGoalSubjectId] = useState<string | null>(null);
+    const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
+    const [newGoalChapterName, setNewGoalChapterName] = useState<string | null>(null);
     const [removedGoalToast, setRemovedGoalToast] = useState<GoalDate | null>(null);
     const removeToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -83,11 +107,27 @@ export default function CalendarPanel({
 
     const addGoalDate = () => {
         if (!newGoalDate || !newGoalLabel.trim()) return;
-        updateGoalDates([...goalDates, { id: crypto.randomUUID(), date: newGoalDate, label: newGoalLabel.trim() }]);
+        const entry: GoalDate = {
+            id: crypto.randomUUID(),
+            date: newGoalDate,
+            label: newGoalLabel.trim(),
+            type: newGoalType,
+            ...(newGoalSubjectId ? { subject_id: newGoalSubjectId } : {}),
+            ...(newGoalChapterName ? { chapter_name: newGoalChapterName } : {}),
+        };
+        updateGoalDates([...goalDates, entry]);
         setNewGoalDate('');
         setNewGoalLabel('');
+        setNewGoalType('deadline');
+        setNewGoalSubjectQuery('');
+        setNewGoalSubjectId(null);
+        setNewGoalChapterName(null);
         setShowGoalModal(false);
     };
+
+    const filteredSubjects = newGoalSubjectQuery.trim().length > 0
+        ? subjects.filter(s => s.name.toLowerCase().includes(newGoalSubjectQuery.toLowerCase()))
+        : [];
 
     const removeGoalDate = (id: string) => {
         const removed = goalDates.find(g => g.id === id);
@@ -150,9 +190,9 @@ export default function CalendarPanel({
 
     // ── Deadlines ──
     const allDeadlines = useMemo(() => [
-        ...goalDates.map(g => ({ ...g, type: 'manual' as const, result: null })),
+        ...goalDates.map(g => ({ ...g, sourceType: 'manual' as const, deadlineType: (g.type ?? 'deadline') as DeadlineType, result: null })),
         ...subjects.filter(s => s.deadline).map(s => ({
-            id: s.id, label: s.name, date: s.deadline!, type: 'subject' as const, result: s.result
+            id: s.id, label: s.name, date: s.deadline!, sourceType: 'subject' as const, deadlineType: 'exam' as DeadlineType, result: s.result
         }))
     ], [goalDates, subjects]);
 
@@ -233,6 +273,93 @@ export default function CalendarPanel({
                         </div>
                         <div className="modal-body-form">
                             <div className="form-group">
+                                <label>{t('calendar.type_label')}</label>
+                                <div className="goal-type-picker">
+                                    {(['exam', 'deadline', 'challenge'] as const).map(type => (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            className={`goal-type-btn goal-type-btn-${type}${newGoalType === type ? ' active' : ''}`}
+                                            onClick={() => setNewGoalType(type)}
+                                        >
+                                            <span className="goal-type-icon">{DEADLINE_ICONS[type]}</span>
+                                            <span>{t(`calendar.type_${type}`)}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>{t('calendar.subject_label')}</label>
+                                <div className="goal-subject-search-wrapper">
+                                    <input
+                                        type="text"
+                                        value={newGoalSubjectQuery}
+                                        onChange={e => {
+                                            setNewGoalSubjectQuery(e.target.value);
+                                            setNewGoalSubjectId(null);
+                                            setNewGoalChapterName(null);
+                                            setShowSubjectDropdown(true);
+                                        }}
+                                        onFocus={() => setShowSubjectDropdown(true)}
+                                        onBlur={() => setTimeout(() => setShowSubjectDropdown(false), 150)}
+                                        placeholder={t('calendar.subject_placeholder')}
+                                        className={`form-input-full${newGoalSubjectId ? ' goal-subject-linked' : ''}`}
+                                    />
+                                    {newGoalSubjectId && (
+                                        <button
+                                            type="button"
+                                            className="goal-subject-clear"
+                                            onClick={() => { setNewGoalSubjectId(null); setNewGoalSubjectQuery(''); setNewGoalChapterName(null); }}
+                                            aria-label="Clear subject"
+                                        >×</button>
+                                    )}
+                                    {showSubjectDropdown && filteredSubjects.length > 0 && (
+                                        <div className="goal-subject-dropdown">
+                                            {filteredSubjects.map(s => (
+                                                <div
+                                                    key={s.id}
+                                                    className="goal-subject-dropdown-item"
+                                                    onMouseDown={() => {
+                                                        setNewGoalSubjectId(s.id);
+                                                        setNewGoalSubjectQuery(s.name);
+                                                        if (!newGoalLabel.trim()) setNewGoalLabel(s.name);
+                                                        setShowSubjectDropdown(false);
+                                                    }}
+                                                >
+                                                    {s.name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            {newGoalSubjectId && (() => {
+                                const subjectChapters = getChaptersForSubject(newGoalSubjectId);
+                                if (subjectChapters.length === 0) return null;
+                                return (
+                                    <div className="form-group">
+                                        <label>{t('calendar.chapter_label')}</label>
+                                        <div className="goal-chapter-list">
+                                            <div
+                                                className={`goal-chapter-item${!newGoalChapterName ? ' active' : ''}`}
+                                                onClick={() => setNewGoalChapterName(null)}
+                                            >
+                                                —
+                                            </div>
+                                            {subjectChapters.map(ch => (
+                                                <div
+                                                    key={ch.id}
+                                                    className={`goal-chapter-item${newGoalChapterName === ch.name ? ' active' : ''}`}
+                                                    onClick={() => setNewGoalChapterName(ch.name)}
+                                                >
+                                                    {ch.name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                            <div className="form-group">
                                 <label htmlFor="goal-label-input">{t('calendar.label_label')}</label>
                                 <input id="goal-label-input" type="text" value={newGoalLabel} onChange={e => setNewGoalLabel(e.target.value)}
                                     placeholder={t('calendar.label_placeholder')} className="form-input-full" />
@@ -242,7 +369,7 @@ export default function CalendarPanel({
                                 <input id="goal-date-input" type="date" value={newGoalDate} onChange={e => setNewGoalDate(e.target.value)}
                                     className="form-input-full" />
                             </div>
-                            <button className="btn btn-primary w-full" onClick={addGoalDate}
+                            <button className="btn btn-primary w-full" onMouseEnter={() => playSFX('glass_ui_hover', theme)} onClick={addGoalDate}
                                 disabled={!newGoalDate || !newGoalLabel.trim()}>
                                 {t('calendar.add_goal_btn')}
                             </button>
@@ -252,13 +379,13 @@ export default function CalendarPanel({
                                 <h4 className="existing-goals-title">{t('calendar.existing_goals')}</h4>
                                 <div className="goals-list">
                                     {goalDates.sort((a, b) => a.date.localeCompare(b.date)).map(g => (
-                                        <div key={g.id} className="goal-item">
+                                        <div key={g.id} className={`goal-item goal-item-${g.type ?? 'deadline'}`}>
                                             <div>
-                                                <span className="goal-item-icon">🏁</span>
+                                                <span className="goal-item-icon">{getDeadlineIcon(g.type)}</span>
                                                 <strong>{g.label}</strong>
                                                 <span className="goal-item-date">{new Date(g.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                             </div>
-                                            <button className="btn-icon goal-remove-btn" onClick={() => removeGoalDate(g.id)} aria-label={`${t('calendar.remove_goal')}: ${g.label}`}>
+                                            <button className="btn-icon goal-remove-btn" onMouseEnter={() => playSFX('glass_ui_hover', theme)} onClick={() => removeGoalDate(g.id)} aria-label={`${t('calendar.remove_goal')}: ${g.label}`}>
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
@@ -280,16 +407,18 @@ export default function CalendarPanel({
                             {currentHeatmapMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
                         </h3>
                         <div className="heatmap-nav">
-                            <button className="btn btn-secondary add-deadline-btn" onClick={() => setShowGoalModal(true)}>
+                            <button className="btn btn-secondary add-deadline-btn" onMouseEnter={() => playSFX('glass_ui_hover', theme)} onClick={() => setShowGoalModal(true)}>
                                 <span className="add-deadline-plus">+</span> {t('calendar.add_deadline')}
                             </button>
                             <button className="btn btn-icon glass heatmap-nav-btn"
                                 aria-label="Previous month"
+                                onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                                 onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}>
                                 <ChevronLeft size={18} />
                             </button>
                             <button className="btn btn-icon glass heatmap-nav-btn"
                                 aria-label="Next month"
+                                onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                                 onClick={() => setCurrentHeatmapMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}>
                                 <ChevronRight size={18} />
                             </button>
@@ -330,12 +459,12 @@ export default function CalendarPanel({
                                 <div
                                     key={i}
                                     className={`heatmap-cell ${getIntensityClass(d.mins)} ${isRainbow ? 'streak-rainbow' : isFlame ? 'streak-flame' : ''} ${goal ? 'goal-cell' : ''} ${d.mins > 0 || goal ? 'heatmap-cell-interactive' : ''}`}
-                                    title={goal ? `🏁 ${goal.label} • ${d.tooltip}` : d.tooltip}
-                                    onMouseEnter={() => { if (d.mins > 0 || goal) playSFX('hover_sound', theme); }}
+                                    title={goal ? `${getDeadlineIcon(goal.type)} ${goal.label} • ${d.tooltip}` : d.tooltip}
+                                    onMouseEnter={() => { if (d.mins > 0 || goal) playSFX('glass_ui_hover', theme); }}
                                     onClick={() => { if (d.mins > 0) setSelectedLogDate(d.date); }}
                                 >
                                     {d.date.getDate()}
-                                    {goal && <span className="goal-flag" title={goal.label}>🏁</span>}
+                                    {goal && <span className={`goal-flag goal-flag-${goal.type ?? 'deadline'}`} title={goal.label}>{getDeadlineIcon(goal.type)}</span>}
                                 </div>
                             );
                         })}
@@ -346,7 +475,7 @@ export default function CalendarPanel({
                         <span className="heatmap-cell h-level-2" />
                         <span className="heatmap-cell h-level-3" />
                         <span className="heatmap-cell h-level-4" /> More
-                        <span className="heatmap-legend-goal">🏁 {t('calendar.goal_marker')}</span>
+                        <span className="heatmap-legend-goal">📋 {t('calendar.goal_marker')}</span>
                     </div>
                 </div>
 
@@ -370,16 +499,18 @@ export default function CalendarPanel({
                                     days > 0 && `${days}d`,
                                 ].filter(Boolean).join(' ');
 
-                                let cardClass = 'deadline-card';
+                                let cardClass = `deadline-card deadline-type-${g.deadlineType}`;
                                 if (totalDays <= 7) cardClass += ' urgent';
                                 else if (totalDays <= 30) cardClass += ' soon';
 
+                                const linkedSubject = g.subject_id ? subjects.find(s => s.id === g.subject_id) : null;
                                 return (
                                     <div key={`${g.id}-${idx}`} className={cardClass}>
-                                        <div className="deadline-card-title">🏁 {g.label}</div>
+                                        <div className="deadline-card-title">{getDeadlineIcon(g.deadlineType)} {g.label}</div>
+                                        {linkedSubject && <div className="deadline-card-subject">{linkedSubject.name}{g.chapter_name ? ` › ${g.chapter_name}` : ''}</div>}
                                         <div className="deadline-card-date">{new Date(g.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                                         <div className="deadline-card-countdown">{countdown}</div>
-                                        {g.type === 'manual' && (
+                                        {g.sourceType === 'manual' && (
                                             <button className="btn-icon remove-deadline-btn deadline-remove-btn" onClick={() => removeGoalDate(g.id)} aria-label={`${t('calendar.remove_deadline')}: ${g.label}`}>
                                                 <Trash2 size={14} />
                                             </button>

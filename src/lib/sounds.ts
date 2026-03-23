@@ -1,34 +1,62 @@
+// ── Sound Effect Registry ──
+// Naming convention: {theme}_{category}_{action}
+// Themes: glass_ | term_
+// Categories: ui_ | session_ | timer_ | reward_ | bingo_
+
 export const SFX = {
-    HOVER: 'hover_sound',
-    CHECKLIST: 'checklist_sound',
-    PAUSE: 'pause_theme',
-    START_SESSION: 'start_study_session',
-    SWITCH_TASK: 'switch-task',
-    DROP_BLOCK: 'drop_block',
-    DRAG_UP: 'drag_up',
-    DRAG_DOWN: 'drag_down',
-    CANCELLING: 'cancelling',
-    ENTER_LESSON: 'entering_lesson',
-    PERFECT_SCORE: 'perfect_score',
-    COOLDOWN: '10sec-cooldown'
+    // UI — ambient/functional
+    HOVER:          'glass_ui_hover',
+    CHECK:          'glass_ui_check',
+    CANCEL:         'glass_ui_cancel',
+    DROP:           'glass_ui_drop',
+    DRAG_UP:        'glass_ui_drag_up',
+    DRAG_DOWN:      'glass_ui_drag_down',
+    ENTER_MENU:     'glass_enter_menu',
+    // Session
+    SESSION_START:  'glass_session_start',
+    SESSION_SWITCH: 'glass_session_switch',
+    SESSION_END:    'glass_session_end',
+    SESSION_FINISH: 'glass_session_finish',
+    ENTER_LESSON:   'glass_session_enter_lesson',
+    // Timer — play over ongoing sounds
+    WARN_10:        'glass_timer_warn10',
+    INTERVAL_WORK:  'glass_timer_interval_work',
+    INTERVAL_REST:  'glass_timer_interval_rest',
+    // Reward
+    REWARD_CORRECT: 'glass_reward_correct',
+    REWARD_PERFECT: 'glass_reward_perfect',
+    // Bingoals
+    BINGO_CHECK:    'glass_bingo_check',
+    BINGO_LINE:     'glass_bingo_line',
+    BINGO_COMPLETE: 'glass_bingo_complete',
+    BINGO_ADD:      'glass_bingo_add',
 } as const;
 
 export type SoundEffect = typeof SFX[keyof typeof SFX];
 
 /** Human-friendly display names for each sound effect */
 export const SFX_LABELS: Record<SoundEffect, string> = {
-    hover_sound: 'Hover',
-    checklist_sound: 'Checklist',
-    pause_theme: 'Pause',
-    start_study_session: 'Start Session',
-    'switch-task': 'Switch Task',
-    drop_block: 'Drop Block',
-    drag_up: 'Drag Up',
-    drag_down: 'Drag Down',
-    cancelling: 'Cancel / Error',
-    entering_lesson: 'Enter Lesson',
-    perfect_score: 'Perfect Score',
-    '10sec-cooldown': '10s Warning',
+    glass_ui_hover:               'Hover',
+    glass_ui_check:               'Checklist',
+    glass_ui_cancel:              'Cancel / Error',
+    glass_ui_drop:                'Drop Block',
+    glass_ui_drag_up:             'Drag Up',
+    glass_ui_drag_down:           'Drag Down',
+    glass_enter_menu:             'Enter Menu',
+    glass_session_start:          'Start Session',
+    glass_session_switch:         'Switch Task',
+    glass_session_end:            'Session End',
+    glass_session_finish:         'Session Finish',
+    glass_session_enter_lesson:   'Enter Lesson',
+    glass_timer_warn10:           '10s Warning',
+    glass_timer_interval_work:    'Interval — Work',
+    glass_timer_interval_rest:    'Interval — Rest',
+    glass_reward_correct:         'Correct Answer',
+    glass_reward_perfect:         'Perfect Score',
+    glass_bingo_check:            'Bingo Check',
+    glass_bingo_line:             'Bingo Line',
+    glass_bingo_complete:         'Bingo Complete',
+    glass_bingo_add:              'Bingo Add Goal',
 };
 
 // ── Volume Management ──
@@ -70,6 +98,43 @@ export function getEffectiveVolume(effectName: SoundEffect): number {
 // Initialize on load
 loadVolumeSettings();
 
+// ── Theme Resolution ──
+
+/** Module-level active theme — updated by SettingsProvider on every theme change */
+let currentTheme: string = 'glassmorphism';
+export function setAudioTheme(theme: string) { currentTheme = theme; }
+
+/** Terminal-theme variants that have been recorded and are available on disk */
+const TERM_SOUNDS = new Set([
+    // UI
+    'term_ui_hover',
+    'term_ui_check',
+    'term_ui_cancel',
+    'term_ui_drop',
+    'term_ui_drag_up',
+    'term_ui_drag_down',
+    // Navigation
+    'term_enter_menu',
+    // Session
+    'term_session_start',
+    'term_session_switch',
+    'term_session_end',
+    'term_session_enter_lesson',
+    // Timer
+    'term_timer_warn10',
+    'term_timer_interval_work',
+    'term_timer_interval_rest',
+    // Bingo
+    'term_bingo_check',
+]);
+
+/** Resolve the actual file name to play, swapping glass_ → term_ when available */
+function resolveFileName(effectName: SoundEffect, theme: string): string {
+    if (!theme.startsWith('terminal-')) return effectName;
+    const termVariant = effectName.replace(/^glass_/, 'term_');
+    return TERM_SOUNDS.has(termVariant) ? termVariant : effectName;
+}
+
 // ── Audio Cache & Playback ──
 
 const audioCache: { [key: string]: HTMLAudioElement } = {};
@@ -85,11 +150,14 @@ export function stopAllSounds() {
     }
 }
 
-export function playSFX(effectName: SoundEffect, theme: string = 'glassmorphism') {
-    const isTerminalTheme = theme === 'orange-terminal' || theme === 'green-terminal';
-    const prefix = isTerminalTheme ? '02_' : '01_';
+/** Timer-category sounds play over ongoing audio — they are never blocked by stopAllSounds */
+function isTimerSound(effectName: string): boolean {
+    return effectName.includes('timer_');
+}
 
-    const fileName = `${prefix}${effectName}.mp3`;
+export function playSFX(effectName: SoundEffect, theme: string = currentTheme) {
+    const resolved = resolveFileName(effectName, theme);
+    const fileName = `${resolved}.mp3`;
     const filePath = `/audio/${fileName}`;
 
     try {
@@ -97,8 +165,10 @@ export function playSFX(effectName: SoundEffect, theme: string = 'glassmorphism'
             audioCache[filePath] = new Audio(filePath);
         }
 
-        // Stop any currently playing sounds before starting new one
-        stopAllSounds();
+        // Timer and hover sounds play over ongoing audio; all others stop the current sound first
+        if (!isTimerSound(effectName) && effectName !== 'glass_ui_hover') {
+            stopAllSounds();
+        }
 
         const audio = audioCache[filePath];
         audio.volume = getEffectiveVolume(effectName);
@@ -112,26 +182,7 @@ export function playSFX(effectName: SoundEffect, theme: string = 'glassmorphism'
     }
 }
 
-/** Play a specific SFX for testing in settings (always uses 01_ prefix) */
+/** Play a specific SFX for testing in settings — respects current theme */
 export function testSFX(effectName: SoundEffect) {
-    const fileName = `01_${effectName}.mp3`;
-    const filePath = `/audio/${fileName}`;
-
-    try {
-        if (!audioCache[filePath]) {
-            audioCache[filePath] = new Audio(filePath);
-        }
-
-        // Stop any currently playing sounds before testing
-        stopAllSounds();
-
-        const audio = audioCache[filePath];
-        audio.volume = getEffectiveVolume(effectName);
-        audio.currentTime = 0;
-        audio.play().catch(e => {
-            console.warn(`Could not play test sound ${fileName}:`, e.message);
-        });
-    } catch (e) {
-        console.error("Audio test error:", e);
-    }
+    playSFX(effectName);
 }

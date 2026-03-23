@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useCountUp } from '../lib/useCountUp';
 import { CalendarDays, Clock, CheckCircle, Lightbulb, Pen, ArrowUp, ArrowDown, X, BookOpen, Trash2, RotateCcw, Timer, Zap, Star, TrendingUp, Target } from 'lucide-react';
 import type { Subject, Tag, Session, SessionBlock } from '../lib/db';
-import { getSubjects, getSubjectTags, softDeleteSubject, updateSubjectPin, getSessions, getAllSessionBlocks, getTrashedSubjects, restoreSubject, permanentlyDeleteSubject, getMetacognitionLogs } from '../lib/db';
+import { getSubjects, getSubjectTags, softDeleteSubject, updateSubjectPin, getSessions, getAllSessionBlocks, getTrashedSubjects, restoreSubject, permanentlyDeleteSubject, getMetacognitionLogs, patchSchema } from '../lib/db';
 import CalendarPanel from '../components/CalendarPanel';
 import WeeklyCompass from '../components/WeeklyCompass';
 import { readFile, BaseDirectory } from '@tauri-apps/plugin-fs';
@@ -14,7 +14,7 @@ import { useTranslation } from '../lib/i18n';
 import { TECHNIQUES } from '../lib/techniques';
 import TechniquePickerModal from '../components/TechniquePickerModal';
 import { CustomSelect } from '../components/CustomSelect';
-import { playSFX } from '../lib/sounds';
+import { playSFX, SFX } from '../lib/sounds';
 import { getRecommendations, getAllChapters, type Recommendation, type Chapter } from '../lib/chapters';
 import './Home.css';
 
@@ -130,7 +130,7 @@ export default function Home() {
     const [showArchived, setShowArchived] = useState<boolean>(false);
     const [loading, setLoading] = useState(true);
 
-    const { weekStart, theme } = useSettings();
+    const { weekStart, theme, metacognitionDay } = useSettings();
     const { t } = useTranslation();
     const [showMetacognition, setShowMetacognition] = useState(false);
     const [showTechniqueModal, setShowTechniqueModal] = useState(false);
@@ -172,9 +172,14 @@ export default function Home() {
         const checkMetacognitionMode = () => {
             const today = new Date();
             const day = today.getDay();
-            const isEndOfWeek = weekStart === 'monday'
-                ? (day === 5 || day === 6 || day === 0)
-                : (day === 4 || day === 5 || day === 6);
+            // Determine which days to show metacognition based on the configured review day
+            // 'saturday' → show Sat(6) + Sun(0); 'sunday' → show Sun(0) only; 'friday' → show Fri(5) + Sat(6) + Sun(0)
+            const metacognitionDays = metacognitionDay === 'friday'
+                ? [5, 6, 0]
+                : metacognitionDay === 'saturday'
+                ? [6, 0]
+                : [0]; // sunday
+            const isEndOfWeek = metacognitionDays.includes(day);
 
             if (!isEndOfWeek) {
                 setShowMetacognition(false);
@@ -200,10 +205,11 @@ export default function Home() {
         };
 
         checkMetacognitionMode();
-    }, [weekStart]);
+    }, [weekStart, metacognitionDay]);
 
     async function loadData() {
         try {
+            await patchSchema();
             const subs = await getSubjects();
             const withTags = await Promise.all(subs.map(async s => {
                 const t = await getSubjectTags(s.id);
@@ -413,7 +419,7 @@ export default function Home() {
         });
 
     async function handleDelete(id: string) {
-        playSFX('cancelling', theme);
+        playSFX('glass_ui_cancel', theme);
         const subject = subjects.find(s => s.id === id);
         await softDeleteSubject(id);
         loadData();
@@ -430,6 +436,7 @@ export default function Home() {
     }
 
     function handleEdit(subject: Subject & { tags: Tag[] }) {
+        playSFX(SFX.ENTER_MENU, theme);
         setEditingSubject(subject);
         setIsEditorOpen(true);
     }
@@ -440,6 +447,7 @@ export default function Home() {
     }
 
     function handleNewSubject() {
+        playSFX(SFX.ENTER_MENU, theme);
         setEditingSubject(undefined);
         setIsEditorOpen(true);
     }
@@ -487,14 +495,14 @@ export default function Home() {
                             <div className="stat-label">{t('home.active_days')}</div>
                         </div>
                         <div className={`stat-card glass technique-card-hover${!techniqueOfWeek ? ' technique-unset' : ''}`}
-                            onMouseEnter={() => playSFX('hover_sound', theme)}
+                            onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                         >
                             <Lightbulb size={24} className="stat-icon" />
                             <div className="stat-value-sm">
                                 {techniqueOfWeek ? (TECHNIQUES.find(t => t.id === techniqueOfWeek)?.name || 'None') : '—'}
                             </div>
                             <div className="stat-label-technique">{t('home.tech_of_week')}</div>
-                            <div className="stat-card-edit-mask" onClick={() => setShowTechniqueModal(true)}>
+                            <div className="stat-card-edit-mask" onClick={() => { playSFX(SFX.ENTER_MENU, theme); setShowTechniqueModal(true); }}>
                                 <Pen size={28} color="white" />
                             </div>
                         </div>
@@ -693,7 +701,7 @@ export default function Home() {
                         />
                     ))}
 
-                    <button className="add-subject-card" onClick={handleNewSubject}>
+                    <button className="add-subject-card" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={handleNewSubject}>
                         {t('home.new_subject')}
                     </button>
                 </div>
@@ -770,7 +778,7 @@ export default function Home() {
                                                     <button
                                                         className="btn trash-delete-btn"
                                                         onClick={async () => {
-                                                            playSFX('cancelling', theme);
+                                                            playSFX('glass_ui_cancel', theme);
                                                             await permanentlyDeleteSubject(s.id);
                                                             setConfirmDeleteId(null);
                                                             const trashed = await getTrashedSubjects();

@@ -41,7 +41,31 @@ export default function SubjectDetail() {
         load();
     }, [id]);
 
-    if (loading) return <div className="subject-detail-loading">Loading...</div>;
+    if (loading) return (
+        <div className="subject-detail-page">
+            <header className="subject-detail-header">
+                <div className="skeleton subject-detail-skeleton-back" />
+                <div className="subject-header-main">
+                    <div className="skeleton subject-detail-skeleton-title" />
+                    <div className="skeleton subject-detail-skeleton-tag" />
+                </div>
+            </header>
+            <div className="subject-detail-grid">
+                <div className="detail-section glass">
+                    <div className="skeleton subject-detail-skeleton-heading" />
+                    <div className="skeleton subject-detail-skeleton-stat" />
+                    <div className="skeleton subject-detail-skeleton-stat" />
+                    <div className="skeleton subject-detail-skeleton-stat" />
+                </div>
+                <div className="detail-section glass">
+                    <div className="skeleton subject-detail-skeleton-heading" />
+                    {[0, 1, 2, 3].map(i => (
+                        <div key={i} className="skeleton subject-detail-skeleton-row" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
     if (!subject) return <div className="subject-detail-error">Subject not found.</div>;
 
     const isMusic = subject.subject_type === 'music';

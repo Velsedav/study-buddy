@@ -639,6 +639,7 @@ export default function AnalyticsTab() {
                                     key={i}
                                     role="listitem"
                                     className="graph-bar-col"
+                                    style={{ '--bar-index': i } as React.CSSProperties}
                                     onMouseEnter={() => setHoveredBarIdx(i)}
                                     onMouseLeave={() => setHoveredBarIdx(null)}
                                     tabIndex={day.minutes > 0 ? 0 : -1}

@@ -180,15 +180,56 @@
     font-style: italic;
 }
 
-.subject-detail-loading,
 .subject-detail-error {
     height: 60vh;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.2rem;
+    color: var(--danger);
 }
 
-.subject-detail-error {
-    color: var(--danger);
+/* ── Loading skeleton ── */
+.skeleton {
+    background: rgba(var(--primary-rgb), 0.08);
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.subject-detail-skeleton-back {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.subject-detail-skeleton-title {
+    height: 2.5rem;
+    width: 60%;
+    border-radius: 8px;
+}
+
+.subject-detail-skeleton-tag {
+    height: 1rem;
+    width: 30%;
+    border-radius: 100px;
+    margin-top: 8px;
+}
+
+.subject-detail-skeleton-heading {
+    height: 1.25rem;
+    width: 45%;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.subject-detail-skeleton-stat {
+    height: 3rem;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.subject-detail-skeleton-row {
+    height: 3.5rem;
+    border-radius: 12px;
+    margin-bottom: 12px;
 }

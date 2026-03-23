@@ -329,7 +329,9 @@ export default function Layout() {
             {/* Main Content Area */}
             <main className="main-content">
                 <div className="top-decoration"></div>
-                <Outlet />
+                <div key={location.pathname} className="page-route-transition">
+                    <Outlet />
+                </div>
             </main>
 
             {editorOpen && (

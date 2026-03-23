@@ -40,8 +40,12 @@
     border: none;
     cursor: pointer;
     color: #fff;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
+
+.subject-card-action-btn:nth-child(1) { transition-delay: 0ms; }
+.subject-card-action-btn:nth-child(2) { transition-delay: 35ms; }
+.subject-card-action-btn:nth-child(3) { transition-delay: 70ms; }
 
 .subject-card-action-btn:hover {
     transform: scale(1.15);

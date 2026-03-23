@@ -1313,6 +1313,15 @@ body {
   box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.6);
 }
 
+.btn:active {
+  transform: scale(0.97);
+  transition: transform 0.08s ease;
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.97);
+}
+
 .btn-secondary {
   background: var(--secondary);
   color: var(--text-dark);
@@ -5171,6 +5180,28 @@ input[type="checkbox"] {
 [data-theme="cyber-scan"] ::selection {
   background: rgba(184, 255, 0, 0.25);
   color: #050510;
+}
+
+/* ── Empty state fade-in ── */
+.timeline-empty-state,
+.onboarding-banner,
+.empty-state-text,
+.empty-text,
+.trash-modal-empty,
+.metacog-log-empty {
+  animation: pageFadeIn 0.35s ease-out both;
+}
+
+/* ── Page route transition ── */
+/* opacity-only: safe for position:fixed children (no containing block created) */
+@keyframes routeFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.page-route-transition {
+  animation: routeFadeIn 0.18s ease forwards;
+  min-height: 100%;
 }
 
 /* ── Reduced motion ── */

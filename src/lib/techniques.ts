@@ -24,6 +24,7 @@ export interface Technique {
     category?: TechCategory;
     externalLink?: string;
     timerMode?: 'interval_30_30';
+    noPreRecall?: boolean;
 }
 
 export const TECHNIQUES: Technique[] = [
@@ -35,28 +36,28 @@ export const TECHNIQUES: Technique[] = [
     { id: 's6', name: 'Faire des exercices', tier: 'S', hint: 'Résoudre des problèmes et exercices types pour s\'entraîner. La pratique active est le meilleur prédicteur de performance en examen.', defaultMinutes: 50, advantage: 'Direct practice = best exam performance predictor', category: 'faire' },
 
     // 🥇 A-TIER (Highly Effective for Comprehension)
-    { id: 'paper1', name: 'Reading a scientific paper (1st pass)', tier: 'A', hint: 'Bird\'s-eye view in 5–10 min: read title, abstract, intro → scan section headings → read conclusions → scan references. Identify the 5 Cs.', defaultMinutes: 10, advantage: 'Decides in <10 min whether an article is worth deep reading', category: 'comprendre', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7' },
-    { id: 'c1', name: 'Filtrer le cours (Filtrage & Synthèse)', tier: 'A', hint: 'Trier délibérément le cours pour ne garder que l\'essentiel (concepts clés, zones denses, éléments insistés par le prof) au lieu de tout apprendre. C\'est l\'étape indispensable avant de créer des flashcards.', advantage: 'Eliminates noise & focuses on highest-value content', category: 'comprendre', externalLink: 'https://youtu.be/rzFJkuumZl8?t=282' },
+    { id: 'paper1', name: 'Reading a scientific paper (1st pass)', tier: 'A', hint: 'Bird\'s-eye view in 5–10 min: read title, abstract, intro → scan section headings → read conclusions → scan references. Identify the 5 Cs.', defaultMinutes: 10, advantage: 'Decides in <10 min whether an article is worth deep reading', category: 'comprendre', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7', noPreRecall: true },
+    { id: 'c1', name: 'Filtrer le cours (Filtrage & Synthèse)', tier: 'A', hint: 'Trier délibérément le cours pour ne garder que l\'essentiel (concepts clés, zones denses, éléments insistés par le prof) au lieu de tout apprendre. C\'est l\'étape indispensable avant de créer des flashcards.', advantage: 'Eliminates noise & focuses on highest-value content', category: 'comprendre', externalLink: 'https://youtu.be/rzFJkuumZl8?t=282', noPreRecall: true },
     { id: 't3', name: 'Enseigner aux autres (Feynman)', tier: 'A', hint: 'Explaining a concept out loud helps you instantly identify your gaps in understanding.', advantage: 'Instantly exposes hidden gaps in understanding', category: 'comprendre', externalLink: 'https://www.youtube.com/watch?v=o_dSpOqGtrQ&pp=ygUWZmV5bm1hbiB0ZWNobmlxdWUgZXJ5bg%3D%3D' },
-    { id: 'b2', name: 'Mind-mapping', tier: 'A', hint: 'Forces you to chunk info and draw relationships. Extremely effective if kept to keywords and visual links rather than long text.', defaultMinutes: 20, advantage: 'Creates a visual network that mirrors how the brain stores info', category: 'comprendre', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7?artifactId=f0bac232-39e4-4282-a80b-770a7d6716d5' },
-    { id: 'a3', name: 'Priming', tier: 'A', hint: 'Skimming headings and diagrams before reading. It builds subconscious familiarity and speeds up deep reading', defaultMinutes: 10, advantage: 'Pre-builds a mental framework so deep reading sticks', category: 'comprendre' },
+    { id: 'b2', name: 'Mind-mapping', tier: 'A', hint: 'Forces you to chunk info and draw relationships. Extremely effective if kept to keywords and visual links rather than long text.', defaultMinutes: 20, advantage: 'Creates a visual network that mirrors how the brain stores info', category: 'comprendre', externalLink: 'https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7?artifactId=f0bac232-39e4-4282-a80b-770a7d6716d5', noPreRecall: true },
+    { id: 'a3', name: 'Priming', tier: 'A', hint: 'Skimming headings and diagrams before reading. It builds subconscious familiarity and speeds up deep reading', defaultMinutes: 10, advantage: 'Pre-builds a mental framework so deep reading sticks', category: 'comprendre', noPreRecall: true },
 
     // 🎵 Music / Motor skill practice
     { id: 'music1', name: 'Pratique 30/30', tier: 'A', hint: 'Pratique 30 secondes, pause 30 secondes — répéter. La pause active consolide la mémoire motrice entre les essais, ce qui améliore l\'acquisition plus vite qu\'une pratique continue.', advantage: 'La pause entre essais consolide la mémoire motrice (Shadmehr & Brashers-Krug, 1997)', category: 'faire', timerMode: 'interval_30_30' },
 
     // 🟡 C-TIER (Situational — useful with caveats)
     { id: 't5', name: 'Interleaving (Entrelacement)', tier: 'C', hint: 'Mélange différents types de problèmes ou chapitres dans une même session. Cela t\'apprend non seulement "comment" résoudre un problème, mais surtout "quand" utiliser la bonne méthode.', advantage: 'Teaches WHEN to use formulas, not just HOW', category: 'faire', externalLink: 'https://youtu.be/J4YazZUXT_A' },
-    { id: 's5', name: 'Créer ses propres notes', tier: 'C', hint: 'Must combine visual and verbal elements (Dual Coding) to be highly effective, rather than acting as a passive transcription', advantage: 'Dual-coded notes are 2x more memorable than plain text', category: 'comprendre', externalLink: 'https://youtu.be/AY7XYMM_9l8' },
+    { id: 's5', name: 'Créer ses propres notes', tier: 'C', hint: 'Must combine visual and verbal elements (Dual Coding) to be highly effective, rather than acting as a passive transcription', advantage: 'Dual-coded notes are 2x more memorable than plain text', category: 'comprendre', externalLink: 'https://youtu.be/AY7XYMM_9l8', noPreRecall: true },
 
     // ⚠️ D-TIER (Low utility, situational at best)
     { id: 'd1', name: 'Apprentissage par coeur', tier: 'D', hint: 'Mémorisation mécanique. Always try to understand the concept first, as comprehension reduces the need for rote memorization', category: 'memoriser' },
-    { id: 'd2', name: 'Relecture avant sommeil', tier: 'D', hint: 'Relire son cours juste avant de dormir si = zero énergie', category: 'memoriser' },
+    { id: 'd2', name: 'Relecture avant sommeil', tier: 'D', hint: 'Relire son cours juste avant de dormir si = zero énergie', category: 'memoriser', noPreRecall: true },
 
     // 🚫 F-TIER (Traps to Avoid - High Time, Low Reward)
-    { id: 'b1', name: 'Relire ses propres notes', tier: 'F', hint: 'Re-reading is a "low utility" trap. It creates an illusion of competence but yields very poor retention.' },
-    { id: 'e1', name: 'Relire son cours', tier: 'F', hint: 'Reading a text 5 or 10 times is passive, inefficient, and wastes massive amounts of time' },
-    { id: 'f1', name: 'Re-regarder cours magistral', tier: 'F', hint: 'Total passivity. Re-consuming material does not mean you are encoding it' },
-    { id: 'f2', name: 'Beautifying summaries', tier: 'F', hint: 'Wastes precious cognitive energy on graphic design (arts and crafts) instead of conceptual synthesis' },
+    { id: 'b1', name: 'Relire ses propres notes', tier: 'F', hint: 'Re-reading is a "low utility" trap. It creates an illusion of competence but yields very poor retention.', noPreRecall: true },
+    { id: 'e1', name: 'Relire son cours', tier: 'F', hint: 'Reading a text 5 or 10 times is passive, inefficient, and wastes massive amounts of time', noPreRecall: true },
+    { id: 'f1', name: 'Re-regarder cours magistral', tier: 'F', hint: 'Total passivity. Re-consuming material does not mean you are encoding it', noPreRecall: true },
+    { id: 'f2', name: 'Beautifying summaries', tier: 'F', hint: 'Wastes precious cognitive energy on graphic design (arts and crafts) instead of conceptual synthesis', noPreRecall: true },
 ];
 
 export function getTierColor(tier: TierType): string {

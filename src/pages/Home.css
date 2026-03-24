@@ -155,6 +155,18 @@
     grid-column: 1 / -1;
 }
 
+/* RotatingInsightCard always spans full width — prevents row height mismatch */
+.rotating-insight-card {
+    grid-column: 1 / -1;
+}
+
+/* Streaks: stacked vertically, cards fill container height equally */
+.streaks-container .weekly-stats-grid {
+    grid-template-columns: 1fr;
+    align-content: stretch;
+    grid-auto-rows: 1fr;
+}
+
 .rotating-insight-content {
     display: flex;
     flex-direction: column;
@@ -508,6 +520,16 @@
     color: var(--danger);
     margin-left: 8px;
 }
+
+.recommendation-retention {
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+}
+.recommendation-retention.low { color: var(--danger); }
+.recommendation-retention.mid { color: var(--accent); }
+.recommendation-retention.high { color: var(--success); }
 
 /* Dashboard grid + subjects section heading */
 .dashboard-grid {

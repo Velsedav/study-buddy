@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Pencil, Check } from 'lucide-react';
 import type { Tag } from '../lib/db';
-import { getAllTags, getDb } from '../lib/db';
+import { getAllTags, getDb, updateTagName } from '../lib/db';
+import { useTranslation } from '../lib/i18n';
 
 interface TagPickerProps {
     selectedTags: string[];
@@ -9,13 +10,17 @@ interface TagPickerProps {
 }
 
 export default function TagPicker({ selectedTags, onChange }: TagPickerProps) {
+    const { t } = useTranslation();
     const [query, setQuery] = useState('');
     const [allTags, setAllTags] = useState<Tag[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [highlightIdx, setHighlightIdx] = useState(0);
+    const [renamingTagId, setRenamingTagId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const renameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         loadTags();
@@ -35,11 +40,20 @@ export default function TagPicker({ selectedTags, onChange }: TagPickerProps) {
         function handler(e: MouseEvent) {
             if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
                 setIsOpen(false);
+                setRenamingTagId(null);
             }
         }
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
+
+    // Focus rename input when it appears
+    useEffect(() => {
+        if (renamingTagId) {
+            renameInputRef.current?.focus();
+            renameInputRef.current?.select();
+        }
+    }, [renamingTagId]);
 
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -88,15 +102,36 @@ export default function TagPicker({ selectedTags, onChange }: TagPickerProps) {
             const db = await getDb();
             await db.execute(`DELETE FROM subject_tags WHERE tag_id = $1`, [tag.id]);
             await db.execute(`DELETE FROM tags WHERE id = $1`, [tag.id]);
-            // Remove from local state
             setAllTags(prev => prev.filter(t => t.id !== tag.id));
-            // Also remove from selected if present
             if (selectedTags.includes(tag.name)) {
                 onChange(selectedTags.filter(t => t !== tag.name));
             }
         } catch (e) {
             console.error('Failed to delete tag:', e);
         }
+    }
+
+    function startRename(tag: Tag, e: React.MouseEvent) {
+        e.stopPropagation();
+        setRenamingTagId(tag.id);
+        setRenameValue(tag.name);
+    }
+
+    async function commitRename(tag: Tag) {
+        const trimmed = renameValue.trim().toLowerCase();
+        if (trimmed && trimmed !== tag.name) {
+            try {
+                await updateTagName(tag.id, trimmed);
+                setAllTags(prev => prev.map(t => t.id === tag.id ? { ...t, name: trimmed } : t));
+                // Update selected tags if this tag was selected
+                if (selectedTags.includes(tag.name)) {
+                    onChange(selectedTags.map(t => t === tag.name ? trimmed : t));
+                }
+            } catch (e) {
+                console.error('Failed to rename tag:', e);
+            }
+        }
+        setRenamingTagId(null);
     }
 
     function handleKeyDown(e: React.KeyboardEvent) {
@@ -162,25 +197,62 @@ export default function TagPicker({ selectedTags, onChange }: TagPickerProps) {
                             key={opt.type === 'create' ? '__create__' : opt.tag!.id}
                             className={`tag-picker-option ${idx === highlightIdx ? 'highlighted' : ''} ${opt.type === 'create' ? 'tag-picker-create' : ''}`}
                         >
-                            <button
-                                type="button"
-                                className="tag-picker-option-label"
-                                onClick={() => selectTag(opt.label)}
-                                onMouseEnter={() => setHighlightIdx(idx)}
-                            >
-                                {opt.type === 'create' ? (
-                                    <>Create <span className="tag-chip-preview">{opt.label}</span></>
-                                ) : opt.label}
-                            </button>
-                            {opt.type === 'select' && opt.tag && (
-                                <button
-                                    type="button"
-                                    className="tag-option-delete"
-                                    title="Delete this tag"
-                                    onClick={(e) => { e.stopPropagation(); deleteTagFromDb(opt.tag!); }}
-                                >
-                                    <Trash2 size={13} />
-                                </button>
+                            {opt.type === 'select' && opt.tag && renamingTagId === opt.tag.id ? (
+                                <div className="tag-rename-row">
+                                    <input
+                                        ref={renameInputRef}
+                                        type="text"
+                                        className="tag-rename-input"
+                                        value={renameValue}
+                                        onChange={e => setRenameValue(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') { e.preventDefault(); commitRename(opt.tag!); }
+                                            if (e.key === 'Escape') { e.preventDefault(); setRenamingTagId(null); }
+                                        }}
+                                        onClick={e => e.stopPropagation()}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="tag-rename-confirm"
+                                        title={t('tags.rename')}
+                                        onClick={e => { e.stopPropagation(); commitRename(opt.tag!); }}
+                                    >
+                                        <Check size={13} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="tag-picker-option-label"
+                                        onClick={() => selectTag(opt.label)}
+                                        onMouseEnter={() => setHighlightIdx(idx)}
+                                    >
+                                        {opt.type === 'create' ? (
+                                            <>Create <span className="tag-chip-preview">{opt.label}</span></>
+                                        ) : opt.label}
+                                    </button>
+                                    {opt.type === 'select' && opt.tag && (
+                                        <div className="tag-option-actions">
+                                            <button
+                                                type="button"
+                                                className="tag-option-rename"
+                                                title={t('tags.rename')}
+                                                onClick={(e) => startRename(opt.tag!, e)}
+                                            >
+                                                <Pencil size={13} />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="tag-option-delete"
+                                                title="Delete this tag"
+                                                onClick={(e) => { e.stopPropagation(); deleteTagFromDb(opt.tag!); }}
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     ))}

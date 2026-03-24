@@ -1,28 +1,49 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { open as openExternal } from '@tauri-apps/plugin-shell';
 import { useSettings } from '../lib/settings';
-import { getChaptersForSubject, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS, getRecommendations, type Recommendation } from '../lib/chapters';
+import { getChaptersForSubject, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS, getRecommendations, savePreRecall, type Recommendation, type Chapter, type PreRecall } from '../lib/chapters';
+import { TECHNIQUES } from '../lib/techniques';
 import { playSFX } from '../lib/sounds';
 import { useTranslation } from '../lib/i18n';
 import './ChapterPickerModal.css';
 
 interface ChapterPickerModalProps {
     subjectId: string;
+    techniqueId?: string | null;
     onClose: () => void;
     onSelect: (chapterName: string) => void;
     currentSelection: string | null;
 }
 
-export default function ChapterPickerModal({ subjectId, onClose, onSelect, currentSelection }: ChapterPickerModalProps) {
+export default function ChapterPickerModal({ subjectId, techniqueId, onClose, onSelect, currentSelection }: ChapterPickerModalProps) {
     const { theme } = useSettings();
     const { t } = useTranslation();
     const chapters = getChaptersForSubject(subjectId).sort((a, b) => a.studyCount - b.studyCount);
+    const [pendingChapter, setPendingChapter] = useState<Chapter | null>(null);
+    const [expandedSourcesId, setExpandedSourcesId] = useState<string | null>(null);
+    const technique = techniqueId ? TECHNIQUES.find(t => t.id === techniqueId) : null;
+    const supportsPreRecall = !technique?.noPreRecall;
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
         document.addEventListener('keydown', handleKey);
         return () => document.removeEventListener('keydown', handleKey);
     }, [onClose]);
+
+    function handleChapterClick(ch: Chapter) {
+        if (ch.studyCount > 0 && supportsPreRecall) {
+            setPendingChapter(ch);
+        } else {
+            onSelect(ch.name);
+        }
+    }
+
+    function commitRecall(recall: PreRecall | null) {
+        if (!pendingChapter) return;
+        if (recall) savePreRecall(pendingChapter.id, recall);
+        onSelect(pendingChapter.name);
+    }
 
     const recommendations = getRecommendations({});
     const ignoredRecs = (() => {
@@ -62,7 +83,7 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                                 <div
                                     key={ch.id}
                                     className={`glass chapter-picker-item${isSelected ? ' selected' : ''}${isRecommended ? ' recommendation-highlight recommended' : ''}${isSubChapter ? ' sub-chapter' : ''}${isPiece ? ' piece' : ''}`}
-                                    onClick={() => { onSelect(ch.name); }}
+                                    onClick={() => handleChapterClick(ch)}
                                     onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                                 >
                                     <div className="chapter-picker-item-header">
@@ -113,11 +134,57 @@ export default function ChapterPickerModal({ subjectId, onClose, onSelect, curre
                                                 .replace('{n}', String(ch.studyCount))}
                                         </div>
                                     )}
+                                    {(ch.sources?.length ?? 0) > 0 && (
+                                        <div className="chapter-picker-sources" onClick={e => e.stopPropagation()}>
+                                            <button
+                                                className={`chapter-picker-sources-toggle${expandedSourcesId === ch.id ? ' open' : ''}`}
+                                                onClick={() => setExpandedSourcesId(expandedSourcesId === ch.id ? null : ch.id)}
+                                            >
+                                                🔗 {ch.sources!.length}
+                                            </button>
+                                            {expandedSourcesId === ch.id && (
+                                                <div className="chapter-picker-sources-list">
+                                                    {ch.sources!.map((src, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            className="chapter-picker-source-btn"
+                                                            onClick={() => openExternal(src.url)}
+                                                        >
+                                                            {src.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })
                     )}
                 </div>
+
+                {pendingChapter && (
+                    <div className="pre-recall-overlay">
+                        <div className="pre-recall-content">
+                            <p className="pre-recall-title">{t('session.pre_recall_title')}</p>
+                            <p className="pre-recall-chapter-name">{pendingChapter.name}</p>
+                            <div className="pre-recall-buttons">
+                                {(['nothing', 'some', 'most', 'all'] as PreRecall[]).map(r => (
+                                    <button
+                                        key={r}
+                                        className="btn pre-recall-btn"
+                                        onClick={() => commitRecall(r)}
+                                    >
+                                        {t(`session.pre_recall_${r}`)}
+                                    </button>
+                                ))}
+                            </div>
+                            <button className="pre-recall-skip" onClick={() => commitRecall(null)}>
+                                {t('session.pre_recall_skip')}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

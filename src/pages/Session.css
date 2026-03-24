@@ -365,6 +365,60 @@
     }
 }
 
+/* ── Block progress bar (5-min segments) ── */
+.session-block-progress {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: 3px;
+    overflow: visible;
+    margin-bottom: 6px;
+}
+
+.session-block-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--fill-pct, 0%);
+    background: var(--primary);
+    border-radius: 3px;
+    opacity: 0.65;
+    transition: width 0.9s linear;
+}
+
+.session-block-progress-tick {
+    position: absolute;
+    left: var(--tick-pos, 0%);
+    top: -4px;
+    width: 1px;
+    height: 14px;
+    background: rgba(var(--primary-rgb), 0.45);
+}
+
+/* Terminal variant — digital/stepped style */
+.session-block-progress.terminal {
+    height: 12px;
+    background: transparent;
+    border-radius: 0;
+    border: 1px solid var(--primary);
+    overflow: hidden;
+}
+
+.session-block-progress.terminal .session-block-progress-fill {
+    border-radius: 0;
+    opacity: 0.55;
+    transition: width 1s steps(30, end);
+}
+
+.session-block-progress.terminal .session-block-progress-tick {
+    top: 0;
+    height: 100%;
+    background: var(--primary);
+    opacity: 0.45;
+}
+
 .timer-display {
     font-size: 7rem;
     font-weight: 700;
@@ -374,6 +428,29 @@
     text-align: center;
     text-shadow: 2px 4px 12px rgba(var(--primary-rgb), 0.3);
     transition: color 0.4s ease;
+}
+
+/* Terminal CRT enhancement */
+.timer-display.terminal {
+    position: relative;
+    letter-spacing: 0.06em;
+    text-shadow:
+        0 0 8px var(--primary),
+        0 0 20px rgba(var(--primary-rgb), 0.45);
+}
+
+.timer-display.terminal::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.07) 3px,
+        rgba(0, 0, 0, 0.07) 4px
+    );
+    pointer-events: none;
 }
 
 .timer-display.paused {
@@ -469,6 +546,102 @@
 .confirm-btn-danger {
     color: var(--danger);
 }
+
+/* Mastery Rating screen */
+.rate-chapters-container {
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    min-width: 340px;
+}
+
+.rate-chapters-title {
+    font-size: 1.4rem;
+    margin: 0;
+}
+
+.rate-chapters-progress {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.rate-chapters-chapter-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    text-align: center;
+    padding: 8px 12px;
+    background: rgba(var(--primary-rgb), 0.08);
+    border-radius: var(--border-radius);
+    width: 100%;
+}
+
+.rate-chapters-how {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.rate-chapters-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+}
+
+.rate-btn {
+    padding: 12px 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: var(--border-radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.rate-btn:active { transform: scale(0.97); }
+
+.rate-btn-forgot {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #ef4444;
+}
+.rate-btn-forgot:hover { background: rgba(239, 68, 68, 0.28); }
+
+.rate-btn-hard {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #f59e0b;
+}
+.rate-btn-hard:hover { background: rgba(245, 158, 11, 0.28); }
+
+.rate-btn-good {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #3b82f6;
+}
+.rate-btn-good:hover { background: rgba(59, 130, 246, 0.28); }
+
+.rate-btn-easy {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #22c55e;
+}
+.rate-btn-easy:hover { background: rgba(34, 197, 94, 0.28); }
+
+.rate-chapters-skip {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 4px 8px;
+}
+.rate-chapters-skip:hover { color: var(--text-dark); }
 
 .total-rest-container {
     padding: 16px 0;
@@ -852,4 +1025,30 @@
     color: var(--text-muted);
     margin-top: 10px;
     line-height: 1.4;
+}
+/* ── Chapter Sources ── */
+.session-chapter-sources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.session-chapter-source-btn {
+    background: rgba(var(--primary-rgb), 0.1);
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--primary);
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.session-chapter-source-btn:hover {
+    background: rgba(var(--primary-rgb), 0.2);
+    border-color: var(--primary);
 }

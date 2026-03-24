@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useCountUp } from '../lib/useCountUp';
 import { useSettings } from '../lib/settings';
 import { useTranslation } from '../lib/i18n';
-import { getSessions, getSubjects, getAllSessionBlocks, getMetacognitionLogs } from '../lib/db';
+import { getSessions, getSubjects, getAllSessionBlocks, getMetacognitionLogs, getAllSubjectTagsMap } from '../lib/db';
 import type { Session, Subject, SessionBlock, MetacognitionLog } from '../lib/db';
-import { Activity, Clock, Flame, Flag, PieChart as PieChartIcon, Zap, BarChart2, Target } from 'lucide-react';
+import { Activity, Clock, Flame, Flag, PieChart as PieChartIcon, Zap, BarChart2, Target, Tag as TagIcon } from 'lucide-react';
 import { TECHNIQUES, getTierColor } from '../lib/techniques';
-import { getAllChapters } from '../lib/chapters';
+import { getAllChapters, getRatings } from '../lib/chapters';
 import type { Chapter } from '../lib/chapters';
 import CalendarPanel from '../components/CalendarPanel';
 import { CustomSelect } from '../components/CustomSelect';
@@ -46,6 +46,7 @@ export default function AnalyticsTab() {
     const [hoveredBarIdx, setHoveredBarIdx] = useState<number | null>(null);
     const [timelineFilter, setTimelineFilter] = useState<number>(1);
     const [loading, setLoading] = useState(true);
+    const [subjectTagsMap, setSubjectTagsMap] = useState<Map<string, string[]>>(new Map());
 
     useEffect(() => {
         async function load() {
@@ -63,6 +64,9 @@ export default function AnalyticsTab() {
 
                 const logs = await getMetacognitionLogs();
                 setMetacogLogs(logs);
+
+                const tagsMap = await getAllSubjectTagsMap();
+                setSubjectTagsMap(tagsMap);
             } catch (e) {
                 console.error("Failed to load analytics data", e);
             } finally {
@@ -280,7 +284,7 @@ export default function AnalyticsTab() {
 
         let total = 0;
         blocks.forEach(b => {
-            if (validSessionIds.has(b.session_id) && b.type === 'focus' && b.technique_id) {
+            if (validSessionIds.has(b.session_id) && b.type === 'WORK' && b.technique_id) {
                 const tech = TECHNIQUES.find(t => t.id === b.technique_id);
                 if (tech && tech.tier) {
                     tierMap[tech.tier] += b.minutes;
@@ -305,6 +309,55 @@ export default function AnalyticsTab() {
 
         return { data, total, dfRatio: dfPct };
     }, [sessions, blocks]);
+
+    const tagBreakdown = useMemo(() => {
+        const tagMinutes: Record<string, number> = {};
+        const validSessionIds = new Set(sessions.map(s => s.id));
+
+        blocks.forEach(b => {
+            if (!validSessionIds.has(b.session_id) || b.type !== 'WORK' || !b.subject_id) return;
+            const tags = subjectTagsMap.get(b.subject_id);
+            if (!tags || tags.length === 0) return;
+            tags.forEach(tag => {
+                tagMinutes[tag] = (tagMinutes[tag] ?? 0) + b.minutes;
+            });
+        });
+
+        const sorted = Object.entries(tagMinutes)
+            .map(([tag, mins]) => ({ tag, mins }))
+            .sort((a, b) => b.mins - a.mins);
+
+        const maxMins = sorted[0]?.mins ?? 0;
+        return { data: sorted, maxMins };
+    }, [sessions, blocks, subjectTagsMap]);
+
+    const calibrationData = useMemo(() => {
+        const ratings = getRatings();
+        if (ratings.length === 0) return null;
+
+        const RECALL_SCORE: Record<string, number> = { nothing: 0, some: 0.33, most: 0.67, all: 1 };
+        const RATING_SCORE: Record<string, number> = { forgot: 0, hard: 0.33, good: 0.67, easy: 1 };
+
+        let totalGap = 0;
+        let countWithPreRecall = 0;
+        let goodCount = 0;
+        let totalCount = ratings.length;
+
+        for (const r of ratings) {
+            if (r.preRecall != null) {
+                const pre = RECALL_SCORE[r.preRecall] ?? 0;
+                const post = RATING_SCORE[r.rating] ?? 0;
+                totalGap += post - pre;
+                countWithPreRecall++;
+            }
+            if (r.rating === 'good' || r.rating === 'easy') goodCount++;
+        }
+
+        const avgGap = countWithPreRecall > 0 ? totalGap / countWithPreRecall : null;
+        const goodPct = Math.round((goodCount / totalCount) * 100);
+
+        return { totalCount, goodPct, avgGap, countWithPreRecall };
+    }, []);
 
     const formatTime = (mins: number) => {
         const h = Math.floor(mins / 60);
@@ -591,6 +644,60 @@ export default function AnalyticsTab() {
                                     <strong>Warning:</strong> {t('analytics.pie_warning').replace('{pct}', String(pieChart.dfRatio))}
                                 </div>
                             )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Tag Breakdown ── */}
+                <div className="glass tag-breakdown-panel">
+                    <h3 className="panel-header">
+                        <TagIcon size={18} /> {t('analytics.by_tag')}
+                    </h3>
+                    {tagBreakdown.data.length === 0 ? (
+                        <p className="empty-state-text">{t('analytics.tag_no_data')}</p>
+                    ) : (
+                        <div className="tag-breakdown-list">
+                            {tagBreakdown.data.map(row => (
+                                <div key={row.tag} className="tag-breakdown-row">
+                                    <div className="tag-breakdown-label">{row.tag}</div>
+                                    <div className="tag-breakdown-bar-track">
+                                        <div
+                                            className="tag-breakdown-bar"
+                                            style={{ '--tag-bar-pct': `${Math.round((row.mins / tagBreakdown.maxMins) * 100)}%` } as React.CSSProperties}
+                                        />
+                                    </div>
+                                    <div className="tag-breakdown-time">{formatTime(row.mins)}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Calibration Card ── */}
+                <div className="glass calibration-panel">
+                    <h3 className="panel-header">
+                        <Target size={18} /> {t('analytics.calibration')}
+                    </h3>
+                    {!calibrationData ? (
+                        <p className="empty-state-text">{t('analytics.calibration_no_data')}</p>
+                    ) : (
+                        <div className="calibration-stats">
+                            <div className="calibration-stat">
+                                <span className="calibration-stat-value">{calibrationData.goodPct}%</span>
+                                <span className="calibration-stat-label">{t('analytics.calibration_post')}</span>
+                            </div>
+                            {calibrationData.avgGap !== null && (
+                                <div className="calibration-stat">
+                                    <span className={`calibration-stat-value ${calibrationData.avgGap > 0.1 ? 'positive' : calibrationData.avgGap < -0.1 ? 'negative' : 'neutral'}`}>
+                                        {calibrationData.avgGap > 0 ? '+' : ''}{Math.round(calibrationData.avgGap * 100)}%
+                                    </span>
+                                    <span className="calibration-stat-label">{t('analytics.calibration_gap').replace('{n}', String(Math.abs(Math.round(calibrationData.avgGap * 100))))}</span>
+                                </div>
+                            )}
+                            <div className="calibration-stat">
+                                <span className="calibration-stat-value">{calibrationData.totalCount}</span>
+                                <span className="calibration-stat-label">{t('analytics.calibration_pre')}</span>
+                            </div>
                         </div>
                     )}
                 </div>

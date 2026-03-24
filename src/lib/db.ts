@@ -188,6 +188,24 @@ export async function updateSubject(id: string, name: string, coverPath: string 
     }
 }
 
+export async function updateTagName(id: string, newName: string) {
+    const db = await getDb();
+    await db.execute(`UPDATE tags SET name = $1 WHERE id = $2`, [newName.trim().toLowerCase(), id]);
+}
+
+export async function getAllSubjectTagsMap(): Promise<Map<string, string[]>> {
+    const db = await getDb();
+    const rows = await db.select<{ subject_id: string; tag_name: string }[]>(
+        `SELECT st.subject_id, t.name as tag_name FROM subject_tags st JOIN tags t ON t.id = st.tag_id`
+    );
+    const map = new Map<string, string[]>();
+    for (const row of rows) {
+        if (!map.has(row.subject_id)) map.set(row.subject_id, []);
+        map.get(row.subject_id)!.push(row.tag_name);
+    }
+    return map;
+}
+
 export async function updateSubjectStats(id: string, addMinutes: number, studiedAt: string) {
     const db = await getDb();
     // We need to fetch current total to add, or just do SET total = total + $1

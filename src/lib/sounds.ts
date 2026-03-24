@@ -20,6 +20,7 @@ export const SFX = {
     ENTER_LESSON:   'glass_session_enter_lesson',
     // Timer — play over ongoing sounds
     WARN_10:        'glass_timer_warn10',
+    FIVE_MIN_ALERT: 'glass_timer_five_min',
     INTERVAL_WORK:  'glass_timer_interval_work',
     INTERVAL_REST:  'glass_timer_interval_rest',
     // Reward
@@ -49,6 +50,7 @@ export const SFX_LABELS: Record<SoundEffect, string> = {
     glass_session_finish:         'Session Finish',
     glass_session_enter_lesson:   'Enter Lesson',
     glass_timer_warn10:           '10s Warning',
+    glass_timer_five_min:         '5-Min Alert',
     glass_timer_interval_work:    'Interval — Work',
     glass_timer_interval_rest:    'Interval — Rest',
     glass_reward_correct:         'Correct Answer',

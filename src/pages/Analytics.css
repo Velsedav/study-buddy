@@ -604,3 +604,106 @@
         gap: 8px;
     }
 }
+
+/* ── Tag Breakdown Panel ── */
+.tag-breakdown-panel {
+    width: 300px;
+    flex-shrink: 0;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+}
+
+.tag-breakdown-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tag-breakdown-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 50px;
+    align-items: center;
+    gap: 10px;
+}
+
+.tag-breakdown-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tag-breakdown-bar-track {
+    height: 8px;
+    background: rgba(var(--primary-rgb), 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.tag-breakdown-bar {
+    height: 100%;
+    width: var(--tag-bar-pct, 0%);
+    background: var(--primary);
+    border-radius: 4px;
+    opacity: 0.8;
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tag-breakdown-time {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-align: right;
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .tag-breakdown-panel {
+        width: 100%;
+    }
+}
+/* Calibration panel */
+.calibration-panel {
+    padding: 20px;
+    min-width: 220px;
+}
+
+.calibration-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.calibration-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.calibration-stat-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    line-height: 1;
+}
+
+.calibration-stat-value.positive { color: var(--success); }
+.calibration-stat-value.negative { color: var(--danger); }
+.calibration-stat-value.neutral { color: var(--text-muted); }
+
+.calibration-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+    .calibration-panel {
+        width: 100%;
+    }
+}

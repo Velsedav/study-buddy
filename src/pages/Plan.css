@@ -269,7 +269,134 @@
 }
 
 .planner-subjects-panel h3 {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+}
+
+.plan-tag-filter {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.plan-tag-filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+}
+
+.plan-tag-filter-btn:hover {
+    border-color: var(--primary);
+    color: var(--text-dark);
+}
+
+.plan-tag-filter-btn.has-filter {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+.plan-tag-filter-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plan-tag-filter-clear {
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--text-muted);
+    padding: 0 2px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.plan-tag-filter-clear:hover {
+    color: var(--danger);
+}
+
+.plan-tag-filter-chevron {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+.plan-tag-filter-chevron.open {
+    transform: rotate(180deg);
+}
+
+.plan-tag-filter-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.plan-tag-filter-search {
+    margin: 8px 8px 4px;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--glass-border);
+    background: rgba(var(--primary-rgb), 0.05);
+    color: var(--text-dark);
+    outline: none;
+}
+
+.plan-tag-filter-search:focus {
+    border-color: var(--primary);
+}
+
+.plan-tag-filter-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px 0 8px;
+}
+
+.plan-tag-filter-item {
+    display: block;
+    width: 100%;
+    padding: 7px 14px;
+    text-align: left;
+    font-size: 0.82rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background 0.15s;
+}
+
+.plan-tag-filter-item:hover,
+.plan-tag-filter-item.highlighted {
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--text-dark);
+}
+
+.plan-tag-filter-item.active {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.plan-tag-filter-item.active.highlighted {
+    background: rgba(var(--primary-rgb), 0.14);
 }
 
 .planner-subjects-list {
@@ -347,7 +474,6 @@
     grid-template-columns: repeat(4, 4px);
     grid-template-rows: repeat(2, 4px);
     gap: 4px;
-    opacity: 0.5;
     user-select: none;
 }
 
@@ -814,4 +940,160 @@
 
 .animate-bounce {
     animation: bounce 2s infinite;
+}
+
+/* ── #1 Undo / Redo buttons ── */
+.planner-undo-redo {
+    display: flex;
+    gap: 4px;
+}
+
+.planner-undo-btn {
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+
+.planner-undo-btn:not(:disabled):hover {
+    opacity: 1;
+}
+
+.planner-undo-btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+}
+
+/* ── #4 Template description ── */
+.planner-template-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-left: 4px;
+}
+
+/* ── #2 Drag handle icon on subject pills ── */
+.drag-handle-icon {
+    color: var(--text-muted);
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+}
+
+.drag-subject-item:hover .drag-handle-icon {
+    opacity: 1;
+}
+
+/* ── #5 Block readiness indicator ── */
+.block-readiness-bar {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.block-readiness-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--glass-border);
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.block-readiness-dot.done {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+/* ── #1 Inline technique button ── */
+.block-technique-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px dashed var(--glass-border);
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    text-align: left;
+    width: 100%;
+}
+
+.block-technique-inline:not(:disabled):hover {
+    border-color: var(--primary);
+    color: var(--text-dark);
+    background: rgba(var(--primary-rgb), 0.06);
+}
+
+.block-technique-inline:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.block-technique-inline.has-technique {
+    border-style: solid;
+    border-color: transparent;
+    padding-left: 0;
+    background: transparent;
+}
+
+.block-technique-inline.has-technique:hover {
+    border-color: var(--primary);
+    padding-left: 10px;
+    background: rgba(var(--primary-rgb), 0.06);
+}
+
+.technique-btn-icon {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.block-technique-inline.has-technique .technique-btn-icon {
+    display: none;
+}
+
+.technique-btn-label {
+    font-style: italic;
+}
+
+/* ── #7 Resize handle discoverability ── */
+.block-resize-handle {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.planner-block:hover .block-resize-handle {
+    opacity: 1;
+}
+
+.block-resize-dots {
+    opacity: 0.7;
+}
+
+/* ── #8 BREAK / PREP visual de-emphasis ── */
+.block-type-break,
+.block-type-prep {
+    opacity: 0.55;
+    transition: opacity 0.2s;
+}
+
+.block-type-break:hover,
+.block-type-prep:hover {
+    opacity: 0.85;
+}
+.plan-five-min-btn {
+    opacity: 0.45;
+    transition: opacity 0.15s, color 0.15s;
+}
+
+.plan-five-min-btn.active {
+    opacity: 1;
+    color: var(--primary);
+}
+
+.plan-five-min-btn:hover {
+    opacity: 1;
 }

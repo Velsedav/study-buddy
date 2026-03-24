@@ -15,7 +15,7 @@ import { TECHNIQUES } from '../lib/techniques';
 import TechniquePickerModal from '../components/TechniquePickerModal';
 import { CustomSelect } from '../components/CustomSelect';
 import { playSFX, SFX } from '../lib/sounds';
-import { getRecommendations, getAllChapters, type Recommendation, type Chapter } from '../lib/chapters';
+import { getRecommendations, getAllChapters, getRetentionPercent, type Recommendation, type Chapter } from '../lib/chapters';
 import './Home.css';
 
 function getWeekStart(date: Date): Date {
@@ -527,7 +527,7 @@ export default function Home() {
                             <div className="stat-value">{animMonthSessions}</div>
                             <div className="stat-label">{t('home.sessions')}</div>
                         </div>
-                        <div className="stat-card glass">
+                        <div className="stat-card glass stat-card-full">
                             <CalendarDays size={24} className="stat-icon" />
                             <div className="stat-value">{animMonthDays}/{monthlyStats.daysInMonth}</div>
                             <div className="stat-label">{t('home.active_days')}</div>
@@ -654,19 +654,27 @@ export default function Home() {
                     </h3>
                     <p className="recommendations-desc">{t('home.rec_desc')}</p>
                     <div className="recommendations-list">
-                        {recommendations.filter(r => !ignoredRecs.has(r.chapter.id)).map(rec => (
-                            <div key={rec.chapter.id} className={`recommendation-card ${rec.daysOverdue > 3 ? 'danger' : 'warning'}`}>
-                                <button className="recommendation-ignore-btn" onClick={() => ignoreRec(rec.chapter.id)} title="Ignore">
-                                    <X size={13} />
-                                </button>
-                                <div className="recommendation-name">{rec.chapter.name}</div>
-                                <div className="recommendation-subject">{rec.subjectName}</div>
-                                <div className="recommendation-footer">
-                                    <span className="recommendation-count">{t('home.study_number')}{rec.chapter.studyCount + 1}</span>
-                                    {rec.daysOverdue > 0 && <span className="recommendation-overdue">({rec.daysOverdue}{t('home.overdue')})</span>}
+                        {recommendations.filter(r => !ignoredRecs.has(r.chapter.id)).map(rec => {
+                            const retention = getRetentionPercent(rec.chapter);
+                            return (
+                                <div key={rec.chapter.id} className={`recommendation-card ${rec.daysOverdue > 3 ? 'danger' : 'warning'}`}>
+                                    <button className="recommendation-ignore-btn" onClick={() => ignoreRec(rec.chapter.id)} title="Ignore">
+                                        <X size={13} />
+                                    </button>
+                                    <div className="recommendation-name">{rec.chapter.name}</div>
+                                    <div className="recommendation-subject">{rec.subjectName}</div>
+                                    {retention !== null && (
+                                        <div className={`recommendation-retention ${retention <= 30 ? 'low' : retention <= 60 ? 'mid' : 'high'}`}>
+                                            {t('home.retention').replace('{n}', String(retention))}
+                                        </div>
+                                    )}
+                                    <div className="recommendation-footer">
+                                        <span className="recommendation-count">{t('home.study_number')}{rec.chapter.studyCount + 1}</span>
+                                        {rec.daysOverdue > 0 && <span className="recommendation-overdue">({rec.daysOverdue}{t('home.overdue')})</span>}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}

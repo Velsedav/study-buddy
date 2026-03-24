@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSubjects, getMetacognitionLogs } from '../lib/db';
-import type { Subject } from '../lib/db';
+import { getSubjects, getMetacognitionLogs, getAllSubjectTagsMap, getAllTags } from '../lib/db';
+import type { Subject, Tag } from '../lib/db';
 import { useUndoRedo } from '../lib/undo';
 import TechniquePickerModal from '../components/TechniquePickerModal';
 import ChapterPickerModal from '../components/ChapterPickerModal';
 import WeeklyCompass from '../components/WeeklyCompass';
 import { TECHNIQUES, type TechCategory } from '../lib/techniques';
-import { ChevronDown, MoreVertical, Calendar } from 'lucide-react';
+import { ChevronDown, MoreVertical, Calendar, GripVertical, Undo2, Redo2, Zap, Bell, BellOff } from 'lucide-react';
 import { CustomSelect } from '../components/CustomSelect';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
@@ -54,6 +54,15 @@ export default function Plan() {
     const { theme, isTerminal } = useSettings();
     const { t } = useTranslation();
     const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [allTags, setAllTags] = useState<Tag[]>([]);
+    const [subjectTagsMap, setSubjectTagsMap] = useState<Map<string, string[]>>(new Map());
+    const [planTagFilter, setPlanTagFilter] = useState<string | null>(null);
+    const [tagFilterOpen, setTagFilterOpen] = useState(false);
+    const [tagFilterQuery, setTagFilterQuery] = useState('');
+    const [tagFilterHighlight, setTagFilterHighlight] = useState(0);
+    const tagFilterRef = useRef<HTMLDivElement>(null);
+    const tagFilterListRef = useRef<HTMLDivElement>(null);
+    const [fiveMinAlert, setFiveMinAlert] = useState(() => localStorage.getItem('study-buddy-five-min-alert') !== 'false');
     const [prioritySubjectIds, setPrioritySubjectIds] = useState<Set<string>>(new Set());
     const [template, setTemplate] = useState('25/5');
     const [customWork, setCustomWork] = useState(25);
@@ -71,7 +80,6 @@ export default function Plan() {
     const [pickingChapterBlockId, setPickingChapterBlockId] = useState<string | null>(null);
     const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
     const [openMenuBlockId, setOpenMenuBlockId] = useState<string | null>(null);
-    const [chapterGateBlockId, setChapterGateBlockId] = useState<string | null>(null);
     const [landedBlockIds, setLandedBlockIds] = useState<Set<string>>(new Set());
     const [flyingSubject, setFlyingSubject] = useState<FlyingSubject | null>(null);
 
@@ -215,6 +223,8 @@ export default function Plan() {
             // sort unpinned first, then pinned
             setSubjects(subs.sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? 1 : -1)));
         });
+        getAllTags().then(tags => setAllTags(tags));
+        getAllSubjectTagsMap().then(map => setSubjectTagsMap(map));
         getMetacognitionLogs().then(logs => {
             const latest = logs[0];
             if (latest?.priority_subject_ids) {
@@ -445,7 +455,8 @@ export default function Plan() {
             draft: blocks,
             template,
             repeats,
-            plannedMinutes
+            plannedMinutes,
+            fiveMinAlert,
         };
         localStorage.setItem('activeSession', JSON.stringify(session));
         navigate('/session');
@@ -459,7 +470,6 @@ export default function Plan() {
             }
             if (e.key === 'Escape') {
                 setOpenMenuBlockId(null);
-                setChapterGateBlockId(null);
             }
         };
         window.addEventListener('keydown', handleKey);
@@ -468,10 +478,22 @@ export default function Plan() {
 
     useEffect(() => {
         if (!openMenuBlockId) return;
-        const handleClickOutside = () => { setOpenMenuBlockId(null); setChapterGateBlockId(null); };
+        const handleClickOutside = () => { setOpenMenuBlockId(null); };
         document.addEventListener('click', handleClickOutside);
         return () => document.removeEventListener('click', handleClickOutside);
     }, [openMenuBlockId]);
+
+    useEffect(() => {
+        if (!tagFilterOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (tagFilterRef.current && !tagFilterRef.current.contains(e.target as Node)) {
+                setTagFilterOpen(false);
+                setTagFilterQuery('');
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [tagFilterOpen]);
 
     // All work blocks have a subject + objective filled
     const workBlocks = blocks.filter(b => b.type === 'WORK');
@@ -484,6 +506,10 @@ export default function Plan() {
     const now = new Date();
     const endsAt = new Date(now.getTime() + (totalWork + totalBreak) * 60000);
     const endsText = `${endsAt.getHours().toString().padStart(2, '0')}:${endsAt.getMinutes().toString().padStart(2, '0')}`;
+    const incompleteWorkBlocks = workBlocks.filter(b => !b.objective?.trim()).length;
+    const startTooltip = incompleteWorkBlocks > 0
+        ? t('plan.blocks_incomplete').replace('{n}', String(incompleteWorkBlocks))
+        : undefined;
 
     return (
         <div className={`planner-page fade-in ${isDragging || (isMouseDownOnSubject && blocks.length > 0) ? 'is-dragging' : ''} ${isMouseDownOnSubject && blocks.length === 0 ? 'is-dragging-empty' : ''} ${resizingBlockId ? 'is-resizing' : ''}`}>
@@ -504,6 +530,11 @@ export default function Plan() {
                             onChange={(val) => setTemplate(val)}
                             options={Object.keys(TEMPLATES).map(k => ({ value: k, label: k }))}
                         />
+                        {template !== 'Custom' && (
+                            <span className="planner-template-desc">
+                                {TEMPLATES[template].work}m {t('plan.work')} · {TEMPLATES[template].break}m {t('plan.rest')}
+                            </span>
+                        )}
                     </div>
                     {template === 'Custom' && (
                         <div className="planner-custom-group drag-dim">
@@ -530,12 +561,46 @@ export default function Plan() {
                         </div>
                     </div>
 
+                    <div className="planner-undo-redo drag-dim">
+                        <button
+                            className="btn btn-icon planner-undo-btn"
+                            onClick={undo}
+                            disabled={!canUndo}
+                            title={t('plan.undo')}
+                            aria-label={t('plan.undo')}
+                        >
+                            <Undo2 size={16} />
+                        </button>
+                        <button
+                            className="btn btn-icon planner-undo-btn"
+                            onClick={redo}
+                            disabled={!canRedo}
+                            title={t('plan.redo')}
+                            aria-label={t('plan.redo')}
+                        >
+                            <Redo2 size={16} />
+                        </button>
+                    </div>
+
                     <button
                         className={`btn btn-primary btn-holographic ${isMouseDownOnSubject && blocks.length === 0 ? 'btn-pulse-hint' : ''}`}
                         onClick={addBlocks}
                         onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                     >
                         {t('plan.add_to_timeline')}
+                    </button>
+
+                    <button
+                        className={`btn btn-icon plan-five-min-btn ${fiveMinAlert ? 'active' : ''}`}
+                        onClick={() => {
+                            const next = !fiveMinAlert;
+                            setFiveMinAlert(next);
+                            localStorage.setItem('study-buddy-five-min-alert', String(next));
+                        }}
+                        title={t('plan.five_min_alert')}
+                        aria-label={t('plan.five_min_alert')}
+                    >
+                        {fiveMinAlert ? <Bell size={16} /> : <BellOff size={16} />}
                     </button>
 
                     <div
@@ -553,6 +618,7 @@ export default function Plan() {
                             className={`btn btn-primary btn-start-session ${blocks.length > 0 ? 'btn-start-session-ready' : ''} ${allFilled ? 'btn-start-session-full' : ''}`}
                             onClick={startSession}
                             disabled={blocks.length === 0}
+                            title={startTooltip}
                         >
                             {t('plan.start_session')}
                         </button>
@@ -566,8 +632,94 @@ export default function Plan() {
                 {/* Subjects List */}
                 <div className="glass planner-subjects-panel">
                     <h3>{t('plan.drag_subjects')}</h3>
+                    {allTags.length > 0 && (
+                        <div className="plan-tag-filter" ref={tagFilterRef}>
+                            <button
+                                className={`plan-tag-filter-btn ${planTagFilter !== null ? 'has-filter' : ''}`}
+                                onClick={() => { setTagFilterOpen(o => !o); setTagFilterQuery(''); }}
+                                aria-haspopup="true"
+                                aria-expanded={tagFilterOpen}
+                            >
+                                <span className="plan-tag-filter-label">
+                                    {planTagFilter ?? t('plan.filter_by_tag')}
+                                </span>
+                                {planTagFilter !== null && (
+                                    <span
+                                        className="plan-tag-filter-clear"
+                                        role="button"
+                                        aria-label={t('plan.all')}
+                                        onClick={e => { e.stopPropagation(); setPlanTagFilter(null); setTagFilterOpen(false); }}
+                                    >
+                                        ×
+                                    </span>
+                                )}
+                                <ChevronDown size={13} className={`plan-tag-filter-chevron ${tagFilterOpen ? 'open' : ''}`} />
+                            </button>
+                            {tagFilterOpen && (() => {
+                                const filtered = allTags.filter(tag => tag.name.includes(tagFilterQuery.toLowerCase().trim()));
+                                const selectOption = (idx: number) => {
+                                    setPlanTagFilter(filtered[idx].name);
+                                    setTagFilterOpen(false);
+                                    setTagFilterQuery('');
+                                    setTagFilterHighlight(0);
+                                };
+                                return (
+                                <div className="plan-tag-filter-dropdown" role="menu">
+                                    <input
+                                        type="text"
+                                        className="plan-tag-filter-search"
+                                        placeholder={t('plan.filter_by_tag')}
+                                        value={tagFilterQuery}
+                                        onChange={e => { setTagFilterQuery(e.target.value); setTagFilterHighlight(0); }}
+                                        autoFocus
+                                        onClick={e => e.stopPropagation()}
+                                        onKeyDown={e => {
+                                            if (e.key === 'ArrowDown') {
+                                                e.preventDefault();
+                                                setTagFilterHighlight(h => {
+                                                    const next = Math.min(h + 1, filtered.length - 1);
+                                                    const el = tagFilterListRef.current?.children[next] as HTMLElement | undefined;
+                                                    el?.scrollIntoView({ block: 'nearest' });
+                                                    return next;
+                                                });
+                                            } else if (e.key === 'ArrowUp') {
+                                                e.preventDefault();
+                                                setTagFilterHighlight(h => {
+                                                    const next = Math.max(h - 1, 0);
+                                                    const el = tagFilterListRef.current?.children[next] as HTMLElement | undefined;
+                                                    el?.scrollIntoView({ block: 'nearest' });
+                                                    return next;
+                                                });
+                                            } else if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                if (filtered.length > 0) selectOption(tagFilterHighlight);
+                                            } else if (e.key === 'Escape') {
+                                                setTagFilterOpen(false);
+                                                setTagFilterQuery('');
+                                                setTagFilterHighlight(0);
+                                            }
+                                        }}
+                                    />
+                                    <div className="plan-tag-filter-list" ref={tagFilterListRef}>
+                                        {filtered.map((tag, i) => (
+                                            <button
+                                                key={tag.id}
+                                                className={`plan-tag-filter-item ${planTagFilter === tag.name ? 'active' : ''} ${tagFilterHighlight === i ? 'highlighted' : ''}`}
+                                                role="menuitem"
+                                                onMouseEnter={() => setTagFilterHighlight(i)}
+                                                onClick={() => selectOption(i)}
+                                            >
+                                                {tag.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                );
+                            })()}
+                        </div>
+                    )}
                     <div className="planner-subjects-list">
-                        {subjects.map((s) => (
+                        {subjects.filter(s => planTagFilter === null || (subjectTagsMap.get(s.id) ?? []).includes(planTagFilter)).map((s) => (
                             <div
                                 key={s.id}
                                 draggable
@@ -576,7 +728,9 @@ export default function Plan() {
                                 onMouseDown={() => handleSubjectMouseDown(s.id)}
                                 className={`drag-subject-item ${((isDragging || isMouseDownOnSubject) && draggingSubjectId === s.id) ? 'drag-active' : ''} ${((isDragging || isMouseDownOnSubject) && draggingSubjectId !== s.id) ? 'drag-dim' : ''}`}
                                 onMouseEnter={() => { if (!isDragging) playSFX('glass_ui_hover', theme); }}
+                                title={t('plan.drag_to_add')}
                             >
+                                <GripVertical size={16} className="drag-handle-icon" aria-hidden="true" />
                                 <strong>{s.name}</strong>
                                 {prioritySubjectIds.has(s.id) && (
                                     <span className="priority-badge">{isTerminal ? '[!]' : t('plan.priority')}</span>
@@ -631,6 +785,8 @@ export default function Plan() {
                                 const technique = TECHNIQUES.find(t => t.id === block.technique_id);
                                 const isDropTarget = isWork && !block.subject_id;
                                 const isHovered = hoveredBlockId === block.id;
+                                const subjectChapters = isWork && subject ? getChaptersForSubject(subject.id) : [];
+                                const hasChapters = subjectChapters.length > 0;
 
                                 // Pixel scaling: 5px per minute
                                 const heightPx = block.minutes * PIXELS_PER_MINUTE;
@@ -681,35 +837,42 @@ export default function Plan() {
                                                     <div className="block-subject-details">
                                                         <div className="block-subject-header">
                                                             <strong className="block-subject-name">{subject.name}</strong>
-                                                            {technique && (
-                                                                <span
-                                                                    title={technique.hint}
-                                                                    className={`block-technique-tag tier-${technique.tier.toLowerCase()}`}
-                                                                >
-                                                                    {technique.name}
-                                                                </span>
-                                                            )}
+                                                            <div className="block-readiness-bar" aria-hidden="true">
+                                                                <span className="block-readiness-dot done" title="Subject" />
+                                                                <span className={`block-readiness-dot ${block.chapter_name ? 'done' : ''}`} title="Chapter" />
+                                                                <span className={`block-readiness-dot ${block.objective?.trim() ? 'done' : ''}`} title="Objective" />
+                                                            </div>
                                                         </div>
-                                                        {(() => {
-                                                            const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
-                                                            if (subjectChapters.length === 0) {
-                                                                return (
-                                                                    <div className="block-no-chapters">
-                                                                        {t('plan.no_chapters')}
-                                                                    </div>
-                                                                );
-                                                            }
-                                                            return (
-                                                                <button
-                                                                    onClick={() => setPickingChapterBlockId(block.id)}
-                                                                    className={`block-chapter-button ${block.chapter_name ? 'selected' : 'empty'}`}
-                                                                    aria-label={block.chapter_name ? t('plan.chapter_label') + ` ${block.chapter_name}` : t('plan.select_chapter')}
-                                                                >
-                                                                    <span>{block.chapter_name || t('plan.select_chapter')}</span>
-                                                                    <ChevronDown size={14} opacity={0.5} />
-                                                                </button>
-                                                            );
-                                                        })()}
+                                                        {hasChapters ? (
+                                                            <button
+                                                                onClick={() => setPickingChapterBlockId(block.id)}
+                                                                className={`block-chapter-button ${block.chapter_name ? 'selected' : 'empty'}`}
+                                                                aria-label={block.chapter_name ? t('plan.chapter_label') + ` ${block.chapter_name}` : t('plan.select_chapter')}
+                                                            >
+                                                                <span>{block.chapter_name || t('plan.select_chapter')}</span>
+                                                                <ChevronDown size={14} opacity={0.5} />
+                                                            </button>
+                                                        ) : (
+                                                            <div className="block-no-chapters">
+                                                                {t('plan.no_chapters')}
+                                                            </div>
+                                                        )}
+                                                        <button
+                                                            className={`block-technique-inline ${block.technique_id ? 'has-technique' : 'no-technique'}`}
+                                                            onClick={() => setPickingBlockId(block.id)}
+                                                            disabled={hasChapters && !block.chapter_name}
+                                                            title={hasChapters && !block.chapter_name ? t('plan.select_chapter_first') : technique?.hint}
+                                                            aria-label={t('plan.add_technique')}
+                                                        >
+                                                            <Zap size={13} className="technique-btn-icon" />
+                                                            {block.technique_id ? (
+                                                                <span className={`block-technique-tag tier-${technique?.tier.toLowerCase()}`}>
+                                                                    {technique?.name}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="technique-btn-label">{t('plan.add_technique')}</span>
+                                                            )}
+                                                        </button>
                                                         <input
                                                             type="text"
                                                             placeholder={t('plan.objective_placeholder')}
@@ -732,26 +895,12 @@ export default function Plan() {
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setOpenMenuBlockId(openMenuBlockId === block.id ? null : block.id);
-                                                            setChapterGateBlockId(null);
                                                         }}
                                                     >
                                                         <MoreVertical size={20} />
                                                     </button>
                                                     {openMenuBlockId === block.id && (
                                                         <div className="block-menu-dropdown block-menu-dropdown-open" role="menu">
-                                                            {chapterGateBlockId === block.id ? (
-                                                                <p className="block-menu-gate-msg">{t('plan.select_chapter_first')}</p>
-                                                            ) : (
-                                                                <button className="block-menu-btn" role="menuitem" onClick={() => {
-                                                                    const subjectChapters = subject ? getChaptersForSubject(subject.id) : [];
-                                                                    if (subjectChapters.length > 0 && !block.chapter_name) {
-                                                                        setChapterGateBlockId(block.id);
-                                                                    } else {
-                                                                        setOpenMenuBlockId(null);
-                                                                        setPickingBlockId(block.id);
-                                                                    }
-                                                                }}>{t('plan.change_technique')}</button>
-                                                            )}
                                                             <button className="block-menu-btn" role="menuitem" onClick={() => { clearBlock(block.id); setOpenMenuBlockId(null); }}>{t('plan.clear_block')}</button>
                                                             <button className="block-menu-btn danger" role="menuitem" onClick={() => { deleteCycle(block.id); setOpenMenuBlockId(null); }}>{t('plan.delete_cycle')}</button>
                                                         </div>
@@ -822,6 +971,7 @@ export default function Plan() {
                 return (
                     <ChapterPickerModal
                         subjectId={pickingBlock.subject_id}
+                        techniqueId={pickingBlock.technique_id}
                         onClose={() => setPickingChapterBlockId(null)}
                         onSelect={handleChapterSelectedModal}
                         currentSelection={pickingBlock.chapter_name || null}

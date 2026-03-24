@@ -8,7 +8,7 @@ import { playSFX, SFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { useTranslation } from '../lib/i18n';
 import { METACOGNITION_QUESTIONS } from '../lib/metacognitionQuestions';
-import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
+import { getChaptersForSubject, incrementStudyCount, applyMasteryRating, saveRating, clearPreRecalls, getPreRecall, type MasteryRating } from '../lib/chapters';
 import { isWorkoutMode } from '../lib/devMode';
 import { MUSCLE_GROUPS, CATEGORY_LABELS, loadWorkoutLog, markMuscleWorked, isMuscleEligible, loadWorkoutSets, saveWorkoutSet } from '../lib/workout';
 import type { WorkoutLog, WorkoutSets } from '../lib/workout';
@@ -110,8 +110,12 @@ export default function Session() {
     const [breakCheckedItems, setBreakCheckedItems] = useState<boolean[]>(allBreakItems.map(() => false));
     const [workoutLog, setWorkoutLog] = useState<WorkoutLog>(loadWorkoutLog);
     const [workoutSets, setWorkoutSets] = useState<WorkoutSets>(loadWorkoutSets);
-    const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'total-rest'>('none');
+    const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'rate-chapters' | 'total-rest'>('none');
     const [restCountdown, setRestCountdown] = useState(600); // 10 minutes in seconds
+    const [chapterRatings, setChapterRatings] = useState<Map<string, MasteryRating>>(new Map());
+    const [rateChapterList, setRateChapterList] = useState<Array<{ id: string; name: string }>>([]);
+    const [rateChapterIdx, setRateChapterIdx] = useState(0);
+    const [pendingCompletedAll, setPendingCompletedAll] = useState(true);
     const [newCustomItem, setNewCustomItem] = useState('');
     const [newCustomBreakItem, setNewCustomBreakItem] = useState('');
     const [displayedWorkMins, setDisplayedWorkMins] = useState(0);
@@ -185,6 +189,18 @@ export default function Session() {
         }
     }, [remaining, paused, theme]);
 
+    // 5-minute interval alert
+    useEffect(() => {
+        if (!session || paused) return;
+        if (!session.fiveMinAlert) return;
+        const block = session.draft[session.nowBlockIdx];
+        if (block?.type !== 'WORK') return;
+        if (remaining > 0 && remaining % 300 === 0) {
+            playSFX('glass_timer_five_min', theme);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [remaining]);
+
     // 30/30 sub-timer: alternates 30s work/rest phases within a WORK block
     const currentTechForInterval = session ? TECHNIQUES.find(t => t.id === session.draft[session.nowBlockIdx]?.technique_id) : null;
     const is3030 = currentTechForInterval?.timerMode === 'interval_30_30' && session?.draft[session.nowBlockIdx]?.type === 'WORK';
@@ -214,6 +230,44 @@ export default function Session() {
         setIntervalTick(30);
     }, [session?.nowBlockIdx]);
 
+    function getCompletedChapters(completedAll: boolean): Array<{ id: string; name: string }> {
+        if (!session) return [];
+        const seen = new Set<string>();
+        const result: Array<{ id: string; name: string }> = [];
+        for (let i = 0; i <= session.nowBlockIdx; i++) {
+            const block = session.draft[i];
+            if (block.type === 'WORK' && block.subject_id && block.chapter_name) {
+                let mins = block.minutes;
+                if (i === session.nowBlockIdx && !completedAll) {
+                    mins = Math.floor((block.minutes * 60 - remaining) / 60);
+                }
+                if (mins > 0) {
+                    const chaps = getChaptersForSubject(block.subject_id);
+                    const ch = chaps.find((c: { name: string; id: string }) => c.name === block.chapter_name);
+                    if (ch && !seen.has(ch.id)) {
+                        seen.add(ch.id);
+                        result.push({ id: ch.id, name: ch.name });
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    function enterRatingStep(completedAll: boolean) {
+        const chaps = getCompletedChapters(completedAll);
+        if (chaps.length > 0) {
+            setRateChapterList(chaps);
+            setRateChapterIdx(0);
+            setChapterRatings(new Map());
+            setPendingCompletedAll(completedAll);
+            setEndConfirmStep('rate-chapters');
+        } else {
+            setRestCountdown(600);
+            setEndConfirmStep('total-rest');
+        }
+    }
+
     async function handleBlockComplete() {
         if (!session) return;
         const currentBlock = session.draft[session.nowBlockIdx];
@@ -241,9 +295,8 @@ export default function Session() {
     }
     function handleSessionComplete() {
         playSFX('glass_session_end', theme);
-        setRestCountdown(600);
-        setEndConfirmStep('total-rest');
         setPaused(true);
+        enterRatingStep(true);
     }
 
     // Rest countdown
@@ -337,9 +390,21 @@ export default function Session() {
 
             for (const id of completedChapterIds) {
                 incrementStudyCount(id);
+                const rating = chapterRatings.get(id);
+                if (rating) {
+                    applyMasteryRating(id, rating);
+                    saveRating({
+                        chapterId: id,
+                        sessionId: session.sessionId,
+                        ratedAt: new Date().toISOString(),
+                        rating,
+                        preRecall: getPreRecall(id),
+                    });
+                }
             }
         }
 
+        clearPreRecalls();
         localStorage.removeItem('activeSession');
         setEndConfirmStep('none');
         navigate('/');
@@ -387,6 +452,16 @@ export default function Session() {
 
     const currentBlock = session.draft[session.nowBlockIdx];
     const tech = currentBlock.technique_id ? TECHNIQUES.find(t => t.id === currentBlock.technique_id) : null;
+    const totalSeconds = (currentBlock.minutes ?? 0) * 60;
+    const elapsed = Math.max(0, totalSeconds - remaining);
+    const fiveMinTicks = totalSeconds > 0
+        ? Array.from({ length: Math.floor(totalSeconds / 300) }, (_, i) => i + 1).filter(i => i * 300 < totalSeconds)
+        : [];
+    const currentChapterSources = (() => {
+        if (!currentBlock.subject_id || !currentBlock.chapter_name) return [];
+        const ch = getChaptersForSubject(currentBlock.subject_id).find(c => c.name === currentBlock.chapter_name);
+        return ch?.sources ?? [];
+    })();
 
     return (
         <div className="session-page session-main-container">
@@ -401,6 +476,19 @@ export default function Session() {
                             <div className="session-info-card">
                                 <div className="session-info-label">{isTerminal ? '>>' : '📖'} {t('session.chapter')}</div>
                                 <div className="session-info-value">{currentBlock.chapter_name}</div>
+                                {currentChapterSources.length > 0 && (
+                                    <div className="session-chapter-sources">
+                                        {currentChapterSources.map((src, idx) => (
+                                            <button
+                                                key={idx}
+                                                className="session-chapter-source-btn"
+                                                onClick={() => openExternal(src.url)}
+                                            >
+                                                🔗 {src.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
                         {currentBlock.objective && (
@@ -747,7 +835,23 @@ export default function Session() {
                         })}
                     </div>
 
-                    <div className={`timer-display ${paused ? 'paused' : 'running'}${!paused && remaining < 60 ? ' critical' : !paused && remaining < 300 ? ' warning' : ''}`}>
+                    {totalSeconds > 0 && (
+                        <div className={`session-block-progress${isTerminal ? ' terminal' : ''}`}>
+                            <div
+                                className="session-block-progress-fill"
+                                style={{ '--fill-pct': `${Math.min(100, (elapsed / totalSeconds) * 100)}%` } as React.CSSProperties}
+                            />
+                            {fiveMinTicks.map(i => (
+                                <div
+                                    key={i}
+                                    className="session-block-progress-tick"
+                                    style={{ '--tick-pos': `${(i * 300 / totalSeconds) * 100}%` } as React.CSSProperties}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    <div className={`timer-display ${paused ? 'paused' : 'running'}${!paused && remaining < 60 ? ' critical' : !paused && remaining < 300 ? ' warning' : ''}${isTerminal ? ' terminal' : ''}`}>
                         {(() => { const [mm, ss] = formatSecondsMMSS(remaining).split(':'); return <>{mm}<span className="timer-colon">:</span>{ss}</>; })()}
                     </div>
 
@@ -803,7 +907,7 @@ export default function Session() {
                                     {t('session.save_text')}
                                 </p>
                                 <div className="confirm-modal-actions">
-                                    <button className="btn btn-primary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={() => { playSFX(SFX.CHECK, theme); finishSession(false, true); }}>
+                                    <button className="btn btn-primary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={() => { playSFX(SFX.CHECK, theme); enterRatingStep(false); }}>
                                         {t('session.save_progress')}
                                     </button>
                                     <button className="btn btn-secondary" onMouseEnter={() => playSFX(SFX.HOVER, theme)} onClick={() => { playSFX(SFX.CANCEL, theme); finishSession(false, false); }}>
@@ -812,6 +916,45 @@ export default function Session() {
                                 </div>
                             </>
                         )}
+
+                        {endConfirmStep === 'rate-chapters' && (() => {
+                            const current = rateChapterList[rateChapterIdx];
+                            const isLast = rateChapterIdx >= rateChapterList.length - 1;
+                            function rateAndAdvance(rating: MasteryRating | null) {
+                                if (current && rating) {
+                                    setChapterRatings(prev => new Map(prev).set(current.id, rating));
+                                }
+                                if (isLast) {
+                                    setRestCountdown(600);
+                                    setEndConfirmStep('total-rest');
+                                } else {
+                                    setRateChapterIdx(i => i + 1);
+                                }
+                            }
+                            return (
+                                <div className="rate-chapters-container">
+                                    <h2 className="rate-chapters-title">{t('session.rate_chapters')}</h2>
+                                    <p className="rate-chapters-progress">{rateChapterIdx + 1} / {rateChapterList.length}</p>
+                                    <div className="rate-chapters-chapter-name">{current?.name}</div>
+                                    <p className="rate-chapters-how">{t('session.rate_how')}</p>
+                                    <div className="rate-chapters-buttons">
+                                        {(['forgot', 'hard', 'good', 'easy'] as MasteryRating[]).map(r => (
+                                            <button
+                                                key={r}
+                                                className={`btn rate-btn rate-btn-${r}`}
+                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                                onClick={() => rateAndAdvance(r)}
+                                            >
+                                                {t(`session.mastery_${r}`)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button className="rate-chapters-skip" onClick={() => rateAndAdvance(null)}>
+                                        {isLast ? t('session.rating_done') : t('session.rating_next')}
+                                    </button>
+                                </div>
+                            );
+                        })()}
 
                         {endConfirmStep === 'total-rest' && (
                             <div className="total-rest-container">
@@ -866,7 +1009,7 @@ export default function Session() {
                                 </div>
 
                                 <div className="total-rest-actions">
-                                    <button className="btn btn-primary btn-holographic total-rest-btn" onClick={() => finishSession(true, true)}>
+                                    <button className="btn btn-primary btn-holographic total-rest-btn" onClick={() => finishSession(pendingCompletedAll, true)}>
                                         {restCountdown === 0 ? t('session.rested') : t('session.skip_rest')}
                                     </button>
                                 </div>

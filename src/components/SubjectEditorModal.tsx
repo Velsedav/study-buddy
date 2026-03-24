@@ -11,9 +11,9 @@ import { useSettings } from '../lib/settings';
 import { useTranslation } from '../lib/i18n';
 import {
     getChaptersForSubject, addChapter, deleteChapter,
-    incrementStudyCount, updateChapterFocusType, updateChapterSpacing,
+    incrementStudyCount, updateChapterFocusType, updateChapterSpacing, updateChapterSources,
     getDefaultSpacing, parseSpacing,
-    type Chapter, type FocusType, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS
+    type Chapter, type ChapterSource, type FocusType, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS
 } from '../lib/chapters';
 
 type SubjectType = 'academic' | 'music';
@@ -68,6 +68,9 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     const [newChapterName, setNewChapterName] = useState('');
     const [newChapterMeasures, setNewChapterMeasures] = useState('');
     const [editingSpacingId, setEditingSpacingId] = useState<string | null>(null);
+    const [expandedSourcesId, setExpandedSourcesId] = useState<string | null>(null);
+    const [newSourceLabel, setNewSourceLabel] = useState('');
+    const [newSourceUrl, setNewSourceUrl] = useState('');
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const chaptersPreview = useMemo(() => {
@@ -339,6 +342,27 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
         setEditingSpacingId(null);
     };
 
+    const handleAddSource = (chapterId: string) => {
+        const label = newSourceLabel.trim();
+        const url = newSourceUrl.trim();
+        if (!url) return;
+        const ch = chapters.find(c => c.id === chapterId);
+        if (!ch) return;
+        const updated: ChapterSource[] = [...(ch.sources ?? []), { label: label || url, url }];
+        updateChapterSources(chapterId, updated);
+        setChapters(getChaptersForSubject(effectiveSubjectId));
+        setNewSourceLabel('');
+        setNewSourceUrl('');
+    };
+
+    const handleRemoveSource = (chapterId: string, idx: number) => {
+        const ch = chapters.find(c => c.id === chapterId);
+        if (!ch) return;
+        const updated = (ch.sources ?? []).filter((_, i) => i !== idx);
+        updateChapterSources(chapterId, updated);
+        setChapters(getChaptersForSubject(effectiveSubjectId));
+    };
+
     const mainChapterCount = chapters.filter(c => !/^\s+[A-Z]\./.test(c.name)).length;
     const subChapterCount = chapters.filter(c => /^\s+[A-Z]\./.test(c.name)).length;
 
@@ -361,6 +385,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
 
                 {/* Scrollable body */}
                 <div className="subject-editor-body">
+                    <div className="subject-editor-details-col">
                     {/* ── Subject Details ── */}
                     <div className="form-group">
                         <label>{t('subject_editor.name')}</label>
@@ -421,6 +446,8 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                         </label>
                     </div>
 
+                    </div>{/* end subject-editor-details-col */}
+                    <div className="subject-editor-chapters-col">
                     {/* ── CHAPTERS SECTION ── */}
                     <div className="chapters-section">
                         <h3>
@@ -519,6 +546,56 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                                 >
                                                     {ch.spacingOverride || t('subject_editor.chapter_default')}
                                                 </button>
+                                            )}
+                                        </div>
+                                        <div className="chapter-sources-row">
+                                            <button
+                                                className={`chapter-sources-toggle${(ch.sources?.length ?? 0) > 0 ? ' has-sources' : ''}${expandedSourcesId === ch.id ? ' open' : ''}`}
+                                                onClick={() => {
+                                                    setExpandedSourcesId(expandedSourcesId === ch.id ? null : ch.id);
+                                                    setNewSourceLabel('');
+                                                    setNewSourceUrl('');
+                                                }}
+                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                            >
+                                                {t('subject_editor.chapter_sources')}{(ch.sources?.length ?? 0) > 0 ? ` (${ch.sources!.length})` : ''}
+                                            </button>
+                                            {expandedSourcesId === ch.id && (
+                                                <div className="chapter-sources-panel">
+                                                    {(ch.sources ?? []).map((src, idx) => (
+                                                        <div key={idx} className="chapter-source-item">
+                                                            <span className="chapter-source-label">{src.label}</span>
+                                                            <button
+                                                                className="chapter-source-remove"
+                                                                onClick={() => handleRemoveSource(ch.id, idx)}
+                                                                title={t('subject_editor.remove_source')}
+                                                            >×</button>
+                                                        </div>
+                                                    ))}
+                                                    <div className="chapter-source-add-row">
+                                                        <input
+                                                            type="text"
+                                                            className="chapter-source-input"
+                                                            placeholder={t('subject_editor.source_label_placeholder')}
+                                                            value={newSourceLabel}
+                                                            onChange={e => setNewSourceLabel(e.target.value)}
+                                                            onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
+                                                        />
+                                                        <input
+                                                            type="url"
+                                                            className="chapter-source-input"
+                                                            placeholder={t('subject_editor.source_url_placeholder')}
+                                                            value={newSourceUrl}
+                                                            onChange={e => setNewSourceUrl(e.target.value)}
+                                                            onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
+                                                        />
+                                                        <button
+                                                            className="chapter-source-add-btn"
+                                                            onClick={() => handleAddSource(ch.id)}
+                                                            onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                                        >{t('subject_editor.add_source')}</button>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -628,6 +705,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                         )}
                         </>}
                     </div>
+                    </div>{/* end subject-editor-chapters-col */}
                 </div>
 
                 {/* Footer */}

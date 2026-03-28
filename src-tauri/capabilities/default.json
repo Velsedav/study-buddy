@@ -53,7 +53,14 @@
     "sql:default",
     "sql:allow-execute",
     "sql:allow-select",
-    "shell:allow-open",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://**" },
+        { "url": "file://**" }
+      ]
+    },
     "fs:default",
     {
       "identifier": "fs:allow-read-file",

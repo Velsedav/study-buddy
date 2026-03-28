@@ -5,6 +5,7 @@ export type FocusType = 'skill' | 'comprehension' | 'memorisation' | null;
 export interface ChapterSource {
     label: string;
     url: string;
+    type?: 'url' | 'file'; // undefined = 'url' for backwards compatibility
 }
 
 export const FOCUS_TYPE_LABELS: Record<string, string> = {

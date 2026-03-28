@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { open as openExternal } from '@tauri-apps/plugin-shell';
+import { invoke } from '@tauri-apps/api/core';
 import { useSettings } from '../lib/settings';
-import { getChaptersForSubject, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS, getRecommendations, savePreRecall, type Recommendation, type Chapter, type PreRecall } from '../lib/chapters';
+import { getChaptersForSubject, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS, getRecommendations, savePreRecall, type Recommendation, type Chapter, type ChapterSource, type PreRecall } from '../lib/chapters';
 import { TECHNIQUES } from '../lib/techniques';
 import { playSFX } from '../lib/sounds';
 import { useTranslation } from '../lib/i18n';
 import './ChapterPickerModal.css';
+
+function openSource(src: ChapterSource) {
+    if (src.type === 'file') invoke('open_path', { path: src.url });
+    else openExternal(src.url);
+}
 
 interface ChapterPickerModalProps {
     subjectId: string;
@@ -148,9 +154,9 @@ export default function ChapterPickerModal({ subjectId, techniqueId, onClose, on
                                                         <button
                                                             key={idx}
                                                             className="chapter-picker-source-btn"
-                                                            onClick={() => openExternal(src.url)}
+                                                            onClick={() => openSource(src)}
                                                         >
-                                                            {src.label}
+                                                            {src.type === 'file' ? '📁' : '🔗'} {src.label}
                                                         </button>
                                                     ))}
                                                 </div>

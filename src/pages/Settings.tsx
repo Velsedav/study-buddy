@@ -86,6 +86,12 @@ export default function SettingsTab() {
             ]
         },
         {
+            name: 'Art',
+            themes: [
+                { id: 'starry-night', name: 'Starry Night', color: '#e8c84a', background: 'linear-gradient(135deg, #0d1b3e 0%, #1e4888 55%, #e8c84a 100%)' },
+            ]
+        },
+        {
             name: 'Modern & Experimental',
             themes: [
                 { id: 'pastel', name: 'Pastel Baseline', color: '#f08cb8' },

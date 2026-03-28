@@ -143,7 +143,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
         setStep(newStep);
     };
 
-    const handleSaveAndComplete = async () => {
+    const handleSaveAndComplete = async () => { try {
         const examTypeLabels: Record<string, string> = {
             memorisation: 'Mémorisation',
             comprehension: 'Compréhension',
@@ -187,7 +187,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
         setTimerStarted(false);
         setTimeLeft(TOTAL_SECONDS);
         onComplete();
-    };
+    } catch (e) { console.error('handleSaveAndComplete failed:', e); } };
 
     return (
         <div className="metacognition-page fade-in" style={{

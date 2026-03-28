@@ -1,5 +1,10 @@
 use tauri_plugin_sql::{Builder as SqlBuilder, Migration, MigrationKind};
 
+#[tauri::command]
+fn open_path(path: String) -> Result<(), String> {
+    opener::open(&path).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -100,10 +105,20 @@ pub fn run() {
       ALTER TABLE subjects ADD COLUMN subject_type TEXT NULL;
       ",
       kind: MigrationKind::Up,
+    },
+    Migration {
+      version: 10,
+      description: "add_free_time_and_priority_to_metacognition_logs",
+      sql: "
+      ALTER TABLE metacognition_logs ADD COLUMN free_time_hours REAL NULL;
+      ALTER TABLE metacognition_logs ADD COLUMN priority_subject_ids TEXT NULL;
+      ",
+      kind: MigrationKind::Up,
     }
   ];
 
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![open_path])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())

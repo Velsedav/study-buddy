@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
 import { mkdir, BaseDirectory, exists, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { createSubject, updateSubject } from '../lib/db';
 import { resizeImage } from '../lib/image';
@@ -16,8 +17,10 @@ import {
     type Chapter, type ChapterSource, type FocusType, FOCUS_TYPE_LABELS, FOCUS_TYPE_COLORS
 } from '../lib/chapters';
 
-type SubjectType = 'academic' | 'music';
 import './SubjectEditorModal.css';
+
+type SubjectType = 'academic' | 'music';
+
 
 interface SubjectEditorModalProps {
     onClose: () => void;
@@ -72,6 +75,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     const [newSourceLabel, setNewSourceLabel] = useState('');
     const [newSourceUrl, setNewSourceUrl] = useState('');
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [nameError, setNameError] = useState(false);
 
     const chaptersPreview = useMemo(() => {
         const val = newChapterName.trim();
@@ -202,7 +206,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
     }
 
     async function handleSave() {
-        if (!name.trim()) return;
+        if (!name.trim()) { setNameError(true); return; }
         try {
             if (isEditing) {
                 await updateSubject(editingSubject!.id, name.trim(), coverPath, selectedTags, deadline || null, result || null, archived, subjectType);
@@ -342,17 +346,34 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
         setEditingSpacingId(null);
     };
 
+    const MAX_SOURCES = 4;
+
     const handleAddSource = (chapterId: string) => {
         const label = newSourceLabel.trim();
         const url = newSourceUrl.trim();
         if (!url) return;
         const ch = chapters.find(c => c.id === chapterId);
         if (!ch) return;
-        const updated: ChapterSource[] = [...(ch.sources ?? []), { label: label || url, url }];
+        if ((ch.sources?.length ?? 0) >= MAX_SOURCES) return;
+        const updated: ChapterSource[] = [...(ch.sources ?? []), { label: label || url, url, type: 'url' }];
         updateChapterSources(chapterId, updated);
         setChapters(getChaptersForSubject(effectiveSubjectId));
         setNewSourceLabel('');
         setNewSourceUrl('');
+    };
+
+    const handlePickFileSource = async (chapterId: string) => {
+        const ch = chapters.find(c => c.id === chapterId);
+        if (!ch || (ch.sources?.length ?? 0) >= MAX_SOURCES) return;
+        const selected = await open({ multiple: false });
+        if (!selected || typeof selected !== 'string') return;
+        const fileName = selected.split(/[\\/]/).pop() ?? selected;
+        const updated: ChapterSource[] = [
+            ...(ch.sources ?? []),
+            { label: fileName, url: selected, type: 'file' }
+        ];
+        updateChapterSources(chapterId, updated);
+        setChapters(getChaptersForSubject(effectiveSubjectId));
     };
 
     const handleRemoveSource = (chapterId: string, idx: number) => {
@@ -391,11 +412,13 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                         <label>{t('subject_editor.name')}</label>
                         <input
                             value={name}
-                            onChange={e => { setName(e.target.value); if (saveError) setSaveError(null); }}
+                            onChange={e => { setName(e.target.value); if (nameError) setNameError(false); if (saveError) setSaveError(null); }}
                             onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
                             placeholder={t('subject_editor.name_placeholder')}
+                            className={nameError ? 'input-error' : undefined}
                             autoFocus
                         />
+                        {nameError && <p className="subject-editor-name-error">{t('subject_editor.name_required')}</p>}
                     </div>
 
                     <div className="form-group">
@@ -558,13 +581,18 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                                 }}
                                                 onMouseEnter={() => playSFX(SFX.HOVER, theme)}
                                             >
-                                                {t('subject_editor.chapter_sources')}{(ch.sources?.length ?? 0) > 0 ? ` (${ch.sources!.length})` : ''}
+                                                {t('subject_editor.chapter_sources')}{(ch.sources?.length ?? 0) > 0 ? ` (${ch.sources!.length}/${MAX_SOURCES})` : ''}
                                             </button>
                                             {expandedSourcesId === ch.id && (
                                                 <div className="chapter-sources-panel">
                                                     {(ch.sources ?? []).map((src, idx) => (
                                                         <div key={idx} className="chapter-source-item">
-                                                            <span className="chapter-source-label">{src.label}</span>
+                                                            <span className="chapter-source-type-icon">{src.type === 'file' ? '📁' : '🔗'}</span>
+                                                            <button
+                                                                className="chapter-source-label-btn"
+                                                                onClick={() => invoke('open_path', { path: src.url })}
+                                                                title={src.url}
+                                                            >{src.label}</button>
                                                             <button
                                                                 className="chapter-source-remove"
                                                                 onClick={() => handleRemoveSource(ch.id, idx)}
@@ -572,29 +600,39 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                                             >×</button>
                                                         </div>
                                                     ))}
-                                                    <div className="chapter-source-add-row">
-                                                        <input
-                                                            type="text"
-                                                            className="chapter-source-input"
-                                                            placeholder={t('subject_editor.source_label_placeholder')}
-                                                            value={newSourceLabel}
-                                                            onChange={e => setNewSourceLabel(e.target.value)}
-                                                            onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
-                                                        />
-                                                        <input
-                                                            type="url"
-                                                            className="chapter-source-input"
-                                                            placeholder={t('subject_editor.source_url_placeholder')}
-                                                            value={newSourceUrl}
-                                                            onChange={e => setNewSourceUrl(e.target.value)}
-                                                            onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
-                                                        />
-                                                        <button
-                                                            className="chapter-source-add-btn"
-                                                            onClick={() => handleAddSource(ch.id)}
-                                                            onMouseEnter={() => playSFX(SFX.HOVER, theme)}
-                                                        >{t('subject_editor.add_source')}</button>
-                                                    </div>
+                                                    {(ch.sources?.length ?? 0) < MAX_SOURCES ? (
+                                                        <div className="chapter-source-add-row">
+                                                            <input
+                                                                type="text"
+                                                                className="chapter-source-input"
+                                                                placeholder={t('subject_editor.source_label_placeholder')}
+                                                                value={newSourceLabel}
+                                                                onChange={e => setNewSourceLabel(e.target.value)}
+                                                                onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
+                                                            />
+                                                            <input
+                                                                type="url"
+                                                                className="chapter-source-input"
+                                                                placeholder={t('subject_editor.source_url_placeholder')}
+                                                                value={newSourceUrl}
+                                                                onChange={e => setNewSourceUrl(e.target.value)}
+                                                                onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
+                                                            />
+                                                            <button
+                                                                className="chapter-source-add-btn"
+                                                                onClick={() => handleAddSource(ch.id)}
+                                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                                            >{t('subject_editor.add_source')}</button>
+                                                            <button
+                                                                className="chapter-source-file-btn"
+                                                                onClick={() => handlePickFileSource(ch.id)}
+                                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                                                title={t('subject_editor.source_pick_file')}
+                                                            >{t('subject_editor.source_pick_file')}</button>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="chapter-sources-limit-msg">{t('subject_editor.sources_limit')}</p>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

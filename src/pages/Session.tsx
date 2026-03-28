@@ -4,15 +4,21 @@ import { formatSecondsMMSS } from '../lib/time';
 import { updateSubjectStats, saveSession } from '../lib/db';
 import { TECHNIQUES } from '../lib/techniques';
 import { open as openExternal } from '@tauri-apps/plugin-shell';
+import { invoke } from '@tauri-apps/api/core';
 import { playSFX, SFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { useTranslation } from '../lib/i18n';
 import { METACOGNITION_QUESTIONS } from '../lib/metacognitionQuestions';
-import { getChaptersForSubject, incrementStudyCount, applyMasteryRating, saveRating, clearPreRecalls, getPreRecall, type MasteryRating } from '../lib/chapters';
+import { getChaptersForSubject, incrementStudyCount, applyMasteryRating, saveRating, clearPreRecalls, getPreRecall, type MasteryRating, type ChapterSource } from '../lib/chapters';
 import { isWorkoutMode } from '../lib/devMode';
 import { MUSCLE_GROUPS, CATEGORY_LABELS, loadWorkoutLog, markMuscleWorked, isMuscleEligible, loadWorkoutSets, saveWorkoutSet } from '../lib/workout';
 import type { WorkoutLog, WorkoutSets } from '../lib/workout';
 import './Session.css';
+
+function openSource(src: ChapterSource) {
+    if (src.type === 'file') invoke('open_path', { path: src.url });
+    else openExternal(src.url);
+}
 
 interface PrepItem {
     emoji: string;
@@ -482,9 +488,9 @@ export default function Session() {
                                             <button
                                                 key={idx}
                                                 className="session-chapter-source-btn"
-                                                onClick={() => openExternal(src.url)}
+                                                onClick={() => openSource(src)}
                                             >
-                                                🔗 {src.label}
+                                                {src.type === 'file' ? '📁' : '🔗'} {src.label}
                                             </button>
                                         ))}
                                     </div>

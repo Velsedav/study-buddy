@@ -5235,6 +5235,301 @@ input[type="checkbox"] {
   color: #050510;
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   Theme — Starry Night  (Van Gogh, 1889)
+   Aesthetic direction: "Post-impressionist nocturne"
+   Color scheme: Complementary — ultramarine blue + golden yellow
+   The painting IS the background. UI panels are deep-blue glass
+   that lets the canvas breathe through. Gold accents match
+   Van Gogh's star halos, the natural complement to all that blue.
+   ════════════════════════════════════════════════════════════════════ */
+
+[data-theme="starry-night"] {
+  /* ── Palette ── */
+  --bg-color: #0d1b3e;
+  /* fallback dark ultramarine */
+  --bg-gradient: linear-gradient(160deg, #0d1b3e 0%, #1a3060 100%);
+  /* overridden below */
+  --card-bg: rgba(8, 18, 50, 0.70);
+  --sidebar-bg: rgba(5, 10, 28, 0.93);
+
+  /* Primary: golden star-halo (Van Gogh's luminous yellow, direct complement to ultramarine) */
+  --primary: #e8c84a;
+  --primary-rgb: 232, 200, 74;
+  --primary-hover: #f2d95c;
+
+  /* Secondary: cobalt sky blue (lighter swirling strokes) */
+  --secondary: #4a8fc8;
+
+  /* Accent: cerulean highlight (the brightest swirl edges) */
+  --accent: #7bbdea;
+
+  /* Status colours — warm brick red / olive green, echoing painting's earthier tones */
+  --success: #6db87a;
+  --danger: #c85c4a;
+  --danger-rgb: 200, 92, 74;
+
+  /* Typography: warm canvas off-white for primary, cool cobalt-grey for muted */
+  --text-dark: #f0e8d4;
+  --text-muted: #8ca8cc;
+  --text-light: #f0e8d4;
+
+  --border-radius: 16px;
+  --border-radius-sm: 8px;
+
+  /* Shadows: hue-shifted deep indigo — never pure black */
+  --shadow-sm: 0 4px 14px rgba(5, 12, 40, 0.65);
+  --shadow-md: 0 8px 28px rgba(5, 12, 40, 0.72), 0 0 10px rgba(232, 200, 74, 0.07);
+  --shadow-lg: 0 14px 44px rgba(5, 12, 40, 0.80), 0 0 24px rgba(232, 200, 74, 0.10);
+
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  /* Glass borders: luminous cobalt, like the brightest swirl edges */
+  --glass-border: rgba(74, 143, 200, 0.32);
+
+  --input-border: rgba(232, 200, 74, 0.28);
+  --input-bg-focus: rgba(8, 18, 50, 0.88);
+  --input-focus-ring: rgba(232, 200, 74, 0.18);
+  --bubble-bg: rgba(232, 200, 74, 0.07);
+
+  /* Heatmap: void → cobalt → gold */
+  --h-0: rgba(8, 18, 50, 0.35);
+  --h-1: rgba(74, 143, 200, 0.35);
+  --h-2: rgba(232, 200, 74, 0.50);
+  --h-3: rgba(232, 200, 74, 0.78);
+  --h-4: #e8c84a;
+
+  /* Body background: deep ultramarine — the painting lives in the sidebar */
+  --bg-gradient: linear-gradient(160deg, #090f28 0%, #0d1b3e 45%, #101e48 100%);
+  /* Let the sidebar handle its own background instead of the body stripe */
+  --sidebar-bg: transparent;
+}
+
+/* ── Sidebar: the painting as a framed canvas ──
+   Portrait format fills the tall narrow column perfectly.
+   Dark navy overlay keeps text legible while swirling blues
+   and golden star halos glow through behind it.              */
+/* .glass.sidebar = specificity (0,3,0) — beats [theme] .glass (0,2,0) */
+[data-theme="starry-night"] .glass.sidebar {
+  background:
+    linear-gradient(to bottom, rgba(6, 12, 38, 0.58) 0%, rgba(5, 10, 30, 0.68) 100%),
+    url('/assets/images/Starry_Night.jpg') center top / cover no-repeat scroll;
+  border-right: 1px solid rgba(74, 143, 200, 0.22);
+  backdrop-filter: none;
+}
+
+/* ── Glass panels ── */
+[data-theme="starry-night"] .glass {
+  background: rgba(8, 18, 50, 0.66);
+  border: 1px solid rgba(74, 143, 200, 0.28);
+  box-shadow: 0 4px 24px rgba(5, 12, 40, 0.60), inset 0 1px 0 rgba(232, 200, 74, 0.06);
+  backdrop-filter: blur(18px);
+}
+
+/* ── Buttons ── */
+[data-theme="starry-night"] .btn {
+  background: rgba(8, 18, 50, 0.55);
+  border: 1px solid rgba(74, 143, 200, 0.35);
+  color: var(--text-dark);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition);
+}
+
+[data-theme="starry-night"] .btn:hover {
+  background: rgba(74, 143, 200, 0.14);
+  border-color: rgba(74, 143, 200, 0.60);
+  box-shadow: 0 0 12px rgba(74, 143, 200, 0.20);
+}
+
+/* Primary CTA: golden like a star — dark navy text creates the same contrast Van Gogh used */
+[data-theme="starry-night"] .btn-primary {
+  background: #e8c84a;
+  color: #0a1428;
+  border: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+[data-theme="starry-night"] .btn-primary:hover {
+  background: #f2d95c;
+  box-shadow: 0 0 18px rgba(232, 200, 74, 0.45);
+}
+
+[data-theme="starry-night"] .btn-secondary {
+  background: rgba(8, 18, 50, 0.55);
+  border: 1px solid rgba(74, 143, 200, 0.35);
+  color: var(--text-dark);
+}
+
+[data-theme="starry-night"] .btn-secondary:hover {
+  background: rgba(74, 143, 200, 0.12);
+  border-color: rgba(74, 143, 200, 0.55);
+}
+
+[data-theme="starry-night"] .btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+}
+
+[data-theme="starry-night"] .btn-icon:hover {
+  color: var(--primary);
+  background: rgba(232, 200, 74, 0.08);
+}
+
+/* ── Inputs & forms ── */
+[data-theme="starry-night"] input,
+[data-theme="starry-night"] select,
+[data-theme="starry-night"] textarea {
+  background: rgba(8, 18, 50, 0.78);
+  border: 1px solid rgba(74, 143, 200, 0.28);
+  color: var(--text-dark);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition);
+}
+
+[data-theme="starry-night"] input:focus,
+[data-theme="starry-night"] select:focus,
+[data-theme="starry-night"] textarea:focus {
+  outline: none;
+  border-color: #e8c84a;
+  box-shadow: 0 0 0 3px rgba(232, 200, 74, 0.16);
+  background: rgba(8, 18, 50, 0.88);
+}
+
+[data-theme="starry-night"] input::placeholder,
+[data-theme="starry-night"] textarea::placeholder {
+  color: rgba(140, 168, 204, 0.55);
+}
+
+[data-theme="starry-night"] input[type="checkbox"] {
+  accent-color: #e8c84a;
+}
+
+[data-theme="starry-night"] input[type="range"] {
+  accent-color: #e8c84a;
+}
+
+/* ── Navigation ── */
+[data-theme="starry-night"] .nav-link {
+  /* Brighter than text-muted — nav sits over the painting overlay */
+  color: rgba(200, 220, 240, 0.80);
+  text-shadow: 0 1px 4px rgba(5, 12, 40, 0.70);
+}
+
+[data-theme="starry-night"] .nav-link:hover {
+  color: #f0e8d4;
+  background: rgba(74, 143, 200, 0.14);
+  text-shadow: 0 0 8px rgba(232, 200, 74, 0.20);
+}
+
+[data-theme="starry-night"] .nav-link.active,
+[data-theme="starry-night"] .nav-link[aria-current="page"] {
+  color: #e8c84a;
+  background: rgba(232, 200, 74, 0.12);
+  border-left: 2px solid #e8c84a;
+  box-shadow: inset 0 0 14px rgba(232, 200, 74, 0.08);
+  text-shadow: 0 0 10px rgba(232, 200, 74, 0.40);
+}
+
+/* ── Sidebar logo & mascot bubble over the painting ── */
+[data-theme="starry-night"] .logo h2 {
+  color: #f0e8d4;
+  text-shadow: 0 1px 8px rgba(5, 12, 40, 0.80), 0 0 16px rgba(232, 200, 74, 0.18);
+}
+
+[data-theme="starry-night"] .icon-gold {
+  color: #e8c84a;
+  filter: drop-shadow(0 0 6px rgba(232, 200, 74, 0.50));
+}
+
+[data-theme="starry-night"] .mascot-bubble {
+  background: rgba(8, 18, 50, 0.78);
+  border: 1px solid rgba(74, 143, 200, 0.32);
+  color: #f0e8d4;
+  backdrop-filter: blur(8px);
+}
+
+/* ── Tags / chips ── */
+[data-theme="starry-night"] .tag,
+[data-theme="starry-night"] .tag-chip {
+  background: rgba(232, 200, 74, 0.10);
+  border: 1px solid rgba(232, 200, 74, 0.30);
+  color: #e8c84a;
+}
+
+/* ── Modals — higher opacity, deeper blur for focus ── */
+[data-theme="starry-night"] .modal-content,
+[data-theme="starry-night"] .modal-glass {
+  background: rgba(5, 12, 35, 0.92);
+  border: 1px solid rgba(74, 143, 200, 0.30);
+  box-shadow: 0 24px 64px rgba(5, 12, 40, 0.85), 0 0 40px rgba(232, 200, 74, 0.05);
+  backdrop-filter: blur(26px);
+}
+
+/* ── Stat cards ── */
+[data-theme="starry-night"] .stat-card {
+  background: rgba(8, 18, 50, 0.72);
+  border: 1px solid rgba(74, 143, 200, 0.22);
+}
+
+/* ── Stat values and headings glow softly like the painting's light sources ── */
+[data-theme="starry-night"] .stat-val,
+[data-theme="starry-night"] .stat-value {
+  text-shadow: 0 0 12px rgba(232, 200, 74, 0.35);
+}
+
+[data-theme="starry-night"] h1,
+[data-theme="starry-night"] h2,
+[data-theme="starry-night"] h3 {
+  font-family: var(--font-heading);
+  text-shadow: 0 1px 10px rgba(5, 12, 40, 0.80);
+}
+
+/* ── Learning section cards: lift and edge glow on hover ── */
+[data-theme="starry-night"] .learning-section-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(5, 12, 40, 0.65), 0 0 18px rgba(74, 143, 200, 0.18);
+  border-color: rgba(74, 143, 200, 0.45);
+}
+
+/* ── Drag items ── */
+[data-theme="starry-night"] .drag-subject-item.drag-active {
+  border: 1px solid #e8c84a;
+  box-shadow: 0 0 20px rgba(232, 200, 74, 0.30);
+}
+
+/* ── SRS badge ── */
+[data-theme="starry-night"] .srs-badge {
+  background: rgba(232, 200, 74, 0.10);
+  border: 1px solid rgba(232, 200, 74, 0.28);
+  color: #e8c84a;
+}
+
+/* ── Scrollbar ── */
+[data-theme="starry-night"] ::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-theme="starry-night"] ::-webkit-scrollbar-track {
+  background: rgba(8, 18, 50, 0.40);
+}
+
+[data-theme="starry-night"] ::-webkit-scrollbar-thumb {
+  background: rgba(74, 143, 200, 0.35);
+  border-radius: 3px;
+}
+
+[data-theme="starry-night"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(232, 200, 74, 0.50);
+}
+
+/* ── Selection: golden like selecting text by candlelight ── */
+[data-theme="starry-night"] ::selection {
+  background: rgba(232, 200, 74, 0.30);
+  color: #0a1428;
+}
+
 /* ── Empty state fade-in ── */
 .timeline-empty-state,
 .onboarding-banner,

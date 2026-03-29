@@ -122,3 +122,99 @@
 .delete-all-btn {
     margin-top: 8px;
 }
+
+/* ── Export / Save Locations ── */
+
+.export-locations {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.export-locations-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
+.export-path-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.export-path-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+.export-path-value {
+    flex: 1;
+    font-size: 0.78rem;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.75;
+    min-width: 0;
+}
+
+.export-path-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.export-clear-btn {
+    flex-shrink: 0;
+    opacity: 0.5;
+    padding: 3px;
+    line-height: 1;
+}
+
+.export-clear-btn:hover {
+    opacity: 1;
+}
+
+.export-auto-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+    padding-top: 2px;
+}
+
+.export-status {
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+    padding: 6px 10px;
+    border-radius: var(--border-radius);
+}
+
+.export-status-success {
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.export-status-error {
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.export-last-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0 0 10px;
+}

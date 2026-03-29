@@ -1,7 +1,7 @@
 import { useSettings } from '../lib/settings';
 import type { Theme, WeekStart, MetacognitionDay } from '../lib/settings';
 import { useState, useEffect } from 'react';
-import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play, Brain, Power, Settings as SettingsIcon } from 'lucide-react';
+import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play, Brain, Power, Settings as SettingsIcon, FolderOpen, X } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { deleteAllData } from '../lib/db';
 import { getDefaultSpacing, setDefaultSpacing, parseSpacing, DEFAULT_SPACING } from '../lib/chapters';
@@ -9,6 +9,13 @@ import { getAutostart, setAutostart } from '../lib/autostart';
 import { CustomSelect } from '../components/CustomSelect';
 import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, playSFX } from '../lib/sounds';
 import type { SoundEffect, VolumeSettings } from '../lib/sounds';
+import {
+    getExportConfig, saveExportConfig,
+    getLastExportTime,
+    exportToConfiguredPaths, exportToFilePath,
+    pickExportFolder, pickSaveFilePath, pickImportFilePath,
+    importBackup,
+} from '../lib/export';
 import './Settings.css';
 
 export default function SettingsTab() {
@@ -26,9 +33,45 @@ export default function SettingsTab() {
     const [spacingError, setSpacingError] = useState('');
     const [autostartEnabled, setAutostartEnabled] = useState(false);
 
+    const [exportPath1, setExportPath1] = useState(() => getExportConfig().path1);
+    const [exportPath2, setExportPath2] = useState(() => getExportConfig().path2);
+    const [lastExportTime, setLastExportTimeState] = useState(() => getLastExportTime());
+    const [exportStatus, setExportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
     useEffect(() => {
         getAutostart().then(setAutostartEnabled);
     }, []);
+
+    function flashStatus(type: 'success' | 'error', message: string) {
+        setExportStatus({ type, message });
+        setTimeout(() => setExportStatus(null), 4000);
+    }
+
+    function persistPaths(p1: string, p2: string) {
+        saveExportConfig({ path1: p1, path2: p2 });
+    }
+
+    async function handlePickPath(slot: 1 | 2) {
+        const folder = await pickExportFolder();
+        if (!folder) return;
+        if (slot === 1) {
+            setExportPath1(folder);
+            persistPaths(folder, exportPath2);
+        } else {
+            setExportPath2(folder);
+            persistPaths(exportPath1, folder);
+        }
+    }
+
+    function handleClearPath(slot: 1 | 2) {
+        if (slot === 1) {
+            setExportPath1('');
+            persistPaths('', exportPath2);
+        } else {
+            setExportPath2('');
+            persistPaths(exportPath1, '');
+        }
+    }
 
     const handleSpacingChange = (val: string) => {
         setDefaultSpacingState(val);
@@ -129,14 +172,46 @@ export default function SettingsTab() {
         document.documentElement.setAttribute('data-theme', theme);
     };
 
-    const handleExport = () => {
-        // Simple placeholder for export
-        alert("Data export functionality will be implemented with Tauri dialog APIs.");
+    const handleExport = async () => {
+        playSFX(SFX.HOVER, theme);
+        const hasPaths = exportPath1.trim() || exportPath2.trim();
+        if (hasPaths) {
+            try {
+                const { saved, errors } = await exportToConfiguredPaths();
+                if (errors.length > 0 && saved.length === 0) {
+                    flashStatus('error', t('settings.export_error'));
+                } else {
+                    setLastExportTimeState(new Date().toISOString());
+                    flashStatus('success', t('settings.export_success'));
+                }
+            } catch {
+                flashStatus('error', t('settings.export_error'));
+            }
+        } else {
+            // No paths configured — open a save dialog
+            const filePath = await pickSaveFilePath();
+            if (!filePath) return;
+            try {
+                await exportToFilePath(filePath);
+                setLastExportTimeState(new Date().toISOString());
+                flashStatus('success', t('settings.export_success'));
+            } catch {
+                flashStatus('error', t('settings.export_error'));
+            }
+        }
     };
 
-    const handleImport = () => {
-        // Simple placeholder for import
-        alert("Data import functionality will be implemented with Tauri dialog APIs.");
+    const handleImport = async () => {
+        playSFX(SFX.HOVER, theme);
+        const filePath = await pickImportFilePath();
+        if (!filePath) return;
+        try {
+            await importBackup(filePath);
+            flashStatus('success', t('settings.import_success'));
+            setTimeout(() => window.location.reload(), 1500);
+        } catch {
+            flashStatus('error', t('settings.import_error'));
+        }
     };
 
     const handleDeleteAll = async () => {
@@ -426,9 +501,72 @@ export default function SettingsTab() {
                         <h3>{t('settings.data_management')}</h3>
                     </div>
                     <p className="settings-desc">{t('settings.backup_desc')}</p>
+
+                    <div className="export-locations">
+                        <span className="export-locations-label">{t('settings.save_locations')}</span>
+                        <div className="export-path-row">
+                            <span className="export-path-tag">{t('settings.export_primary')}</span>
+                            <span className="export-path-value" title={exportPath1 || undefined}>
+                                {exportPath1 || t('settings.export_not_set')}
+                            </span>
+                            <button
+                                className="btn btn-secondary export-path-btn"
+                                onMouseEnter={() => playSFX(SFX.HOVER)}
+                                onClick={() => handlePickPath(1)}
+                            >
+                                <FolderOpen size={14} />
+                                {t('settings.export_browse')}
+                            </button>
+                            {exportPath1 && (
+                                <button
+                                    className="btn-icon export-clear-btn"
+                                    onClick={() => handleClearPath(1)}
+                                    aria-label="Clear primary location"
+                                >
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="export-path-row">
+                            <span className="export-path-tag">{t('settings.export_secondary')}</span>
+                            <span className="export-path-value" title={exportPath2 || undefined}>
+                                {exportPath2 || t('settings.export_not_set')}
+                            </span>
+                            <button
+                                className="btn btn-secondary export-path-btn"
+                                onMouseEnter={() => playSFX(SFX.HOVER)}
+                                onClick={() => handlePickPath(2)}
+                            >
+                                <FolderOpen size={14} />
+                                {t('settings.export_browse')}
+                            </button>
+                            {exportPath2 && (
+                                <button
+                                    className="btn-icon export-clear-btn"
+                                    onClick={() => handleClearPath(2)}
+                                    aria-label="Clear secondary location"
+                                >
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </div>
+                        <p className="export-auto-note">{t('settings.export_auto_note')}</p>
+                    </div>
+
+                    {exportStatus && (
+                        <p className={`export-status export-status-${exportStatus.type}`}>
+                            {exportStatus.message}
+                        </p>
+                    )}
+                    {lastExportTime && !exportStatus && (
+                        <p className="export-last-time">
+                            {t('settings.export_last')} {new Date(lastExportTime).toLocaleString()}
+                        </p>
+                    )}
+
                     <div className="data-actions">
-                        <button className="btn btn-secondary w-full" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={handleExport}>{t('settings.export')}</button>
-                        <button className="btn btn-secondary w-full" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={handleImport}>{t('settings.import')}</button>
+                        <button className="btn btn-secondary w-full" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={handleExport}>{t('settings.export_now')}</button>
+                        <button className="btn btn-secondary w-full" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={handleImport}>{t('settings.import_merge')}</button>
                     </div>
                 </div>
 

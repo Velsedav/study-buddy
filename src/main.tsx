@@ -51,6 +51,20 @@ document.addEventListener('keydown', async (e) => {
   }
 });
 
+// Auto-export on close: save to configured paths before the window is destroyed
+import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+  getCurrentWindow().onCloseRequested(async (event) => {
+    event.preventDefault();
+    try {
+      const { autoExportToConfiguredPaths } = await import('./lib/export');
+      await autoExportToConfiguredPaths();
+    } catch {
+      // Never block close due to export failure
+    }
+    getCurrentWindow().destroy();
+  });
+});
+
 // Strip any native WebView zoom property if it gets applied
 const clearNativeZoom = () => {
   if (document.documentElement.style.zoom) document.documentElement.style.removeProperty('zoom');

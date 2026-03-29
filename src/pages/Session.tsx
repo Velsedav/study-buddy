@@ -278,12 +278,15 @@ export default function Session() {
         if (!session) return;
         const currentBlock = session.draft[session.nowBlockIdx];
 
-        // Accumulate work minutes implicitly
+        // Accumulate actual work minutes (timer may not have reached zero if user skipped)
         if (currentBlock.type === 'WORK' && currentBlock.subject_id) {
-            setCompletedWorkMinutes(prev => ({
-                ...prev,
-                [currentBlock.subject_id]: (prev[currentBlock.subject_id] || 0) + currentBlock.minutes
-            }));
+            const actualMins = Math.floor((currentBlock.minutes * 60 - remaining) / 60);
+            if (actualMins > 0) {
+                setCompletedWorkMinutes(prev => ({
+                    ...prev,
+                    [currentBlock.subject_id]: (prev[currentBlock.subject_id] || 0) + actualMins
+                }));
+            }
         }
 
         const nextIdx = session.nowBlockIdx + 1;

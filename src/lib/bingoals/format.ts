@@ -11,7 +11,11 @@ export function formatDuration(ms: number): string {
 
 export function daysAgo(ts: number | null): number | null {
   if (ts === null) return null;
-  const diff = Math.floor((Date.now() - ts) / 86_400_000);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const then = new Date(ts);
+  then.setHours(0, 0, 0, 0);
+  const diff = Math.round((now.getTime() - then.getTime()) / 86_400_000);
   return Math.max(0, diff);
 }
 

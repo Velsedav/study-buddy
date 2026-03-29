@@ -89,6 +89,12 @@ export default function SettingsTab() {
             name: 'Art',
             themes: [
                 { id: 'starry-night', name: 'Starry Night', color: '#e8c84a', background: 'linear-gradient(135deg, #0d1b3e 0%, #1e4888 55%, #e8c84a 100%)' },
+                { id: 'designers-republic', name: 'TDR — Signal', color: '#e8001d', background: 'linear-gradient(135deg, #f0ede6 0%, #ffffff 45%, #e8001d 100%)' },
+                { id: 'tdr-blue', name: 'TDR — Blueprint', color: '#0055cc', background: 'linear-gradient(135deg, #f0ede6 0%, #ffffff 45%, #0055cc 100%)' },
+                { id: 'tdr-ember', name: 'TDR — Ember', color: '#e86000', background: 'linear-gradient(135deg, #f0ede6 0%, #ffffff 45%, #e86000 100%)' },
+                { id: 'tdr-night', name: 'TDR — Night', color: '#ff1a2d', background: 'linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 45%, #ff1a2d 100%)' },
+                { id: 'tdr-warp', name: 'TDR — Warp', color: '#f5d000', background: 'linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 45%, #f5d000 100%)' },
+                { id: 'tdr-acid', name: 'TDR — Acid', color: '#aaff00', background: 'linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 45%, #aaff00 100%)' },
             ]
         },
         {

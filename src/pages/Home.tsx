@@ -186,13 +186,14 @@ export default function Home() {
                 return;
             }
 
-            const d = new Date(today);
-            const currentDay = d.getDay();
-            const diff = weekStart === 'monday'
-                ? d.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
-                : d.getDate() - currentDay;
-            const sow = new Date(d.setDate(diff));
-            sow.setHours(0, 0, 0, 0);
+            // Compute the start of the current Pit Stop window (the most recent anchor day).
+            // Saturday config → anchor = Saturday; Friday config → anchor = Friday; Sunday → anchor = Sunday.
+            // This is independent of weekStart so Sat+Sun always belong to the same window.
+            const anchorDay = metacognitionDay === 'friday' ? 5 : metacognitionDay === 'saturday' ? 6 : 0;
+            const windowStart = new Date(today);
+            windowStart.setHours(0, 0, 0, 0);
+            const daysBack = (windowStart.getDay() - anchorDay + 7) % 7;
+            windowStart.setDate(windowStart.getDate() - daysBack);
 
             const lastRecordedStr = localStorage.getItem('study-buddy-metacognition-last');
             if (!lastRecordedStr) {
@@ -201,7 +202,7 @@ export default function Home() {
             }
 
             const lastRecorded = new Date(lastRecordedStr);
-            setShowMetacognition(lastRecorded < sow);
+            setShowMetacognition(lastRecorded < windowStart);
         };
 
         checkMetacognitionMode();

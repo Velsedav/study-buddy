@@ -23,6 +23,8 @@ export default function Layout() {
     const [animClass, setAnimClass] = useState('quote-visible');
     const [editorOpen, setEditorOpen] = useState(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const glitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [glitchVariant, setGlitchVariant] = useState<'a' | 'b' | 'c' | null>(null);
     const [navWarningStep, setNavWarningStep] = useState<'none' | 'confirm-stop' | 'confirm-save'>('none');
     const [pendingNavPath, setPendingNavPath] = useState<string | null>(null);
     const [devNavVisible, setDevNavVisible] = useState(isDevNavUnlocked);
@@ -152,6 +154,13 @@ export default function Layout() {
 
     function handleNavClick(e: React.MouseEvent, path: string) {
         playSFX('glass_enter_menu', theme);
+        if (isTerminal) {
+            const variants = ['a', 'b', 'c'] as const;
+            const picked = variants[Math.floor(Math.random() * variants.length)];
+            if (glitchTimerRef.current) clearTimeout(glitchTimerRef.current);
+            setGlitchVariant(picked);
+            glitchTimerRef.current = setTimeout(() => setGlitchVariant(null), 300);
+        }
         if (localStorage.getItem('activeSession')) {
             e.preventDefault();
             setPendingNavPath(path);
@@ -327,7 +336,7 @@ export default function Layout() {
             </nav>
 
             {/* Main Content Area */}
-            <main className="main-content">
+            <main className={`main-content${glitchVariant ? ` terminal-glitch-${glitchVariant}` : ''}`}>
                 <div className="top-decoration"></div>
                 <div key={location.pathname} className="page-route-transition">
                     <Outlet />

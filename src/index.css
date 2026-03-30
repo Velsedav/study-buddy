@@ -5558,7 +5558,7 @@ input[type="checkbox"] {
   --font-heading: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
   --bg-color: #f0ede6;
   --bg-gradient: linear-gradient(180deg, #f0ede6, #f0ede6);
-  --card-bg: #ffffff;
+  --card-bg: #fdfcf9;
   --primary: #e8001d;
   --primary-rgb: 232, 0, 29;
   --primary-hover: #ff1a2d;
@@ -5576,19 +5576,19 @@ input[type="checkbox"] {
   --shadow-md: 3px 3px 0 rgba(13, 13, 13, 0.22);
   --shadow-lg: 5px 5px 0 rgba(13, 13, 13, 0.28);
   --transition: all 0.1s ease;
-  --glass-border: #0d0d0d;
-  --sidebar-bg: #0d0d0d;
+  --glass-border: rgba(13, 13, 13, 0.28);
+  --sidebar-bg: #e8001d;
   --input-border: #0d0d0d;
-  --input-bg-focus: #ffffff;
+  --input-bg-focus: #fdfcf9;
   --input-focus-ring: rgba(232, 0, 29, 0.15);
-  --bubble-bg: #0d0d0d;
+  --bubble-bg: rgba(0, 0, 0, 0.28);
   --h-0: #ffe0e3;
   --h-1: #ff9aa3;
   --h-2: #ff4455;
   --h-3: #e8001d;
   --h-4: #a80015;
   --tdr-rule: #0d0d0d;
-  --tdr-dot: rgba(13, 13, 13, 0.09);
+  --tdr-dot: rgba(13, 13, 13, 0.13);
   --tdr-btn-fg: #0d0d0d;
   --tdr-btn-inv: #0d0d0d;
   --tdr-btn-inv-fg: #f0ede6;
@@ -5600,7 +5600,7 @@ input[type="checkbox"] {
   --font-heading: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
   --bg-color: #f0ede6;
   --bg-gradient: linear-gradient(180deg, #f0ede6, #f0ede6);
-  --card-bg: #ffffff;
+  --card-bg: #fdfcf9;
   --primary: #0055cc;
   --primary-rgb: 0, 85, 204;
   --primary-hover: #1a6adf;
@@ -5618,19 +5618,19 @@ input[type="checkbox"] {
   --shadow-md: 3px 3px 0 rgba(13, 13, 13, 0.22);
   --shadow-lg: 5px 5px 0 rgba(13, 13, 13, 0.28);
   --transition: all 0.1s ease;
-  --glass-border: #0d0d0d;
-  --sidebar-bg: #0d0d0d;
+  --glass-border: rgba(13, 13, 13, 0.28);
+  --sidebar-bg: #0055cc;
   --input-border: #0d0d0d;
-  --input-bg-focus: #ffffff;
+  --input-bg-focus: #fdfcf9;
   --input-focus-ring: rgba(0, 85, 204, 0.15);
-  --bubble-bg: #0d0d0d;
+  --bubble-bg: rgba(0, 0, 0, 0.28);
   --h-0: #d6e8ff;
   --h-1: #88bbff;
   --h-2: #4488ee;
   --h-3: #0055cc;
   --h-4: #003399;
   --tdr-rule: #0d0d0d;
-  --tdr-dot: rgba(13, 13, 13, 0.09);
+  --tdr-dot: rgba(13, 13, 13, 0.13);
   --tdr-btn-fg: #0d0d0d;
   --tdr-btn-inv: #0d0d0d;
   --tdr-btn-inv-fg: #f0ede6;
@@ -5642,7 +5642,7 @@ input[type="checkbox"] {
   --font-heading: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
   --bg-color: #f0ede6;
   --bg-gradient: linear-gradient(180deg, #f0ede6, #f0ede6);
-  --card-bg: #ffffff;
+  --card-bg: #fdfcf9;
   --primary: #e86000;
   --primary-rgb: 232, 96, 0;
   --primary-hover: #ff7714;
@@ -5660,19 +5660,19 @@ input[type="checkbox"] {
   --shadow-md: 3px 3px 0 rgba(13, 13, 13, 0.22);
   --shadow-lg: 5px 5px 0 rgba(13, 13, 13, 0.28);
   --transition: all 0.1s ease;
-  --glass-border: #0d0d0d;
-  --sidebar-bg: #0d0d0d;
+  --glass-border: rgba(13, 13, 13, 0.28);
+  --sidebar-bg: #e86000;
   --input-border: #0d0d0d;
-  --input-bg-focus: #ffffff;
+  --input-bg-focus: #fdfcf9;
   --input-focus-ring: rgba(232, 96, 0, 0.15);
-  --bubble-bg: #0d0d0d;
+  --bubble-bg: rgba(0, 0, 0, 0.28);
   --h-0: #ffe8d4;
   --h-1: #ffb87a;
   --h-2: #ff7714;
   --h-3: #e86000;
   --h-4: #a84400;
   --tdr-rule: #0d0d0d;
-  --tdr-dot: rgba(13, 13, 13, 0.09);
+  --tdr-dot: rgba(13, 13, 13, 0.13);
   --tdr-btn-fg: #0d0d0d;
   --tdr-btn-inv: #0d0d0d;
   --tdr-btn-inv-fg: #f0ede6;
@@ -5713,8 +5713,8 @@ input[type="checkbox"] {
   --h-2: #cc0016;
   --h-3: #ff1a2d;
   --h-4: #ff7788;
-  --tdr-rule: rgba(240, 237, 230, 0.15);
-  --tdr-dot: rgba(255, 26, 45, 0.07);
+  --tdr-rule: rgba(240, 237, 230, 0.20);
+  --tdr-dot: rgba(255, 26, 45, 0.10);
   --tdr-btn-fg: #f0ede6;
   --tdr-btn-inv: var(--primary);
   --tdr-btn-inv-fg: #0d0d0d;
@@ -5755,8 +5755,8 @@ input[type="checkbox"] {
   --h-2: #998000;
   --h-3: #f5d000;
   --h-4: #ffe566;
-  --tdr-rule: rgba(240, 237, 230, 0.15);
-  --tdr-dot: rgba(245, 208, 0, 0.07);
+  --tdr-rule: rgba(240, 237, 230, 0.20);
+  --tdr-dot: rgba(245, 208, 0, 0.10);
   --tdr-btn-fg: #f0ede6;
   --tdr-btn-inv: var(--primary);
   --tdr-btn-inv-fg: #0d0d0d;
@@ -5797,8 +5797,8 @@ input[type="checkbox"] {
   --h-2: #558800;
   --h-3: #aaff00;
   --h-4: #ccff66;
-  --tdr-rule: rgba(240, 237, 230, 0.15);
-  --tdr-dot: rgba(170, 255, 0, 0.07);
+  --tdr-rule: rgba(240, 237, 230, 0.20);
+  --tdr-dot: rgba(170, 255, 0, 0.10);
   --tdr-btn-fg: #f0ede6;
   --tdr-btn-inv: var(--primary);
   --tdr-btn-inv-fg: #0d0d0d;
@@ -5828,13 +5828,20 @@ input[type="checkbox"] {
   pointer-events: none;
 }
 
-/* ── Sidebar: the black band ── */
+/* ── Sidebar: primary-coloured band on light variants, near-black on dark ── */
 [data-theme="designers-republic"] .glass.sidebar,
 [data-theme^="tdr-"] .glass.sidebar {
   background: var(--sidebar-bg);
   border-right: 2px solid var(--primary);
   backdrop-filter: none;
   box-shadow: none;
+}
+
+/* Light TDR sidebars are coloured — their right-border rule must be dark, not same-as-bg */
+[data-theme="designers-republic"] .glass.sidebar,
+[data-theme="tdr-blue"] .glass.sidebar,
+[data-theme="tdr-ember"] .glass.sidebar {
+  border-right: 2px solid rgba(0, 0, 0, 0.30);
 }
 
 /* ── Sidebar crosshair: registration target mark ── */
@@ -5856,6 +5863,16 @@ input[type="checkbox"] {
   background-position: center center;
   background-repeat: no-repeat;
   pointer-events: none;
+}
+
+/* Light TDR sidebars: crosshair uses cream instead of primary (same colour as bg) */
+[data-theme="designers-republic"] .glass.sidebar::before,
+[data-theme="tdr-blue"] .glass.sidebar::before,
+[data-theme="tdr-ember"] .glass.sidebar::before {
+  border-color: rgba(240, 237, 230, 0.45);
+  background-image:
+    linear-gradient(to right, rgba(240, 237, 230, 0.40) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(240, 237, 230, 0.40) 1px, transparent 1px);
 }
 
 /* ── Glass panels: flat card + corner mark ── */
@@ -5889,6 +5906,14 @@ input[type="checkbox"] {
   display: none;
 }
 
+/* Modals suppress the card corner mark (registration mark already on the card frame) */
+[data-theme="designers-republic"] .modal-content::after,
+[data-theme="designers-republic"] .modal-glass::after,
+[data-theme^="tdr-"] .modal-content::after,
+[data-theme^="tdr-"] .modal-glass::after {
+  display: none;
+}
+
 /* ── Navigation: uppercase grotesque on dark sidebar ── */
 [data-theme="designers-republic"] .nav-link,
 [data-theme^="tdr-"] .nav-link {
@@ -5915,6 +5940,26 @@ input[type="checkbox"] {
   font-weight: 900;
 }
 
+/* Light TDR sidebars: hover/active must use dark overlay — primary bg is already the sidebar */
+[data-theme="designers-republic"] .nav-link:hover,
+[data-theme="tdr-blue"] .nav-link:hover,
+[data-theme="tdr-ember"] .nav-link:hover {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="designers-republic"] .nav-link.active,
+[data-theme="designers-republic"] .nav-link[aria-current="page"],
+[data-theme="tdr-blue"] .nav-link.active,
+[data-theme="tdr-blue"] .nav-link[aria-current="page"],
+[data-theme="tdr-ember"] .nav-link.active,
+[data-theme="tdr-ember"] .nav-link[aria-current="page"] {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.40);
+  border-left: 3px solid #ffffff;
+  font-weight: 900;
+}
+
 /* ── Logo: white on dark sidebar ── */
 [data-theme="designers-republic"] .logo h2,
 [data-theme^="tdr-"] .logo h2 {
@@ -5930,13 +5975,27 @@ input[type="checkbox"] {
   filter: none;
 }
 
+/* Light TDR sidebars: icon-gold must be cream/white — primary is the sidebar bg */
+[data-theme="designers-republic"] .icon-gold,
+[data-theme="tdr-blue"] .icon-gold,
+[data-theme="tdr-ember"] .icon-gold {
+  color: rgba(240, 237, 230, 0.85);
+}
+
 /* ── Mascot bubble: dark box, primary border ── */
 [data-theme="designers-republic"] .mascot-bubble,
 [data-theme^="tdr-"] .mascot-bubble {
-  background: var(--sidebar-bg);
+  background: var(--bubble-bg);
   border: 1.5px solid var(--primary);
   color: #f0ede6;
   border-radius: 0;
+}
+
+/* Light TDR sidebars: mascot bubble gets dark bg + cream border */
+[data-theme="designers-republic"] .mascot-bubble,
+[data-theme="tdr-blue"] .mascot-bubble,
+[data-theme="tdr-ember"] .mascot-bubble {
+  border-color: rgba(240, 237, 230, 0.55);
 }
 
 [data-theme="designers-republic"] .quote-edit-btn,
@@ -5950,6 +6009,14 @@ input[type="checkbox"] {
 [data-theme^="tdr-"] .quote-edit-btn:hover {
   color: var(--primary);
   background: rgba(var(--primary-rgb), 0.12);
+}
+
+/* Light TDR sidebars: quote-edit hover uses cream + dark overlay */
+[data-theme="designers-republic"] .quote-edit-btn:hover,
+[data-theme="tdr-blue"] .quote-edit-btn:hover,
+[data-theme="tdr-ember"] .quote-edit-btn:hover {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.20);
 }
 
 /* ── Buttons: uppercase grotesque, inversion on hover ── */
@@ -5987,7 +6054,7 @@ input[type="checkbox"] {
 [data-theme^="tdr-"] .btn-primary:hover {
   background: var(--tdr-btn-inv);
   border-color: var(--tdr-btn-inv);
-  color: var(--primary);
+  color: var(--tdr-btn-inv-fg);
 }
 
 [data-theme="designers-republic"] .btn-secondary,
@@ -6028,6 +6095,14 @@ input[type="checkbox"] {
   background: rgba(var(--primary-rgb), 0.15);
 }
 
+/* Light TDR sidebars: sidebar btn-icon hover uses white + dark overlay */
+[data-theme="designers-republic"] .glass.sidebar .btn-icon:hover,
+[data-theme="tdr-blue"] .glass.sidebar .btn-icon:hover,
+[data-theme="tdr-ember"] .glass.sidebar .btn-icon:hover {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.22);
+}
+
 [data-theme="designers-republic"] .btn-danger,
 [data-theme^="tdr-"] .btn-danger {
   background: var(--danger);
@@ -6040,7 +6115,7 @@ input[type="checkbox"] {
 [data-theme^="tdr-"] .btn-danger:hover {
   background: var(--tdr-btn-inv);
   border-color: var(--tdr-btn-inv);
-  color: var(--danger);
+  color: var(--tdr-btn-inv-fg);
 }
 
 /* ── Typography: condensed grotesque throughout — no serifs ── */
@@ -6156,11 +6231,93 @@ input[type="checkbox"] {
   background: var(--primary);
 }
 
+/* ── Acid: dark text on chartreuse active/selected states ── */
+/* #aaff00 chartreuse bg + white text = poor contrast — override to near-black */
+[data-theme="tdr-acid"] .nav-link.active,
+[data-theme="tdr-acid"] .nav-link[aria-current="page"] {
+  color: #0d0d0d;
+  border-left-color: #0d0d0d;
+}
+
+/* ━━ INTERACTIVE VS DISPLAY CARDS — moodboard: stamp-press hover for clickable panels ━━ */
+
+/* Subject cards in TDR: replace the float/scale hover with a flat offset-shadow press.
+   Inspired by: print registration shift — the shadow "stamp" appears behind as you push the card. */
+[data-theme="designers-republic"] .subject-card,
+[data-theme^="tdr-"] .subject-card {
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+}
+
+[data-theme="designers-republic"] .subject-card:hover,
+[data-theme^="tdr-"] .subject-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 5px 5px 0 var(--primary);
+  border-color: var(--primary);
+}
+
+/* Display-only glass panels: kill any hover lift — static, print-flat */
+[data-theme="designers-republic"] .glass:not(.subject-card):not(.sidebar):hover,
+[data-theme^="tdr-"] .glass:not(.subject-card):not(.sidebar):hover {
+  transform: none;
+}
+
+/* ── Bingoals cards: apply glass panel treatment to match Subject cards ── */
+[data-theme="designers-republic"] .bingoals-root .card,
+[data-theme^="tdr-"] .bingoals-root .card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1.5px solid var(--tdr-rule);
+  border-radius: 0;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: none;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease;
+}
+
+/* Registration corner mark on bingoals cards — mirrors .glass::after L-bracket */
+[data-theme="designers-republic"] .bingoals-root .card::after,
+[data-theme^="tdr-"] .bingoals-root .card::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 12px;
+  height: 12px;
+  border-top: 1.5px solid var(--primary);
+  border-right: 1.5px solid var(--primary);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Bingoals cards: same stamp-press hover as subject cards */
+[data-theme="designers-republic"] .bingoals-root .card:hover,
+[data-theme^="tdr-"] .bingoals-root .card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 5px 5px 0 var(--primary);
+  border-color: var(--primary);
+}
+
+/* Bingoals cards: zero-radius progress bar and pill (TDR = no rounding) */
+[data-theme="designers-republic"] .bingoals-root .cardProgressBar,
+[data-theme="designers-republic"] .bingoals-root .cardProgressFill,
+[data-theme^="tdr-"] .bingoals-root .cardProgressBar,
+[data-theme^="tdr-"] .bingoals-root .cardProgressFill {
+  border-radius: 0;
+}
+
+[data-theme="designers-republic"] .bingoals-root .pill,
+[data-theme^="tdr-"] .bingoals-root .pill {
+  border-radius: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.7em;
+}
+
 /* ── Text selection: primary inversion ── */
 [data-theme="designers-republic"] ::selection,
 [data-theme^="tdr-"] ::selection {
   background: var(--primary);
-  color: #0d0d0d;
+  color: var(--tdr-btn-inv-fg);
 }
 
 /* ── Empty state fade-in ── */

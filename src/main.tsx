@@ -51,17 +51,19 @@ document.addEventListener('keydown', async (e) => {
   }
 });
 
-// Auto-export on close: save to configured paths before the window is destroyed
-import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
-  getCurrentWindow().onCloseRequested(async (event) => {
+// Auto-export on close: save to configured paths before the window closes
+import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
+  const appWindow = getCurrentWindow();
+  const unlisten = await appWindow.onCloseRequested(async (event) => {
     event.preventDefault();
+    unlisten(); // remove listener so the next close() goes through without recursion
     try {
       const { autoExportToConfiguredPaths } = await import('./lib/export');
       await autoExportToConfiguredPaths();
     } catch {
       // Never block close due to export failure
     }
-    getCurrentWindow().destroy();
+    appWindow.close();
   });
 });
 

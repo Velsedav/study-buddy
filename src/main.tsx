@@ -54,9 +54,11 @@ document.addEventListener('keydown', async (e) => {
 // Auto-export on close: save to configured paths before the window closes
 import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
   const appWindow = getCurrentWindow();
-  const unlisten = await appWindow.onCloseRequested(async (event) => {
+  let closing = false;
+  await appWindow.onCloseRequested(async (event) => {
+    if (closing) return; // second invocation triggered by appWindow.close() — let it through
+    closing = true;
     event.preventDefault();
-    unlisten(); // remove listener so the next close() goes through without recursion
     try {
       const { autoExportToConfiguredPaths } = await import('./lib/export');
       await autoExportToConfiguredPaths();

@@ -108,3 +108,55 @@
     background: rgba(var(--primary-rgb), 0.12);
     color: var(--primary);
 }
+
+/* ── Free time input (Step 2) ── */
+
+.mc-free-time-group {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.mc-free-time-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.mc-free-time-desc {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0 0 14px;
+}
+
+.mc-free-time-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mc-free-time-input {
+    width: 120px;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.mc-free-time-unit {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+/* ── Complete step actions row ── */
+
+.mc-complete-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 32px;
+}
+
+.mc-complete-btn {
+    font-size: 1.05rem;
+    padding: 14px 40px;
+    background: var(--success);
+}

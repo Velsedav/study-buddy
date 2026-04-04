@@ -1,10 +1,13 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Maximize, Minimize, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Maximize, Minimize, Pencil, Plus, Trash2 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { open as openExternal } from "@tauri-apps/plugin-shell";
 import BingoModal from "../../components/bingoals/BingoModal";
 import type { MediaItem, Objective, Subobjective } from "../../lib/bingoals/db";
 import {
   addImage,
+  addLink,
+  addManualTimeDelta,
   addQuote,
   addTimeSession,
   createSubobjective,
@@ -263,6 +266,42 @@ function AddQuoteModal(props: { open: boolean; onClose: () => void; onAdd: (quot
   );
 }
 
+function AddLinkModal(props: { open: boolean; onClose: () => void; onAdd: (url: string, label: string) => void }) {
+  const { t } = useTranslation();
+  const [url, setUrl] = useState("");
+  const [label, setLabel] = useState("");
+  useEffect(() => { if (props.open) { setUrl(""); setLabel(""); } }, [props.open]);
+  const canAdd = url.trim().length > 0;
+  return (
+    <BingoModal open={props.open} title={t('bingoals.add_link_modal_title')} onClose={props.onClose}>
+      <div className="form">
+        <label>{t('bingoals.link_url_label')}</label>
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder={t('bingoals.link_url_placeholder')}
+          type="url"
+          autoFocus
+          onKeyDown={(e) => { if (e.key === "Enter" && canAdd) props.onAdd(url.trim(), label.trim()); }}
+        />
+        <label>{t('bingoals.link_label_label')}</label>
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder={t('bingoals.link_label_placeholder')}
+          onKeyDown={(e) => { if (e.key === "Enter" && canAdd) props.onAdd(url.trim(), label.trim()); }}
+        />
+        <div className="row">
+          <button className="btn" onClick={props.onClose}>{t('bingoals.cancel')}</button>
+          <button className="btn btn-primary" disabled={!canAdd} onClick={() => props.onAdd(url.trim(), label.trim())}>
+            {t('bingoals.add')}
+          </button>
+        </div>
+      </div>
+    </BingoModal>
+  );
+}
+
 const SubobjectivePanel = memo(function SubobjectivePanel(props: {
   s: Subobjective;
   timeStats: { total_ms: number; last_end: number | null };
@@ -281,9 +320,11 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [timeEditOpen, setTimeEditOpen] = useState(false);
   const [timeEditMs, setTimeEditMs] = useState(0);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [isEditingCount, setIsEditingCount] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const last = Math.max(timeStats.last_end ?? 0, s.updated_at ?? 0) || null;
   const d = daysAgo(last);
@@ -365,6 +406,15 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
             aria-label={t('bingoals.time_edit_title')}
           >
             <Pencil size={12} />
+          </button>
+          <button
+            className="btn btn-icon bingo-instrument-quick-add"
+            onMouseEnter={() => playSFX(SFX.HOVER)}
+            onClick={(e) => { e.stopPropagation(); setQuickAddOpen(true); }}
+            title={t('bingoals.quick_add_title')}
+            aria-label={t('bingoals.quick_add_title')}
+          >
+            <Plus size={12} />
           </button>
         </div>
 
@@ -526,6 +576,7 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
           <div className="muted bingo-section-label">{t('bingoals.memories_label')}</div>
           <div className="memories-actions">
             <button className="btn bingo-memory-action-btn" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => setQuoteOpen(true)}>{t('bingoals.add_quote')}</button>
+            <button className="btn bingo-memory-action-btn" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => setLinkOpen(true)}>{t('bingoals.add_link')}</button>
 
             <label className="btn bingo-memory-action-btn" onMouseEnter={() => playSFX(SFX.HOVER)}>
               {t('bingoals.add_images')}
@@ -549,24 +600,61 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
               />
             </label>
 
-            <button
-              className="btn bingo-memories-play"
-              disabled={subMedia.length < 2}
-              title={subMedia.length < 2 ? t('bingoals.play_requires_two') : undefined}
-              onMouseEnter={() => playSFX(SFX.HOVER)}
-              onClick={() => setPlayingSubId((prev) => (prev === s.id ? null : s.id))}
-            >
-              {isPlaying ? t('bingoals.pause') : t('bingoals.play')}
-            </button>
+            {(() => {
+              const slideCount = subMedia.filter(m => m.kind !== "link").length;
+              return (
+                <button
+                  className="btn bingo-memories-play"
+                  disabled={slideCount < 2}
+                  title={slideCount < 2 ? t('bingoals.play_requires_two') : undefined}
+                  onMouseEnter={() => playSFX(SFX.HOVER)}
+                  onClick={() => setPlayingSubId((prev) => (prev === s.id ? null : s.id))}
+                >
+                  {isPlaying ? t('bingoals.pause') : t('bingoals.play')}
+                </button>
+              );
+            })()}
           </div>
         </div>
 
-        <Slideshow
-          items={subMedia}
-          playing={isPlaying}
-          onRequestStop={() => setPlayingSubId(null)}
-          onDelete={async (mediaId) => { await deleteMediaItem(mediaId); await reload(); }}
-        />
+        {(() => {
+          const linkItems = subMedia.filter(m => m.kind === "link");
+          const slideItems = subMedia.filter(m => m.kind !== "link");
+          return (
+            <>
+              {linkItems.length > 0 && (
+                <div className="bingo-links-row">
+                  {linkItems.map(item => {
+                    const parsed = (() => { try { return JSON.parse(item.data); } catch { return { url: item.data, label: "" }; } })();
+                    return (
+                      <div key={item.id} className="bingo-link-pill">
+                        <button
+                          className="bingo-link-pill-btn"
+                          onClick={() => openExternal(parsed.url)}
+                          title={parsed.url}
+                        >
+                          <ExternalLink size={12} />
+                          {parsed.label || parsed.url}
+                        </button>
+                        <button
+                          className="bingo-link-pill-delete"
+                          onClick={async () => { await deleteMediaItem(item.id); await reload(); }}
+                          aria-label={t('bingoals.delete')}
+                        >×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <Slideshow
+                items={slideItems}
+                playing={isPlaying}
+                onRequestStop={() => setPlayingSubId(null)}
+                onDelete={async (mediaId) => { await deleteMediaItem(mediaId); await reload(); }}
+              />
+            </>
+          );
+        })()}
       </div>
       </div>
       </div>
@@ -581,11 +669,27 @@ const SubobjectivePanel = memo(function SubobjectivePanel(props: {
         }}
       />
 
+      <AddLinkModal
+        open={linkOpen}
+        onClose={() => setLinkOpen(false)}
+        onAdd={async (url, label) => {
+          setLinkOpen(false);
+          await addLink(s.id, url, label);
+          await reload();
+        }}
+      />
+
       <TimeEditModal
         open={timeEditOpen}
         initialMs={timeEditMs}
         onSave={async (ms) => { setTimeEditOpen(false); await setSubobjectiveTotalTime(s.id, ms); await reload(); }}
         onClose={() => setTimeEditOpen(false)}
+      />
+
+      <QuickAddTimeModal
+        open={quickAddOpen}
+        onSave={async (deltaMs) => { setQuickAddOpen(false); if (deltaMs > 0) { await addManualTimeDelta(s.id, deltaMs); await reload(); } }}
+        onClose={() => setQuickAddOpen(false)}
       />
     </div>
   );
@@ -661,10 +765,25 @@ function Slideshow(props: {
         >{isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}</button>
 
         <div key={item.id} className="mediaFade">
-          {item.kind === "image"
-            ? <img className="slideImg" src={item.data} alt="memory" />
-            : <div className="quote">"{item.data}"</div>
-          }
+          {item.kind === "image" ? (
+            <img className="slideImg" src={item.data} alt="memory" />
+          ) : item.kind === "link" ? (
+            (() => {
+              const parsed = (() => { try { return JSON.parse(item.data); } catch { return { url: item.data, label: "" }; } })();
+              return (
+                <div className="bingo-link-card">
+                  <div className="bingo-link-label">{parsed.label || parsed.url}</div>
+                  {parsed.label && <div className="bingo-link-url">{parsed.url}</div>}
+                  <button className="btn btn-primary bingo-link-open-btn" onClick={() => openExternal(parsed.url)}>
+                    <ExternalLink size={16} />
+                    {t('bingoals.open_link')}
+                  </button>
+                </div>
+              );
+            })()
+          ) : (
+            <div className="quote">"{item.data}"</div>
+          )}
         </div>
       </div>
 
@@ -676,7 +795,7 @@ function Slideshow(props: {
 
       <BingoModal open={deleteMediaId !== null} title={t('bingoals.delete')} onClose={() => setDeleteMediaId(null)}>
         <div className="form">
-          <div>{t('bingoals.delete_sub_confirm')}</div>
+          <div>{t('bingoals.delete_media_confirm')}</div>
           <div className="row">
             <button className="btn" onClick={() => setDeleteMediaId(null)}>{t('bingoals.cancel')}</button>
             <button className="btn btn-danger" onClick={async () => {
@@ -766,6 +885,63 @@ function TimeEditModal(props: { open: boolean; initialMs: number; onSave: (ms: n
         <div className="row bingo-row-end">
           <button className="btn" onClick={props.onClose}>{t('bingoals.cancel')}</button>
           <button className="btn btn-primary" onClick={save}>{t('bingoals.save')}</button>
+        </div>
+      </div>
+    </BingoModal>
+  );
+}
+
+function QuickAddTimeModal(props: { open: boolean; onSave: (deltaMs: number) => void; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [h, setH] = useState("");
+  const [m, setM] = useState("");
+  const [s, setS] = useState("");
+  const hRef = useRef<HTMLInputElement>(null);
+  const mRef = useRef<HTMLInputElement>(null);
+  const sRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!props.open) return;
+    setH(""); setM(""); setS("");
+    setTimeout(() => mRef.current?.focus(), 50);
+  }, [props.open]);
+
+  function save() {
+    const hh = parseInt(h || "0", 10);
+    const mm = parseInt(m || "0", 10);
+    const ss = parseInt(s || "0", 10);
+    if (isNaN(hh) || isNaN(mm) || isNaN(ss) || mm > 59 || ss > 59) return;
+    props.onSave(((hh * 60 + mm) * 60 + ss) * 1000);
+  }
+
+  return (
+    <BingoModal open={props.open} title={t('bingoals.quick_add_title')} onClose={props.onClose}>
+      <div className="bingo-time-edit-body">
+        <div className="bingo-time-edit-fields">
+          <div className="bingo-time-edit-col">
+            <input ref={hRef} type="text" inputMode="numeric" value={h} className="bingo-time-field" placeholder="0" onFocus={(e) => e.target.select()}
+              onChange={(e) => { const val = e.target.value.replace(/\D/g, "").slice(0, 3); setH(val); if (val.length === 3) mRef.current?.select(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } if (e.key === "Escape") props.onClose(); }} />
+            <span className="muted">HH</span>
+          </div>
+          <span className="bingo-time-sep">:</span>
+          <div className="bingo-time-edit-col">
+            <input ref={mRef} type="text" inputMode="numeric" value={m} className="bingo-time-field" placeholder="0" onFocus={(e) => e.target.select()}
+              onChange={(e) => { const val = e.target.value.replace(/\D/g, "").slice(0, 2); setM(val); if (val.length === 2) sRef.current?.select(); }}
+              onKeyDown={(e) => { if (e.key === "Backspace" && m === "") hRef.current?.select(); if (e.key === "Enter") { e.preventDefault(); save(); } if (e.key === "Escape") props.onClose(); }} />
+            <span className="muted">MM</span>
+          </div>
+          <span className="bingo-time-sep">:</span>
+          <div className="bingo-time-edit-col">
+            <input ref={sRef} type="text" inputMode="numeric" value={s} className="bingo-time-field" placeholder="0" onFocus={(e) => e.target.select()}
+              onChange={(e) => { const val = e.target.value.replace(/\D/g, "").slice(0, 2); setS(val); }}
+              onKeyDown={(e) => { if (e.key === "Backspace" && s === "") mRef.current?.select(); if (e.key === "Enter") { e.preventDefault(); save(); } if (e.key === "Escape") props.onClose(); }} />
+            <span className="muted">SS</span>
+          </div>
+        </div>
+        <div className="row bingo-row-end">
+          <button className="btn" onClick={props.onClose}>{t('bingoals.cancel')}</button>
+          <button className="btn btn-primary" onClick={save}>{t('bingoals.quick_add_confirm')}</button>
         </div>
       </div>
     </BingoModal>

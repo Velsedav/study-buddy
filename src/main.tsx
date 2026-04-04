@@ -55,17 +55,30 @@ document.addEventListener('keydown', async (e) => {
 import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
   const appWindow = getCurrentWindow();
   let closing = false;
+
+  // Expose force-quit so the React overlay can bypass the save entirely
+  (window as any).__forceQuit = () => {
+    appWindow.destroy();
+  };
+
   await appWindow.onCloseRequested(async (event) => {
-    if (closing) return; // second invocation triggered by appWindow.close() — let it through
-    closing = true;
+    // Always block the native close while our handler is active
     event.preventDefault();
+    if (closing) return; // already saving — ignore extra X clicks
+    closing = true;
+    window.dispatchEvent(new CustomEvent('app-close-start'));
     try {
       const { autoExportToConfiguredPaths } = await import('./lib/export');
-      await autoExportToConfiguredPaths();
+      await autoExportToConfiguredPaths((path, status, slot) => {
+        window.dispatchEvent(new CustomEvent('app-close-path', { detail: { path, status, slot } }));
+      });
     } catch {
       // Never block close due to export failure
     }
-    appWindow.close();
+    window.dispatchEvent(new CustomEvent('app-close-done'));
+    // Brief delay so the "done" feedback is visible, then destroy bypasses onCloseRequested
+    await new Promise(r => setTimeout(r, 700));
+    appWindow.destroy();
   });
 });
 

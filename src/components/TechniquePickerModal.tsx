@@ -1,12 +1,13 @@
 import { TECHNIQUES, getTierColor, CATEGORY_LABELS, CATEGORY_COLORS } from '../lib/techniques';
 import type { TechCategory } from '../lib/techniques';
-import { X, ExternalLink } from 'lucide-react';
+import { X, ExternalLink, ChevronRight } from 'lucide-react';
 import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { isDevMode } from '../lib/devMode';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { open as openExternal } from '@tauri-apps/plugin-shell';
 import { getSessions, getAllSessionBlocks } from '../lib/db';
+import { useTranslation } from '../lib/i18n';
 import './TechniquePickerModal.css';
 
 interface TechniquePickerModalProps {
@@ -14,6 +15,10 @@ interface TechniquePickerModalProps {
     onSelect: (techniqueId: string) => void;
     currentSelection: string | null;
     recommendedCategory?: TechCategory;
+    suggestedTechniqueId?: string | null;
+    suggestionLabel?: string | null;
+    subjectName?: string | null;
+    chapterName?: string | null;
 }
 
 const DAILY_LINK_KEY = 'study-buddy-technique-link-date';
@@ -38,9 +43,14 @@ function loadLearnedTechIds(): Set<string> {
     return new Set();
 }
 
-export default function TechniquePickerModal({ onClose, onSelect, currentSelection, recommendedCategory }: TechniquePickerModalProps) {
+export default function TechniquePickerModal({ onClose, onSelect, currentSelection, recommendedCategory, suggestedTechniqueId, suggestionLabel, subjectName, chapterName }: TechniquePickerModalProps) {
     const { theme } = useSettings();
+    const { t } = useTranslation();
     const tiers = Array.from(new Set(TECHNIQUES.map(t => t.tier)));
+    const suggestedTechniqueName = useMemo(
+        () => TECHNIQUES.find(tech => tech.id === suggestedTechniqueId)?.name,
+        [suggestedTechniqueId]
+    );
     const [linkUsedToday, setLinkUsedToday] = useState(hasClickedLinkToday());
     const isLinkBlocked = linkUsedToday && !isDevMode();
     const [showBlockedTooltip, setShowBlockedTooltip] = useState<string | null>(null);
@@ -151,13 +161,42 @@ export default function TechniquePickerModal({ onClose, onSelect, currentSelecti
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content tech-picker-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-content tech-picker-modal" role="dialog" aria-modal="true" aria-labelledby="tech-picker-title" onClick={e => e.stopPropagation()}>
                 <div className="tech-picker-header">
-                    <h2>Select a technique</h2>
-                    <button className="btn btn-secondary tech-picker-close" onClick={onClose}>
+                    <div className="tech-picker-header-left">
+                        {(subjectName || chapterName) && (
+                            <div className="tech-picker-breadcrumb" aria-label={t('plan.technique_breadcrumb_label')}>
+                                {subjectName && (
+                                    <span className="tech-breadcrumb-step tech-breadcrumb-done">{subjectName}</span>
+                                )}
+                                {subjectName && chapterName && (
+                                    <ChevronRight size={12} className="tech-breadcrumb-sep" aria-hidden="true" />
+                                )}
+                                {chapterName && (
+                                    <span className="tech-breadcrumb-step tech-breadcrumb-done">{chapterName}</span>
+                                )}
+                                <ChevronRight size={12} className="tech-breadcrumb-sep" aria-hidden="true" />
+                                <span className="tech-breadcrumb-step tech-breadcrumb-active">{t('plan.technique_breadcrumb_current')}</span>
+                            </div>
+                        )}
+                        <h2 id="tech-picker-title">{t('plan.select_technique')}</h2>
+                    </div>
+                    <button className="btn-icon tech-picker-close" aria-label={t('plan.close')} onClick={onClose}>
                         <X size={20} />
                     </button>
                 </div>
+
+                {suggestionLabel && suggestedTechniqueId && (
+                    <div className="tech-suggestion-banner">
+                        <span className="tech-suggestion-label">{suggestionLabel}</span>
+                        <button
+                            className="btn btn-primary tech-suggestion-apply"
+                            onClick={() => { onSelect(suggestedTechniqueId); onClose(); }}
+                        >
+                            {suggestedTechniqueName}
+                        </button>
+                    </div>
+                )}
 
                 <div className="tech-picker-scroll">
                     {tiers.map(tier => (
@@ -177,10 +216,11 @@ export default function TechniquePickerModal({ onClose, onSelect, currentSelecti
                             <div className="tech-tier-techniques">
                                 {TECHNIQUES.filter(t => t.tier === tier).map(t => {
                                     const isRecommended = recommendedCategory && t.category === recommendedCategory;
+                                    const isSuggested = suggestedTechniqueId === t.id;
                                     return (
                                         <div
                                             key={t.id}
-                                            className={`glass tech-card${currentSelection === t.id ? ' selected' : ''}${isRecommended ? ' recommended-technique' : ''}`}
+                                            className={`glass tech-card${currentSelection === t.id ? ' selected' : ''}${isRecommended ? ' recommended-technique' : ''}${isSuggested ? ' suggested-technique' : ''}`}
                                             onClick={() => { onSelect(t.id); onClose(); }}
                                             onMouseEnter={() => playSFX('glass_ui_hover', theme)}
                                         >

@@ -34,6 +34,14 @@ export async function patchSchema() {
             // Ignore error - column likely already exists
         }
     }
+
+    // Add chapter_name to session_blocks (introduced for technique suggestion history)
+    try {
+        await db.execute(`ALTER TABLE session_blocks ADD COLUMN chapter_name TEXT NULL`);
+        console.log(`[SchemaPatch] Added column chapter_name to session_blocks`);
+    } catch {
+        // Column already exists
+    }
 }
 
 
@@ -226,9 +234,9 @@ export async function saveSession(session: Omit<Session, 'id'> & { id: string },
     for (let i = 0; i < blocks.length; i++) {
         const b = blocks[i];
         await db.execute(
-            `INSERT INTO session_blocks (id, session_id, idx, type, minutes, subject_id, technique_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [crypto.randomUUID(), session.id, i, b.type, b.minutes, b.subject_id, b.technique_id]
+            `INSERT INTO session_blocks (id, session_id, idx, type, minutes, subject_id, technique_id, chapter_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [crypto.randomUUID(), session.id, i, b.type, b.minutes, b.subject_id, b.technique_id, b.chapter_name ?? null]
         );
     }
 }
@@ -247,6 +255,7 @@ export interface SessionBlock {
     minutes: number;
     subject_id: string | null;
     technique_id: string | null;
+    chapter_name: string | null;
     started_at: string | null;
     ended_at: string | null;
 }
@@ -254,6 +263,15 @@ export interface SessionBlock {
 export async function getAllSessionBlocks(): Promise<SessionBlock[]> {
     const db = await getDb();
     return db.select<SessionBlock[]>(`SELECT * FROM session_blocks`);
+}
+
+export async function getBlockCountForChapter(subjectId: string, chapterName: string): Promise<number> {
+    const db = await getDb();
+    const rows = await db.select<{ cnt: number }[]>(
+        `SELECT COUNT(*) as cnt FROM session_blocks WHERE subject_id = $1 AND chapter_name = $2 AND type = 'WORK'`,
+        [subjectId, chapterName]
+    );
+    return rows[0]?.cnt ?? 0;
 }
 
 // ── Quotes ──

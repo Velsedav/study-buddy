@@ -7,7 +7,7 @@ import { deleteAllData } from '../lib/db';
 import { getDefaultSpacing, setDefaultSpacing, parseSpacing, DEFAULT_SPACING } from '../lib/chapters';
 import { getAutostart, setAutostart } from '../lib/autostart';
 import { CustomSelect } from '../components/CustomSelect';
-import { SFX, SFX_LABELS, loadVolumeSettings, saveVolumeSettings, testSFX, playSFX } from '../lib/sounds';
+import { SFX, SFX_LABELS, SFX_GROUPS, loadVolumeSettings, saveVolumeSettings, testSFX, playSFX } from '../lib/sounds';
 import type { SoundEffect, VolumeSettings } from '../lib/sounds';
 import {
     getExportConfig, saveExportConfig,
@@ -450,10 +450,19 @@ export default function SettingsTab() {
                     <h3>{t('settings.audio')}</h3>
                 </div>
                 <div className="form-group">
-                    <label className="audio-header-label">
-                        <span>{t('settings.master_volume')}</span>
-                        <span className="audio-master-val">{volumeSettings.master}%</span>
-                    </label>
+                    <div className="audio-master-row">
+                        <label className="audio-header-label">
+                            <span>{t('settings.master_volume')}</span>
+                            <span className="audio-master-val">{volumeSettings.master}%</span>
+                        </label>
+                        <button
+                            className="audio-reset-all-btn"
+                            onClick={() => setVolumeSettings({ master: 100, individual: {} })}
+                            title={t('settings.audio_reset_all')}
+                        >
+                            {t('settings.audio_reset_all')}
+                        </button>
+                    </div>
                     <input
                         type="range"
                         min={0}
@@ -464,29 +473,39 @@ export default function SettingsTab() {
                     />
                 </div>
                 <div className="audio-individual-list">
-                    {Object.values(SFX).map(effect => (
-                        <div key={effect} className="audio-item">
-                            <div className="audio-item-label">
-                                <span>{SFX_LABELS[effect]}</span>
-                                <span className="audio-item-volume">{volumeSettings.individual[effect] ?? 100}%</span>
+                    {SFX_GROUPS.map(group => (
+                        <div key={group.labelKey} className="audio-group">
+                            <div className="audio-group-header">
+                                <span className="audio-group-icon">{group.icon}</span>
+                                <span className="audio-group-name">{t(group.labelKey as Parameters<typeof t>[0])}</span>
                             </div>
-                            <div className="audio-item-controls">
-                                <input
-                                    type="range"
-                                    min={0}
-                                    max={100}
-                                    value={volumeSettings.individual[effect] ?? 100}
-                                    onChange={e => handleIndividualVolume(effect, Number(e.target.value))}
-                                    className="volume-slider"
-                                />
-                                <button
-                                    className="btn-icon audio-test-btn"
-                                    onMouseEnter={() => playSFX(SFX.HOVER)}
-                                    onClick={() => testSFX(effect)}
-                                    title={`Test ${SFX_LABELS[effect]}`}
-                                >
-                                    <Play size={14} />
-                                </button>
+                            <div className="audio-group-items">
+                                {group.effects.map(effect => (
+                                    <div key={effect} className="audio-item">
+                                        <div className="audio-item-label">
+                                            <span>{SFX_LABELS[effect]}</span>
+                                            <span className="audio-item-volume">{volumeSettings.individual[effect] ?? 100}%</span>
+                                        </div>
+                                        <div className="audio-item-controls">
+                                            <input
+                                                type="range"
+                                                min={0}
+                                                max={100}
+                                                value={volumeSettings.individual[effect] ?? 100}
+                                                onChange={e => handleIndividualVolume(effect, Number(e.target.value))}
+                                                className="volume-slider"
+                                            />
+                                            <button
+                                                className="btn-icon audio-test-btn"
+                                                onMouseEnter={() => playSFX(SFX.HOVER)}
+                                                onClick={() => testSFX(effect)}
+                                                title={`Test ${SFX_LABELS[effect]}`}
+                                            >
+                                                <Play size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     ))}
@@ -585,8 +604,10 @@ export default function SettingsTab() {
                         {t('settings.delete_all_data')}
                     </button>
                 </div>
+
             </div>
             </div>
+            <p className="settings-version">Study Buddy · v{__APP_VERSION__}</p>
         </div>
     );
 }

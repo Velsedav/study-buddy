@@ -207,6 +207,10 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
 
     async function handleSave() {
         if (!name.trim()) { setNameError(true); return; }
+        // Auto-commit any pending source entry the user forgot to click "Add" on
+        if (expandedSourcesId && newSourceUrl.trim()) {
+            handleAddSource(expandedSourcesId);
+        }
         try {
             if (isEditing) {
                 await updateSubject(editingSubject!.id, name.trim(), coverPath, selectedTags, deadline || null, result || null, archived, subjectType);
@@ -546,20 +550,22 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                             </div>
                                         )}
                                         <div className="chapter-spacing-row">
-                                            <span className="chapter-spacing-label">{t('subject_editor.schedule')}</span>
                                             {editingSpacingId === ch.id ? (
-                                                <input
-                                                    type="text"
-                                                    defaultValue={ch.spacingOverride || ''}
-                                                    placeholder={getDefaultSpacing()}
-                                                    autoFocus
-                                                    className="chapter-spacing-input"
-                                                    onBlur={e => handleSpacingCommit(ch.id, e.target.value)}
-                                                    onKeyDown={e => {
-                                                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                                                        if (e.key === 'Escape') setEditingSpacingId(null);
-                                                    }}
-                                                />
+                                                <>
+                                                    <span className="chapter-spacing-label">{t('subject_editor.schedule')}</span>
+                                                    <input
+                                                        type="text"
+                                                        defaultValue={ch.spacingOverride || ''}
+                                                        placeholder={getDefaultSpacing()}
+                                                        autoFocus
+                                                        className="chapter-spacing-input"
+                                                        onBlur={e => handleSpacingCommit(ch.id, e.target.value)}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                                            if (e.key === 'Escape') setEditingSpacingId(null);
+                                                        }}
+                                                    />
+                                                </>
                                             ) : (
                                                 <button
                                                     onClick={() => setEditingSpacingId(ch.id)}
@@ -567,7 +573,7 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                                     className={`chapter-spacing-btn${ch.spacingOverride ? ' has-override' : ''}`}
                                                     title={t('subject_editor.chapter_spacing_hint')}
                                                 >
-                                                    {ch.spacingOverride || t('subject_editor.chapter_default')}
+                                                    {t('subject_editor.schedule')} {ch.spacingOverride || t('subject_editor.chapter_default')}
                                                 </button>
                                             )}
                                         </div>
@@ -602,33 +608,37 @@ export default function SubjectEditorModal({ onClose, onSaved, editingSubject }:
                                                     ))}
                                                     {(ch.sources?.length ?? 0) < MAX_SOURCES ? (
                                                         <div className="chapter-source-add-row">
-                                                            <input
-                                                                type="text"
-                                                                className="chapter-source-input"
-                                                                placeholder={t('subject_editor.source_label_placeholder')}
-                                                                value={newSourceLabel}
-                                                                onChange={e => setNewSourceLabel(e.target.value)}
-                                                                onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
-                                                            />
-                                                            <input
-                                                                type="url"
-                                                                className="chapter-source-input"
-                                                                placeholder={t('subject_editor.source_url_placeholder')}
-                                                                value={newSourceUrl}
-                                                                onChange={e => setNewSourceUrl(e.target.value)}
-                                                                onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
-                                                            />
-                                                            <button
-                                                                className="chapter-source-add-btn"
-                                                                onClick={() => handleAddSource(ch.id)}
-                                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
-                                                            >{t('subject_editor.add_source')}</button>
-                                                            <button
-                                                                className="chapter-source-file-btn"
-                                                                onClick={() => handlePickFileSource(ch.id)}
-                                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
-                                                                title={t('subject_editor.source_pick_file')}
-                                                            >{t('subject_editor.source_pick_file')}</button>
+                                                            <div className="chapter-source-inputs">
+                                                                <input
+                                                                    type="text"
+                                                                    className="chapter-source-input"
+                                                                    placeholder={t('subject_editor.source_label_placeholder')}
+                                                                    value={newSourceLabel}
+                                                                    onChange={e => setNewSourceLabel(e.target.value)}
+                                                                    onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
+                                                                />
+                                                                <input
+                                                                    type="url"
+                                                                    className="chapter-source-input"
+                                                                    placeholder={t('subject_editor.source_url_placeholder')}
+                                                                    value={newSourceUrl}
+                                                                    onChange={e => setNewSourceUrl(e.target.value)}
+                                                                    onKeyDown={e => { if (e.key === 'Enter') handleAddSource(ch.id); }}
+                                                                />
+                                                            </div>
+                                                            <div className="chapter-source-actions">
+                                                                <button
+                                                                    className={`chapter-source-add-btn${newSourceUrl.trim() && newSourceLabel.trim() ? ' has-pending' : ''}`}
+                                                                    onClick={() => handleAddSource(ch.id)}
+                                                                    onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                                                >{t('subject_editor.add_source')}</button>
+                                                                <button
+                                                                    className="chapter-source-file-btn"
+                                                                    onClick={() => handlePickFileSource(ch.id)}
+                                                                    onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                                                    title={t('subject_editor.source_pick_file')}
+                                                                >{t('subject_editor.source_pick_file')}</button>
+                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <p className="chapter-sources-limit-msg">{t('subject_editor.sources_limit')}</p>

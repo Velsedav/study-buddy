@@ -35,7 +35,7 @@ export type Subobjective = {
 export type MediaItem = {
   id: string;
   subobjective_id: string;
-  kind: "quote" | "image";
+  kind: "quote" | "image" | "link";
   data: string;
   created_at: number;
 };
@@ -407,6 +407,15 @@ export async function addImage(subobjectiveId: string, dataUrl: string) {
   await db.execute(
     `INSERT INTO media_items (id, subobjective_id, kind, data, created_at) VALUES (?, ?, 'image', ?, ?)`,
     [id, subobjectiveId, dataUrl, now()]
+  );
+}
+
+export async function addLink(subobjectiveId: string, url: string, label: string) {
+  const db = await getBingoDb();
+  const id = crypto.randomUUID();
+  await db.execute(
+    `INSERT INTO media_items (id, subobjective_id, kind, data, created_at) VALUES (?, ?, 'link', ?, ?)`,
+    [id, subobjectiveId, JSON.stringify({ url, label }), now()]
   );
 }
 

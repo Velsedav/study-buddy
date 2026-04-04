@@ -97,9 +97,17 @@
 }
 
 .dashboard-top-row .analytics-main-panel {
-    /* flex: 1 1 600px; */
+    flex: 0 0 390px;
+    flex-direction: column;
+    flex-wrap: nowrap;
     min-width: 0;
     align-self: stretch;
+}
+
+/* Let the deadlines panel fill the calendar column width */
+.dashboard-top-row .deadlines-panel {
+    width: auto;
+    flex: 1;
 }
 
 @media (max-width: 900px) {
@@ -136,6 +144,11 @@
     align-content: start;
 }
 
+/* When the fuel card is a sibling, grid sizes to content and fuel card fills the rest */
+.weekly-stats-container:has(> .fuel-card) .weekly-stats-grid {
+    flex: none;
+}
+
 .stat-card {
     padding: 16px 8px;
     display: flex;
@@ -154,6 +167,89 @@
 .stat-card-full {
     grid-column: 1 / -1;
 }
+
+/* ── Fuel bar (free time depletion) ── */
+
+.fuel-card {
+    padding: 12px 16px;
+    gap: 8px;
+    align-items: stretch;
+    justify-content: center;
+}
+
+/* Fuel card as direct child of weekly-stats-container: fill remaining vertical space */
+.weekly-stats-container > .fuel-card {
+    flex: 1;
+    margin-top: 12px;
+}
+
+.fuel-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.fuel-label-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fuel-icon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.fuel-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.fuel-fraction {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    font-variant-numeric: tabular-nums;
+}
+
+.fuel-track {
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.fuel-fill {
+    height: 100%;
+    width: var(--fuel-pct);
+    border-radius: 5px;
+    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fuel-fill-ok     { background: var(--success); }
+.fuel-fill-warn   { background: #f59e0b; }
+.fuel-fill-danger { background: var(--danger); }
+.fuel-fill-over   { background: var(--danger); animation: fuel-pulse 1.2s ease-in-out infinite; }
+
+@keyframes fuel-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+}
+
+.fuel-remaining {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.fuel-remaining-ok     { color: var(--success); }
+.fuel-remaining-warn   { color: #f59e0b; }
+.fuel-remaining-danger { color: var(--danger); }
+.fuel-remaining-over   { color: var(--danger); font-weight: 600; }
 
 /* RotatingInsightCard always spans full width — prevents row height mismatch */
 .rotating-insight-card {

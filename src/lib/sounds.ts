@@ -38,28 +38,72 @@ export type SoundEffect = typeof SFX[keyof typeof SFX];
 /** Human-friendly display names for each sound effect */
 export const SFX_LABELS: Record<SoundEffect, string> = {
     glass_ui_hover:               'Hover',
-    glass_ui_check:               'Checklist',
+    glass_ui_check:               'Check',
     glass_ui_cancel:              'Cancel / Error',
-    glass_ui_drop:                'Drop Block',
+    glass_ui_drop:                'Drop',
     glass_ui_drag_up:             'Drag Up',
     glass_ui_drag_down:           'Drag Down',
-    glass_enter_menu:             'Enter Menu',
-    glass_session_start:          'Start Session',
+    glass_enter_menu:             'Open Menu',
+    glass_session_start:          'Start',
     glass_session_switch:         'Switch Task',
-    glass_session_end:            'Session End',
-    glass_session_finish:         'Session Finish',
+    glass_session_end:            'End',
+    glass_session_finish:         'Finish',
     glass_session_enter_lesson:   'Enter Lesson',
     glass_timer_warn10:           '10s Warning',
     glass_timer_five_min:         '5-Min Alert',
-    glass_timer_interval_work:    'Interval — Work',
-    glass_timer_interval_rest:    'Interval — Rest',
+    glass_timer_interval_work:    'Work Interval',
+    glass_timer_interval_rest:    'Rest Interval',
     glass_reward_correct:         'Correct Answer',
     glass_reward_perfect:         'Perfect Score',
-    glass_bingo_check:            'Bingo Check',
-    glass_bingo_line:             'Bingo Line',
-    glass_bingo_complete:         'Bingo Complete',
-    glass_bingo_add:              'Bingo Add Goal',
+    glass_bingo_check:            'Check Goal',
+    glass_bingo_line:             'Complete Line',
+    glass_bingo_complete:         'Bingo!',
+    glass_bingo_add:              'Add Goal',
 };
+
+export interface SFXGroup {
+    labelKey: string;
+    icon: string;
+    effects: SoundEffect[];
+}
+
+/** Logical groups for rendering the audio settings panel */
+export const SFX_GROUPS: SFXGroup[] = [
+    {
+        labelKey: 'settings.audio_group_ui',
+        icon: '🖱️',
+        effects: [
+            SFX.HOVER, SFX.CHECK, SFX.CANCEL,
+            SFX.DROP, SFX.DRAG_UP, SFX.DRAG_DOWN, SFX.ENTER_MENU,
+        ],
+    },
+    {
+        labelKey: 'settings.audio_group_session',
+        icon: '📚',
+        effects: [
+            SFX.SESSION_START, SFX.SESSION_SWITCH,
+            SFX.SESSION_END, SFX.SESSION_FINISH, SFX.ENTER_LESSON,
+        ],
+    },
+    {
+        labelKey: 'settings.audio_group_timer',
+        icon: '⏱️',
+        effects: [
+            SFX.WARN_10, SFX.FIVE_MIN_ALERT,
+            SFX.INTERVAL_WORK, SFX.INTERVAL_REST,
+        ],
+    },
+    {
+        labelKey: 'settings.audio_group_rewards',
+        icon: '⭐',
+        effects: [SFX.REWARD_CORRECT, SFX.REWARD_PERFECT],
+    },
+    {
+        labelKey: 'settings.audio_group_bingoals',
+        icon: '🎯',
+        effects: [SFX.BINGO_CHECK, SFX.BINGO_LINE, SFX.BINGO_COMPLETE, SFX.BINGO_ADD],
+    },
+];
 
 // ── Volume Management ──
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSubjects, getMetacognitionLogs, getAllSubjectTagsMap, getAllTags } from '../lib/db';
+import { getSubjects, getMetacognitionLogs, getAllSubjectTagsMap, getAllTags, getBlockCountForChapter } from '../lib/db';
 import type { Subject, Tag } from '../lib/db';
 import { useUndoRedo } from '../lib/undo';
 import TechniquePickerModal from '../components/TechniquePickerModal';
@@ -78,6 +78,8 @@ export default function Plan() {
 
     const [pickingBlockId, setPickingBlockId] = useState<string | null>(null);
     const [pickingChapterBlockId, setPickingChapterBlockId] = useState<string | null>(null);
+    const [suggestedTechniqueId, setSuggestedTechniqueId] = useState<string | null>(null);
+    const [suggestionLabel, setSuggestionLabel] = useState<string | null>(null);
     const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
     const [openMenuBlockId, setOpenMenuBlockId] = useState<string | null>(null);
     const [landedBlockIds, setLandedBlockIds] = useState<Set<string>>(new Set());
@@ -387,7 +389,7 @@ export default function Plan() {
         setBlocks(blocks.map(b => b.id === id ? { ...b, subject_id: null, technique_id: null, chapter_name: null, objective: '' } : b));
     };
 
-    const handleChapterSelectedModal = (chapterName: string) => {
+    const handleChapterSelectedModal = async (chapterName: string) => {
         const block = blocks.find(b => b.id === pickingChapterBlockId);
         let autoObjective = '';
         if (block?.subject_id) {
@@ -402,6 +404,30 @@ export default function Plan() {
             ? { ...b, chapter_name: chapterName, objective: autoObjective }
             : b
         ));
+
+        // Compute technique suggestion based on how many times this chapter has been worked
+        let nextSuggestedId: string | null = null;
+        let nextSuggestionLabel: string | null = null;
+        if (block?.subject_id) {
+            const dbCount = await getBlockCountForChapter(block.subject_id, chapterName);
+            const planCount = blocks.filter(b =>
+                b.id !== pickingChapterBlockId &&
+                b.subject_id === block.subject_id &&
+                b.chapter_name === chapterName &&
+                b.type === 'WORK'
+            ).length;
+            const totalCount = dbCount + planCount;
+            if (totalCount === 0) {
+                nextSuggestedId = 'a3'; // Priming
+                nextSuggestionLabel = t('plan.suggestion_priming');
+            } else if (totalCount === 1) {
+                nextSuggestedId = 'disc1'; // Première Approche
+                nextSuggestionLabel = t('plan.suggestion_first_approach');
+            }
+        }
+        setSuggestedTechniqueId(nextSuggestedId);
+        setSuggestionLabel(nextSuggestionLabel);
+
         setPickingBlockId(pickingChapterBlockId); // Trigger technique selection right after
         setPickingChapterBlockId(null);
     };
@@ -953,12 +979,22 @@ export default function Plan() {
                     }
                 }
 
+                const clearSuggestion = () => {
+                    setSuggestedTechniqueId(null);
+                    setSuggestionLabel(null);
+                };
+                const subjectName = subjects.find(s => s.id === pickingBlock?.subject_id)?.name ?? null;
+                const chapterName = pickingBlock?.chapter_name ?? null;
                 return (
                     <TechniquePickerModal
-                        onClose={() => setPickingBlockId(null)}
-                        onSelect={handleTechniqueSelected}
+                        onClose={() => { setPickingBlockId(null); clearSuggestion(); }}
+                        onSelect={(id) => { handleTechniqueSelected(id); clearSuggestion(); }}
                         currentSelection={pickingBlock?.technique_id || ""}
                         recommendedCategory={recommendedCategory}
+                        suggestedTechniqueId={suggestedTechniqueId}
+                        suggestionLabel={suggestionLabel}
+                        subjectName={subjectName}
+                        chapterName={chapterName}
                     />
                 );
             })()}

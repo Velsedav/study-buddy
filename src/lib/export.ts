@@ -427,18 +427,27 @@ export async function importBackup(filePath: string): Promise<void> {
 }
 
 /** Called on window close. Silently exports to all configured paths, swallows errors. */
-export async function autoExportToConfiguredPaths(): Promise<void> {
+export async function autoExportToConfiguredPaths(
+    onProgress?: (path: string, status: 'saving' | 'ok' | 'error', slot: 1 | 2) => void
+): Promise<void> {
     const config = getExportConfig();
-    const folders = [config.path1, config.path2].filter(p => p.trim() !== '');
-    if (folders.length === 0) return;
+    const slots: [string, 1 | 2][] = ([config.path1, config.path2] as const)
+        .map((p, i) => [p, (i + 1) as 1 | 2])
+        .filter(([p]) => (p as string).trim() !== '') as [string, 1 | 2][];
+    if (slots.length === 0) return;
 
     try {
         const backup = await createBackup();
         const json = JSON.stringify(backup, null, 2);
-        for (const folder of folders) {
+        for (const [folder, slot] of slots) {
+            const filePath = folderToFilePath(folder);
+            onProgress?.(filePath, 'saving', slot);
             try {
-                await writeTextFile(folderToFilePath(folder), json);
-            } catch {}
+                await writeTextFile(filePath, json);
+                onProgress?.(filePath, 'ok', slot);
+            } catch {
+                onProgress?.(filePath, 'error', slot);
+            }
         }
         setLastExportTime();
     } catch {}

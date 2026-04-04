@@ -49,6 +49,9 @@ export const TECHNIQUES: Technique[] = [
     { id: 't5', name: 'Interleaving (Entrelacement)', tier: 'C', hint: 'Mélange différents types de problèmes ou chapitres dans une même session. Cela t\'apprend non seulement "comment" résoudre un problème, mais surtout "quand" utiliser la bonne méthode.', advantage: 'Teaches WHEN to use formulas, not just HOW', category: 'faire', externalLink: 'https://youtu.be/J4YazZUXT_A' },
     { id: 's5', name: 'Créer ses propres notes', tier: 'C', hint: 'Must combine visual and verbal elements (Dual Coding) to be highly effective, rather than acting as a passive transcription', advantage: 'Dual-coded notes are 2x more memorable than plain text', category: 'comprendre', externalLink: 'https://youtu.be/AY7XYMM_9l8', noPreRecall: true },
 
+    // 📖 B-TIER (Required first-contact step for self-taught learners)
+    { id: 'disc1', name: 'Première Approche (Stop & Recall)', tier: 'B', hint: 'Premier contact approfondi avec le contenu. Divise le sous-chapitre en 3-4 idées fortes. Après chaque idée, ferme les yeux et explique-la à voix haute. Objectif : 80% de compréhension globale en mode Bulldozer — ne t\'arrête pas sur les détails complexes.', defaultMinutes: 30, advantage: 'Construit une compréhension de base solide avant toute mémorisation', category: 'comprendre', noPreRecall: true },
+
     // ⚠️ D-TIER (Low utility, situational at best)
     { id: 'd1', name: 'Apprentissage par coeur', tier: 'D', hint: 'Mémorisation mécanique. Always try to understand the concept first, as comprehension reduces the need for rote memorization', category: 'memoriser' },
     { id: 'd2', name: 'Relecture avant sommeil', tier: 'D', hint: 'Relire son cours juste avant de dormir si = zero énergie', category: 'memoriser', noPreRecall: true },

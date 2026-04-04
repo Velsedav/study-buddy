@@ -631,7 +631,7 @@
   text-transform: uppercase;
   flex: 1;
   min-width: 0;
-  cursor: text;
+  cursor: pointer;
   padding: 2px 4px;
   border: 1px solid transparent;
   border-radius: var(--border-radius-sm);
@@ -798,6 +798,99 @@
   text-align: center;
   font-weight: 700;
   color: var(--white);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.bingoals-root .bingo-links-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.bingoals-root .bingo-link-pill {
+  display: flex;
+  align-items: center;
+  border: var(--border);
+  background: var(--white);
+  color: var(--black);
+  max-width: 260px;
+}
+
+.bingoals-root .bingo-link-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.bingoals-root .bingo-link-pill-btn:hover {
+  text-decoration: underline;
+}
+
+.bingoals-root .bingo-link-pill-delete {
+  background: none;
+  border: none;
+  border-left: var(--border);
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.4;
+  padding: 4px 7px;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.bingoals-root .bingo-link-pill-delete:hover {
+  opacity: 1;
+  color: var(--danger, #e53e3e);
+}
+
+.bingoals-root .bingo-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  width: 100%;
+}
+
+.bingoals-root .bingo-link-label {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--white);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.bingoals-root .bingo-link-url {
+  font-size: 0.75rem;
+  color: var(--white);
+  opacity: 0.5;
+  overflow-wrap: break-word;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+.bingoals-root .bingo-link-open-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .bingoals-root .mediaTrashBtn {
@@ -1153,19 +1246,18 @@
 /* ── Dark-theme card hoverProgress overrides ── */
 
 [data-theme="neobrutalism"] .bingoals-root .hoverProgress,
-[data-theme="terminal-orange"] .bingoals-root .hoverProgress,
-[data-theme="terminal-green"] .bingoals-root .hoverProgress,
-[data-theme="terminal-amber"] .bingoals-root .hoverProgress,
-[data-theme="terminal-purple"] .bingoals-root .hoverProgress,
-[data-theme="terminal-blue"] .bingoals-root .hoverProgress,
-[data-theme="terminal-red"] .bingoals-root .hoverProgress,
-[data-theme="terminal-cyan"] .bingoals-root .hoverProgress,
 [data-theme="tdr-night"] .bingoals-root .hoverProgress,
 [data-theme="tdr-warp"] .bingoals-root .hoverProgress,
 [data-theme="tdr-acid"] .bingoals-root .hoverProgress {
   background: rgba(0,0,0,0.75);
   border-top: 1px solid rgba(255,255,255,0.15);
   color: #fff;
+}
+
+[data-theme^="terminal-"] .bingoals-root .hoverProgress {
+  background: rgba(0,0,0,0.75);
+  border-top: 1px solid rgba(255,255,255,0.15);
+  color: var(--white);
 }
 
 /* ── Terminal panelDone ── */
@@ -1488,6 +1580,22 @@
 }
 
 .bingoals-root .bingo-instrument-face:hover .bingo-instrument-edit {
+  opacity: 0.75;
+}
+
+/* Quick-add (+) button — positioned to the left of the pencil, same hover logic */
+.bingoals-root .bingo-instrument-quick-add {
+  position: absolute;
+  top: 6px;
+  right: 34px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.bingoals-root .bingo-instrument-face:hover .bingo-instrument-quick-add {
   opacity: 0.75;
 }
 

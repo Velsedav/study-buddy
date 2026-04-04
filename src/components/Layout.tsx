@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, Calendar, Sparkles, Pencil, Lightbulb, BarChart2, Settings as SettingsIcon, Wrench, FlaskConical, Target } from 'lucide-react';
+import { BookOpen, Calendar, Sparkles, Pencil, Lightbulb, BarChart2, Settings as SettingsIcon, Wrench, FlaskConical, Target, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { getQuotes, addQuote, saveSession, updateSubjectStats } from '../lib/db';
 import type { Quote } from '../lib/db';
 import QuoteEditorModal from './QuoteEditorModal';
@@ -9,9 +9,88 @@ import { playSFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { getChaptersForSubject, incrementStudyCount } from '../lib/chapters';
 import { isDevNavUnlocked, toggleDevNav } from '../lib/devMode';
+import './Layout.css';
 
 const MASCOT_DEFAULT_QUOTE = "The exam is won at home, not on exam day 🏠";
 const DEV_NAV_CLICKS = 10;
+
+interface PathEntry { path: string; status: 'saving' | 'ok' | 'error'; slot: 1 | 2; }
+
+
+function CloseOverlay() {
+    const { t } = useTranslation();
+    const [phase, setPhase] = useState<'idle' | 'saving' | 'done'>('idle');
+    const [paths, setPaths] = useState<PathEntry[]>([]);
+
+    useEffect(() => {
+        const onStart = () => { setPhase('saving'); setPaths([]); };
+        const onDone = () => setPhase('done');
+        const onPath = (e: Event) => {
+            const { path, status, slot } = (e as CustomEvent<{ path: string; status: PathEntry['status']; slot: 1 | 2 }>).detail;
+            setPaths(prev => {
+                const idx = prev.findIndex(p => p.slot === slot);
+                if (idx >= 0) {
+                    const next = [...prev];
+                    next[idx] = { path, status, slot };
+                    return next;
+                }
+                return [...prev, { path, status, slot }];
+            });
+        };
+        window.addEventListener('app-close-start', onStart);
+        window.addEventListener('app-close-done', onDone);
+        window.addEventListener('app-close-path', onPath);
+        return () => {
+            window.removeEventListener('app-close-start', onStart);
+            window.removeEventListener('app-close-done', onDone);
+            window.removeEventListener('app-close-path', onPath);
+        };
+    }, []);
+
+    if (phase === 'idle') return null;
+
+    const isDone = phase === 'done';
+
+    return (
+        <div className="close-overlay">
+            <div className="close-overlay-card">
+                <div className="close-overlay-header">
+                    {isDone
+                        ? <CheckCircle2 size={28} className="close-overlay-check" />
+                        : <Loader2 size={28} className="close-overlay-spinner" />
+                    }
+                    <p className="close-overlay-label">
+                        {isDone ? t('app.save_done') : t('app.saving')}
+                    </p>
+                </div>
+
+                {paths.length > 0 && (
+                    <ul className="close-overlay-paths">
+                        {paths.map(({ path, status, slot }) => (
+                            <li key={slot} className={`close-overlay-path-row close-overlay-path-${status}`}>
+                                <span className="close-overlay-path-label">
+                                    {slot === 1 ? t('app.backup_primary') : t('app.backup_secondary')}
+                                </span>
+                                {status === 'saving' && <Loader2 size={13} className="close-overlay-path-spinner" />}
+                                {status === 'ok' && <CheckCircle2 size={13} />}
+                                {status === 'error' && <XCircle size={13} title={path} />}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                {!isDone && (
+                    <button
+                        className="btn btn-secondary close-overlay-force"
+                        onClick={() => (window as any).__forceQuit?.()}
+                    >
+                        {t('app.force_quit')}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function Layout() {
     const location = useLocation();
@@ -349,6 +428,8 @@ export default function Layout() {
                     onChanged={loadQuotes}
                 />
             )}
+
+            <CloseOverlay />
 
             {navWarningStep !== 'none' && (
                 <div className="modal-overlay" onClick={() => { setNavWarningStep('none'); setPendingNavPath(null); }}>

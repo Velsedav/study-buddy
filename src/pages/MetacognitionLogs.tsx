@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Wrench, ChevronLeft, ChevronRight, ClipboardCopy, Check } from 'lucide-react';
+import { Wrench, ChevronLeft, ChevronRight, ClipboardCopy, Check, FileText } from 'lucide-react';
 import { getMetacognitionLogs, type MetacognitionLog } from '../lib/db';
 import { useTranslation } from '../lib/i18n';
 import { useSettings } from '../lib/settings';
 import { playSFX, SFX } from '../lib/sounds';
+import { generateAIReport } from '../lib/aiExport';
 import './MetacognitionLogs.css';
 
 function getMonthKey(dateStr: string): string {
@@ -38,6 +39,7 @@ export default function MetacognitionLogs() {
     const [logs, setLogs] = useState<MetacognitionLog[]>([]);
     const [monthIndex, setMonthIndex] = useState(0); // 0 = most recent month
     const [copied, setCopied] = useState(false);
+    const [copiedFull, setCopiedFull] = useState(false);
 
     useEffect(() => {
         loadLogs();
@@ -75,10 +77,8 @@ export default function MetacognitionLogs() {
             {logs.length === 0 ? (
                 <div className="glass metacognition-logs-empty">
                     <Wrench size={48} className="text-muted empty-wrench-icon" />
-                    <p className="text-muted">No metacognition logs found yet.</p>
-                    <p className="text-muted empty-subtext">
-                        Logs are generated when you complete a Metacognition Mode pit stop.
-                    </p>
+                    <p className="text-muted">{t('metacog_logs.empty')}</p>
+                    <p className="text-muted empty-subtext">{t('metacog_logs.empty_sub')}</p>
                 </div>
             ) : (
                 <>
@@ -118,9 +118,21 @@ export default function MetacognitionLogs() {
                                 }}
                             >
                                 {copied ? <Check size={15} /> : <ClipboardCopy size={15} />}
-                                {copied ? 'Copied!' : 'Copy for NotebookLM'}
+                                {copied ? t('metacog_logs.copied') : t('metacog_logs.copy_for_lm')}
                             </button>
-                            {copied && (
+                            <button
+                                className={`btn btn-secondary copy-lm-btn ${copiedFull ? 'copy-lm-btn-success' : ''}`}
+                                onMouseEnter={() => playSFX(SFX.HOVER)}
+                                onClick={async () => {
+                                    const text = await generateAIReport();
+                                    navigator.clipboard.writeText(text);
+                                    setCopiedFull(true);
+                                }}
+                            >
+                                {copiedFull ? <Check size={15} /> : <FileText size={15} />}
+                                {copiedFull ? t('metacog_logs.copied') : t('metacog_logs.copy_full_report')}
+                            </button>
+                            {(copied || copiedFull) && (
                                 <span className="open-lm-btn-wrapper">
                                     <a
                                         href="https://notebooklm.google.com/notebook/33dc2ca6-a3da-4218-b679-bd91ce99d7e7"
@@ -129,7 +141,7 @@ export default function MetacognitionLogs() {
                                         className="btn btn-primary open-lm-btn"
                                         onMouseEnter={() => playSFX(SFX.HOVER)}
                                     >
-                                        Open in NotebookLM →
+                                        {t('metacog_logs.open_lm')}
                                     </a>
                                 </span>
                             )}
@@ -148,7 +160,7 @@ export default function MetacognitionLogs() {
                                         style={{ '--animation-order': slotIdx } as any}
                                     >
                                         <Wrench size={28} className="empty-log-card-icon" />
-                                        <p className="empty-log-card-text">No entry</p>
+                                        <p className="empty-log-card-text">{t('metacog_logs.no_entry')}</p>
                                     </div>
                                 );
                             }
@@ -161,7 +173,7 @@ export default function MetacognitionLogs() {
                                     <div className="log-card-header">
                                         <h3 className="log-card-title">
                                             <Wrench size={15} className="icon-gold" />
-                                            Pit Stop
+                                            {t('metacog_logs.pit_stop')}
                                         </h3>
                                         <span className="text-muted log-card-date">
                                             {new Date(log.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}

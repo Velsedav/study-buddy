@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Sparkles, RotateCcw, Trophy, Lock, GraduationCap, Eye, EyeOff, PlusCircle } from 'lucide-react';
 import { playSFX, SFX } from '../lib/sounds';
 import { useSettings } from '../lib/settings';
 import { curriculum } from '../lib/learningContent';
 import type { Section, QuizOption } from '../lib/learningContent';
 import { isDevMode, isDevNavUnlocked } from '../lib/devMode';
+import { useTranslation } from '../lib/i18n';
 import './Learning.css';
 
 // ── Spaced Repetition Types & Constants ──
@@ -118,6 +119,24 @@ function loadQuizState(): Record<number, Record<string, boolean>> {
 function loadSRSState(): SRSState {
     try {
         const saved = localStorage.getItem('study-buddy-srs-state');
+        if (saved) return JSON.parse(saved);
+    } catch { }
+    return {};
+}
+
+// ── Observation Journal Types & Helpers ──
+
+interface LessonObservation {
+    date: string; // ISO
+    noticed: boolean | null; // true = noticed, false = not noticed, null = just journaled
+    note: string;
+}
+
+type ObservationsState = Record<string, LessonObservation[]>; // keyed by lessonId
+
+function loadObservationsState(): ObservationsState {
+    try {
+        const saved = localStorage.getItem('study-buddy-observations');
         if (saved) return JSON.parse(saved);
     } catch { }
     return {};
@@ -354,6 +373,84 @@ function CelebrationOverlay({ onDone }: { onDone: () => void }) {
     );
 }
 
+// ── Observation Panel ──
+
+function ObservationPanel({ lessonId, observations, onAdd, t, theme }: {
+    lessonId: string;
+    observations: LessonObservation[];
+    onAdd: (obs: LessonObservation) => void;
+    t: (key: string) => string;
+    theme: string;
+}) {
+    const [open, setOpen] = useState(false);
+    const [noticed, setNoticed] = useState<boolean | null>(null);
+    const [note, setNote] = useState('');
+
+    function submit() {
+        if (!note.trim() && noticed === null) return;
+        onAdd({ date: new Date().toISOString(), noticed, note: note.trim() });
+        setNote('');
+        setNoticed(null);
+        setOpen(false);
+        playSFX(SFX.CHECK, theme);
+    }
+
+    return (
+        <div className="observation-panel">
+            {observations.length === 0 ? (
+                <div className="observation-prompt">
+                    <Eye size={14} />
+                    <span>{t('learning.observe_prompt')}</span>
+                </div>
+            ) : (
+                <div className="observation-log">
+                    {observations.map((obs, i) => (
+                        <div key={i} className="observation-entry">
+                            <span className={`observation-noticed-badge${obs.noticed === true ? ' yes' : obs.noticed === false ? ' no' : ' neutral'}`}>
+                                {obs.noticed === true ? t('learning.noticed_yes') : obs.noticed === false ? t('learning.noticed_no') : '·'}
+                            </span>
+                            <span className="observation-date">{new Date(obs.date).toLocaleDateString()}</span>
+                            {obs.note && <span className="observation-note">{obs.note}</span>}
+                        </div>
+                    ))}
+                </div>
+            )}
+            {!open ? (
+                <button className="btn-text observation-add-btn" onClick={() => setOpen(true)}>
+                    <PlusCircle size={13} />
+                    {t('learning.add_observation')}
+                </button>
+            ) : (
+                <div className="observation-form">
+                    <div className="observation-form-noticed">
+                        <span className="observation-form-label">{t('learning.noticed_question')}</span>
+                        <div className="observation-noticed-btns">
+                            <button className={`btn-noticed${noticed === true ? ' active-yes' : ''}`} onClick={() => setNoticed(noticed === true ? null : true)}>
+                                <Eye size={12} /> {t('learning.noticed_yes')}
+                            </button>
+                            <button className={`btn-noticed${noticed === false ? ' active-no' : ''}`} onClick={() => setNoticed(noticed === false ? null : false)}>
+                                <EyeOff size={12} /> {t('learning.noticed_no')}
+                            </button>
+                        </div>
+                    </div>
+                    <textarea
+                        className="observation-textarea"
+                        placeholder={t('learning.observation_placeholder')}
+                        value={note}
+                        rows={2}
+                        onChange={(e) => setNote(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
+                    />
+                    <div className="observation-form-actions">
+                        <button className="btn btn-secondary" onClick={() => setOpen(false)}>{t('learning.observation_cancel')}</button>
+                        <button className="btn btn-primary" onClick={submit} disabled={!note.trim() && noticed === null}>{t('learning.observation_save')}</button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Main Component ──
 
 export default function LearningTab() {
@@ -368,6 +465,8 @@ export default function LearningTab() {
 
     const [quizState, setQuizState] = useState<Record<number, Record<string, boolean>>>(loadQuizState);
     const [srsState, setSRSState] = useState<SRSState>(loadSRSState);
+    const [observationsState, setObservationsState] = useState<ObservationsState>(loadObservationsState);
+    const { t } = useTranslation();
 
     // Flat lesson list with chapter context — recomputes whenever selectedSection changes
     const flatLessons = selectedSection
@@ -387,6 +486,10 @@ export default function LearningTab() {
     useEffect(() => {
         localStorage.setItem('study-buddy-srs-state', JSON.stringify(srsState));
     }, [srsState]);
+
+    useEffect(() => {
+        localStorage.setItem('study-buddy-observations', JSON.stringify(observationsState));
+    }, [observationsState]);
 
     // On mount: clear quiz answers for due sections
     useEffect(() => {
@@ -813,8 +916,22 @@ export default function LearningTab() {
                                                     </div>
                                                     {isSolved && (
                                                         <div className="quiz-success-msg slide-up">
-                                                            <strong>Correct!</strong> Great job internalizing this concept!
+                                                            <strong>{t('learning.correct')}</strong> {t('learning.correct_desc')}
                                                         </div>
+                                                    )}
+                                                    {isSolved && (
+                                                        <ObservationPanel
+                                                            lessonId={lesson.id}
+                                                            observations={observationsState[lesson.id] ?? []}
+                                                            onAdd={(obs) => {
+                                                                setObservationsState(prev => ({
+                                                                    ...prev,
+                                                                    [lesson.id]: [...(prev[lesson.id] ?? []), obs]
+                                                                }));
+                                                            }}
+                                                            t={t}
+                                                            theme={theme}
+                                                        />
                                                     )}
                                                 </div>
                                             </div>

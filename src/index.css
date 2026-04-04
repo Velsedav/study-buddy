@@ -1086,6 +1086,25 @@
 }
 
 /* ── Terminal Theme Component Overrides ── */
+
+[data-theme^="terminal-"] ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+[data-theme^="terminal-"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme^="terminal-"] ::-webkit-scrollbar-thumb {
+  background: rgba(var(--primary-rgb), 0.35);
+  border-radius: 0;
+}
+
+[data-theme^="terminal-"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--primary-rgb), 0.7);
+}
+
 [data-theme^="terminal-"] .tag-picker-input-area:focus-within {
   background: #000 !important;
 }
@@ -2737,6 +2756,41 @@ input[type="checkbox"] {
 /* Base Responsive */
 @media (max-width: 900px) {
   .right-panel {
+    display: none;
+  }
+
+  /* ── Sidebar collapse to icon-only ── */
+  .layout {
+    grid-template-columns: 60px 1fr;
+  }
+
+  .layout .sidebar {
+    padding: 16px 6px;
+  }
+
+  .layout .sidebar .logo {
+    gap: 0;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  .layout .sidebar .logo h2 {
+    display: none;
+  }
+
+  .layout .sidebar .nav-link {
+    justify-content: center;
+    padding: 10px;
+    gap: 0;
+  }
+
+  /* Hide label text, keep the review-due dot visible */
+  .layout .sidebar .nav-link > span:not(.nav-review-dot) {
+    display: none;
+  }
+
+  .layout .sidebar .mascot-container,
+  .layout .sidebar .terminal-quote-container {
     display: none;
   }
 }
@@ -5835,6 +5889,9 @@ input[type="checkbox"] {
   border-right: 2px solid var(--primary);
   backdrop-filter: none;
   box-shadow: none;
+  /* [tdr] .glass { position: relative } (specificity 0,2,0) overrides .sidebar { position: sticky } (0,1,0).
+     Restore sticky here at specificity 0,3,0. */
+  position: sticky;
 }
 
 /* Light TDR sidebars are coloured — their right-border rule must be dark, not same-as-bg */

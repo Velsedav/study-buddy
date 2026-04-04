@@ -1,4 +1,44 @@
 
+/* ── Modal entrance animation ── */
+@keyframes tech-modal-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes tech-breadcrumb-slide {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .tech-picker-modal {
+        animation: tech-modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .tech-breadcrumb-step,
+    .tech-breadcrumb-sep {
+        animation: tech-breadcrumb-slide 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .tech-breadcrumb-step:nth-child(1) { animation-delay: 0.04s; }
+    .tech-breadcrumb-sep:nth-child(2)  { animation-delay: 0.09s; }
+    .tech-breadcrumb-step:nth-child(3) { animation-delay: 0.14s; }
+    .tech-breadcrumb-sep:nth-child(4)  { animation-delay: 0.19s; }
+    .tech-breadcrumb-step:nth-child(5) { animation-delay: 0.24s; }
+}
+
 .tech-picker-modal {
     max-width: 700px;
     max-height: 80vh;
@@ -9,8 +49,16 @@
 .tech-picker-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.tech-picker-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
 }
 
 .tech-picker-header h2 {
@@ -18,7 +66,47 @@
 }
 
 .tech-picker-close {
-    padding: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ── Breadcrumb ── */
+
+.tech-picker-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.tech-breadcrumb-step {
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tech-breadcrumb-done {
+    background: rgba(var(--primary-rgb), 0.10);
+    color: var(--text-muted);
+    border: 1px solid rgba(var(--primary-rgb), 0.20);
+}
+
+.tech-breadcrumb-active {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.tech-breadcrumb-sep {
+    color: var(--text-muted);
+    opacity: 0.5;
+    flex-shrink: 0;
 }
 
 .tech-picker-scroll {
@@ -239,4 +327,36 @@
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
     border-top: 6px solid var(--text-dark);
+}
+
+/* Technique suggestion banner */
+.tech-suggestion-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    margin: 0 0 12px 0;
+    background: rgba(var(--primary-rgb), 0.10);
+    border: 1px solid rgba(var(--primary-rgb), 0.30);
+    border-radius: var(--border-radius);
+}
+
+.tech-suggestion-label {
+    flex: 1;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.tech-suggestion-apply {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    white-space: nowrap;
+}
+
+/* Suggested technique card highlight */
+.tech-card.suggested-technique {
+    border-color: rgba(var(--primary-rgb), 0.60);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.20), var(--shadow-md);
 }

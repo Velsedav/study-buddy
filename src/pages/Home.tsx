@@ -18,13 +18,13 @@ import { playSFX, SFX } from '../lib/sounds';
 import { getRecommendations, getAllChapters, getRetentionPercent, type Recommendation, type Chapter } from '../lib/chapters';
 import './Home.css';
 
-function getWeekStart(date: Date): Date {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = (day === 0 ? -6 : 1 - day); // Monday = start
-    d.setDate(d.getDate() + diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
+function formatHoursDisplay(h: number): string {
+    if (h <= 0) return '0m';
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    if (hh === 0) return `${mm}m`;
+    if (mm === 0) return `${hh}h`;
+    return `${hh}h ${mm}m`;
 }
 
 /** Convert a Uint8Array to a base64 data URL */
@@ -138,7 +138,7 @@ export default function Home() {
     const [monthlyStats, setMonthlyStats] = useState({ focusTime: 0, sessions: 0, activeDays: 0, daysInMonth: 30 });
     const [monthlyInsights, setMonthlyInsights] = useState({ avgSessionMins: 0, longestSessionMins: 0, bestDay: '—', topSubject: '—', deepWorkPct: 0 });
     const [streaks, setStreaks] = useState({ current: 0, best: 0 });
-    const [freeTimePercent, setFreeTimePercent] = useState<number | null>(null);
+    const [freeTimeData, setFreeTimeData] = useState<{ usedHours: number; totalHours: number } | null>(null);
 
     const animFocusTime = useCountUp(weeklyStats.focusTime);
     const animSessions = useCountUp(weeklyStats.sessions);
@@ -148,7 +148,6 @@ export default function Home() {
     const animMonthDays = useCountUp(monthlyStats.activeDays);
     const animCurrentStreak = useCountUp(streaks.current);
     const animBestStreak = useCountUp(streaks.best);
-    const animFreeTime = useCountUp(freeTimePercent ?? 0, 1200);
     const [techniqueOfWeek, setTechniqueOfWeek] = useState<string | null>(() => localStorage.getItem('study-buddy-technique-week'));
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [ignoredRecs, setIgnoredRecs] = useState<Set<string>>(() => {
@@ -324,23 +323,14 @@ export default function Home() {
             }
             setStreaks({ current: streakCur, best: streakBest });
 
-            // Compute Free Time Utilization
+            // Compute Free Time Utilization (current week vs most recent budget)
             const metacogLogs = await getMetacognitionLogs();
             const validLog = metacogLogs.find(log => log.free_time_hours != null && log.free_time_hours > 0);
             if (validLog && validLog.free_time_hours != null) {
-                const logWeekStart = getWeekStart(new Date(validLog.created_at));
-                const logWeekEnd = new Date(logWeekStart);
-                logWeekEnd.setDate(logWeekEnd.getDate() + 7);
-                const actualMins = fetchedSessions
-                    .filter(s => {
-                        const sd = new Date(s.started_at);
-                        return sd >= logWeekStart && sd < logWeekEnd;
-                    })
-                    .reduce((sum, s) => sum + (s.actual_minutes || 0), 0);
-                const actualHours = actualMins / 60;
-                setFreeTimePercent(Math.round((actualHours / validLog.free_time_hours) * 100));
+                // weeklyFocus already uses the correct weekStart boundary
+                setFreeTimeData({ usedHours: weeklyFocus / 60, totalHours: validLog.free_time_hours });
             } else {
-                setFreeTimePercent(null);
+                setFreeTimeData(null);
             }
 
             // Compute Monthly Insights
@@ -507,12 +497,33 @@ export default function Home() {
                                 <Pen size={28} color="white" />
                             </div>
                         </div>
-                        <div className="stat-card glass stat-card-full" title={t('home.free_time_used_tooltip')}>
-                            <Target size={24} className="stat-icon" />
-                            <div className="stat-value">{freeTimePercent !== null ? `${animFreeTime}%` : '—'}</div>
-                            <div className="stat-label">{t('home.free_time_used')}</div>
-                        </div>
                     </div>
+                    {freeTimeData && (() => {
+                        const pct = Math.min((freeTimeData.usedHours / freeTimeData.totalHours) * 100, 100);
+                        const remaining = freeTimeData.totalHours - freeTimeData.usedHours;
+                        const colorClass = pct >= 100 ? 'over' : pct >= 85 ? 'danger' : pct >= 60 ? 'warn' : 'ok';
+                        return (
+                            <div className="stat-card glass fuel-card" title={t('home.free_time_used_tooltip')}>
+                                <div className="fuel-top-row">
+                                    <div className="fuel-label-group">
+                                        <Target size={15} className="fuel-icon" />
+                                        <span className="fuel-label">{t('home.free_time_used')}</span>
+                                    </div>
+                                    <span className="fuel-fraction">
+                                        {formatHoursDisplay(freeTimeData.usedHours)} / {formatHoursDisplay(freeTimeData.totalHours)}
+                                    </span>
+                                </div>
+                                <div className="fuel-track">
+                                    <div className={`fuel-fill fuel-fill-${colorClass}`} style={{ '--fuel-pct': `${pct}%` } as React.CSSProperties} />
+                                </div>
+                                <div className={`fuel-remaining fuel-remaining-${colorClass}`}>
+                                    {remaining >= 0
+                                        ? `${formatHoursDisplay(remaining)} ${t('home.free_time_remaining')}`
+                                        : `+${formatHoursDisplay(-remaining)} ${t('home.free_time_over')}`}
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 <div className="weekly-stats-container glass">

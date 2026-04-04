@@ -552,3 +552,173 @@
 .lesson-progress-dot:not(.dot-active):hover {
     transform: scale(1.4);
 }
+/* ── Observation Journal ── */
+
+.observation-panel {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.observation-prompt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 8px;
+}
+
+.observation-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: var(--primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 0;
+    opacity: 0.8;
+    transition: opacity 0.15s;
+}
+
+.observation-add-btn:hover {
+    opacity: 1;
+}
+
+.observation-log {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.observation-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.observation-noticed-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.observation-noticed-badge.yes {
+    background: rgba(var(--success-rgb, 34 197 94), 0.15);
+    color: var(--success);
+}
+
+.observation-noticed-badge.no {
+    background: rgba(var(--danger-rgb), 0.12);
+    color: var(--danger);
+}
+
+.observation-noticed-badge.neutral {
+    background: var(--glass-border);
+    color: var(--text-muted);
+}
+
+.observation-date {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.observation-note {
+    color: var(--text-dark);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* Form */
+
+.observation-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.observation-form-noticed {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.observation-form-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.observation-noticed-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-noticed {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--glass-border);
+    background: var(--card-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-noticed:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.btn-noticed.active-yes {
+    background: rgba(var(--success-rgb, 34 197 94), 0.15);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.btn-noticed.active-no {
+    background: rgba(var(--danger-rgb), 0.12);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.observation-textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 56px;
+    padding: 8px 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius);
+    background: var(--card-bg);
+    color: var(--text-dark);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    font-family: inherit;
+    transition: border-color 0.15s;
+}
+
+.observation-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.observation-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}

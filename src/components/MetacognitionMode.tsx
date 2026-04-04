@@ -35,6 +35,9 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
     const [problem3, setProblem3] = useState('');
     const [sacrifice, setSacrifice] = useState('');
 
+    // Step 2 extra fields
+    const [freeTimeHours, setFreeTimeHours] = useState('');
+
     // Step 4 fields
     const [systemRule, setSystemRule] = useState('');
 
@@ -167,7 +170,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
             focus_drop: focusDropValue,
             memorization_align: memorizationAlignValue,
             mechanical_fix: systemRule,
-            free_time_hours: null,
+            free_time_hours: freeTimeHours ? parseFloat(freeTimeHours) : null,
             priority_subject_ids: null,
         });
 
@@ -183,6 +186,7 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
         setProblem3('');
         setSacrifice('');
         setSystemRule('');
+        setFreeTimeHours('');
         setRedChapters('');
         setTimerStarted(false);
         setTimeLeft(TOTAL_SECONDS);
@@ -319,6 +323,29 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                                 </div>
                             </div>
 
+                            <div className="mc-free-time-group">
+                                <label className="mc-free-time-label">
+                                    {isTerminal ? '[T]' : '⏳'} {t('metacog.free_time_label')}
+                                </label>
+                                <p className="mc-free-time-desc">
+                                    {t('metacog.free_time_desc')}
+                                </p>
+                                <div className="mc-free-time-input-row">
+                                    <input
+                                        className="mc-input mc-free-time-input"
+                                        type="number"
+                                        inputMode="decimal"
+                                        min="0"
+                                        max="168"
+                                        step="0.5"
+                                        value={freeTimeHours}
+                                        onChange={e => setFreeTimeHours(e.target.value)}
+                                        placeholder={t('metacog.free_time_placeholder')}
+                                    />
+                                    <span className="mc-free-time-unit">{t('metacog.free_time_unit')}</span>
+                                </div>
+                            </div>
+
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '32px' }}>
                                 <button className="btn btn-primary" style={{ padding: '12px 32px' }} onClick={() => goToStep(3)}>
                                     Étape Suivante →
@@ -433,11 +460,10 @@ export default function MetacognitionMode({ onComplete }: { onComplete: () => vo
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px' }}>
+                            <div className="mc-complete-actions">
                                 <button className="btn btn-secondary" onClick={() => goToStep(4)}>← Retour</button>
                                 <button
-                                    className="btn btn-primary"
-                                    style={{ fontSize: '1.05rem', padding: '14px 40px', background: 'var(--success)' }}
+                                    className="btn btn-primary mc-complete-btn"
                                     onClick={handleSaveAndComplete}
                                 >
                                     ✅ Compléter le Pit Stop

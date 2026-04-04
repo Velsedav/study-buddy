@@ -158,7 +158,7 @@
 .chapter-focus-btn {
     background: rgba(0, 0, 0, 0.06);
     color: var(--text-muted);
-    border: none;
+    border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 6px;
     padding: 2px 7px;
     font-size: 0.7rem;
@@ -171,12 +171,12 @@
 .chapter-focus-btn:hover {
     background: rgba(0, 0, 0, 0.13);
     color: var(--text-dark);
+    border-color: rgba(0, 0, 0, 0.25);
 }
 
 .chapter-focus-btn.active {
     background: var(--focus-color);
     color: #fff;
-    font-weight: 700;
 }
 
 .chapter-focus-btn.active:hover {
@@ -213,7 +213,6 @@
     font-size: 0.75rem;
     border-radius: 4px;
     color: var(--text-muted);
-    text-decoration: underline dotted;
 }
 
 .chapter-spacing-btn:hover {
@@ -258,6 +257,33 @@
     padding: 6px 10px;
     display: flex;
     align-items: center;
+}
+
+[data-theme^="terminal-"] .chapter-add-btn {
+    color: var(--bg-color);
+}
+
+[data-theme^="terminal-"] .chapter-focus-btn {
+    background: transparent;
+    border-color: rgba(var(--primary-rgb), 0.3);
+    color: rgba(var(--primary-rgb), 0.6);
+}
+
+[data-theme^="terminal-"] .chapter-focus-btn:hover {
+    border-color: rgba(var(--primary-rgb), 0.7);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+[data-theme^="terminal-"] .chapter-focus-btn.active {
+    background: rgba(var(--primary-rgb), 0.18);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+[data-theme^="terminal-"] .chapter-focus-btn.active:hover {
+    background: rgba(var(--primary-rgb), 0.28);
+    opacity: 1;
 }
 
 .chapter-input-help {
@@ -550,7 +576,21 @@ input.input-error {
     font-size: 0.75rem;
     border-radius: 4px;
     color: var(--text-muted);
-    text-decoration: underline dotted;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chapter-sources-toggle::after {
+    content: '▾';
+    font-size: 0.7rem;
+    display: inline-block;
+    transition: transform 200ms ease;
+    transform: rotate(0deg);
+}
+
+.chapter-sources-toggle.open::after {
+    transform: rotate(-180deg);
 }
 
 .chapter-sources-toggle:hover {
@@ -567,6 +607,19 @@ input.input-error {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    animation: sources-expand 180ms ease;
+    transform-origin: top;
+}
+
+@keyframes sources-expand {
+    from {
+        opacity: 0;
+        transform: scaleY(0.85) translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: scaleY(1) translateY(0);
+    }
 }
 
 .chapter-source-item {
@@ -622,26 +675,36 @@ input.input-error {
 
 .chapter-source-add-row {
     display: flex;
-    gap: 4px;
-    align-items: center;
-    margin-top: 2px;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.chapter-source-inputs {
+    display: flex;
+    gap: 6px;
+}
+
+.chapter-source-actions {
+    display: flex;
+    gap: 6px;
 }
 
 .chapter-source-input {
     flex: 1;
-    font-size: 0.75rem;
-    padding: 3px 6px;
+    font-size: 0.8rem;
+    padding: 5px 8px;
     border-radius: 4px;
     min-width: 0;
 }
 
 .chapter-source-add-btn {
-    flex-shrink: 0;
-    font-size: 0.75rem;
-    padding: 3px 8px;
+    flex: 1;
+    font-size: 0.8rem;
+    padding: 5px 10px;
     border-radius: 4px;
     background: rgba(var(--primary-rgb), 0.15);
-    border: none;
+    border: 1px solid transparent;
     color: var(--primary);
     cursor: pointer;
     font-weight: 500;
@@ -651,10 +714,15 @@ input.input-error {
     background: rgba(var(--primary-rgb), 0.25);
 }
 
+.chapter-source-add-btn.has-pending {
+    background: rgba(var(--primary-rgb), 0.25);
+    border-color: var(--primary);
+}
+
 .chapter-source-file-btn {
-    flex-shrink: 0;
-    font-size: 0.75rem;
-    padding: 3px 8px;
+    flex: 1;
+    font-size: 0.8rem;
+    padding: 5px 10px;
     border-radius: 4px;
     background: rgba(var(--primary-rgb), 0.08);
     border: 1px dashed rgba(var(--primary-rgb), 0.3);

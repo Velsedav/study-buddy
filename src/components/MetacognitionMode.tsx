@@ -4,6 +4,7 @@ import { saveMetacognitionLog, getSubjects } from '../lib/db';
 import { formatSecondsMMSS } from '../lib/time';
 import { getAllChapters } from '../lib/chapters';
 import { useSettings } from '../lib/settings';
+import { useTranslation } from '../lib/i18n';
 import './MetacognitionMode.css';
 const STEPS = [
     { id: 1, label: 'Le Recul' },
@@ -17,6 +18,7 @@ const TOTAL_SECONDS = 15 * 60;
 
 export default function MetacognitionMode({ onComplete }: { onComplete: () => void }) {
     const { isTerminal } = useSettings();
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [animKey, setAnimKey] = useState(0);
     const [animClass, setAnimClass] = useState('');

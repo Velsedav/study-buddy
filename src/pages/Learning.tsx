@@ -375,7 +375,7 @@ function CelebrationOverlay({ onDone }: { onDone: () => void }) {
 
 // ── Observation Panel ──
 
-function ObservationPanel({ lessonId, observations, onAdd, t, theme }: {
+function ObservationPanel({ lessonId: _lessonId, observations, onAdd, t, theme }: {
     lessonId: string;
     observations: LessonObservation[];
     onAdd: (obs: LessonObservation) => void;

@@ -73,7 +73,7 @@ function CloseOverlay() {
                                 </span>
                                 {status === 'saving' && <Loader2 size={13} className="close-overlay-path-spinner" />}
                                 {status === 'ok' && <CheckCircle2 size={13} />}
-                                {status === 'error' && <XCircle size={13} title={path} />}
+                                {status === 'error' && <span title={path}><XCircle size={13} /></span>}
                             </li>
                         ))}
                     </ul>

@@ -124,7 +124,7 @@ export default function SettingsTab() {
                 { id: 'terminal-red', name: 'Red Terminal', color: '#ff0000' },
                 { id: 'terminal-cyan', name: 'CLI / Cyan', color: '#00d4ff' },
                 { id: 'terminal-amber', name: 'Amber Terminal', color: '#ffaa00' },
-                { id: 'terminal-purple', name: 'Purple Terminal', color: '#cc33ff' },
+                { id: 'terminal-acid', name: 'Acid Terminal', color: '#aaff00' },
                 { id: 'terminal-blue', name: 'Blue Terminal', color: '#4499ff' },
             ]
         },

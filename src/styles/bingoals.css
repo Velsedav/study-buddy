@@ -118,15 +118,15 @@
   color: #ffaa00;
 }
 
-[data-theme="terminal-purple"] .bingoals-root {
-  --red:    #12001e;
-  --white:  #cc33ff;
-  --black:  #0a0014;
-  --green:  #ff44cc;
-  --border: 1px solid rgba(204,51,255,0.5);
-  --shadow: 0 0 10px rgba(204,51,255,0.4);
+[data-theme="terminal-acid"] .bingoals-root {
+  --red:    #030c03;
+  --white:  #aaff00;
+  --black:  #020902;
+  --green:  #ccff66;
+  --border: 1px solid rgba(170,255,0,0.5);
+  --shadow: 0 0 10px rgba(170,255,0,0.4);
   --mono:   'JetBrains Mono', 'Cascadia Mono', monospace;
-  color: #cc33ff;
+  color: #aaff00;
 }
 
 [data-theme="terminal-blue"] .bingoals-root {
@@ -1065,18 +1065,18 @@
   box-shadow: 0 0 15px rgba(255,170,0,0.6);
 }
 
-[data-theme="terminal-purple"] .bingoals-root .card {
-  background: #12001e;
-  color: #cc33ff;
-  border: 1px solid #cc33ff;
+[data-theme="terminal-acid"] .bingoals-root .card {
+  background: #030c03;
+  color: #aaff00;
+  border: 1px solid #aaff00;
   border-radius: 0;
-  box-shadow: 0 0 10px rgba(204,51,255,0.3);
+  box-shadow: 0 0 10px rgba(170,255,0,0.3);
 }
 
-[data-theme="terminal-purple"] .bingoals-root .card:hover {
-  border-color: #dd55ff;
-  background: #220033;
-  box-shadow: 0 0 15px rgba(204,51,255,0.6);
+[data-theme="terminal-acid"] .bingoals-root .card:hover {
+  border-color: #bbff33;
+  background: #0a1f00;
+  box-shadow: 0 0 15px rgba(170,255,0,0.6);
 }
 
 [data-theme="terminal-blue"] .bingoals-root .card {

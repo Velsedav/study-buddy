@@ -940,54 +940,54 @@
 }
 
 /* Theme - Terminal Purple */
-[data-theme="terminal-purple"] {
+/* Theme - Terminal Acid (P31 phosphor — #aaff00 green, inspired by TDR Acid) */
+[data-theme="terminal-acid"] {
   --font-main: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  --bg-color: #0a0014;
-  --bg-gradient: linear-gradient(180deg, #0a0014, #12001e);
-  --card-bg: #0a0014;
-  --primary: #cc33ff;
-  --primary-rgb: 204, 51, 255;
-  --primary-hover: #dd55ff;
-  --secondary: #9900cc;
-  --accent: #ff44cc;
-  --success: #44ff88;
+  --bg-color: #020902;
+  --bg-gradient: linear-gradient(180deg, #020902, #030c03);
+  --card-bg: #020902;
+  --primary: #aaff00;
+  --primary-rgb: 170, 255, 0;
+  --primary-hover: #bbff33;
+  --secondary: #77cc00;
+  --accent: #ccff66;
+  --success: #00ff88;
   --danger: #ff3355;
-  --text-dark: #e0b0ff;
-  --text-muted: #6a2a8a;
-  --text-light: #e0b0ff;
+  --text-dark: #aaff66;
+  --text-muted: #2a5500;
+  --text-light: #aaff66;
   --border-radius: 0px;
   --border-radius-sm: 0px;
-  --shadow-sm: 0 0 6px rgba(204, 51, 255, 0.15);
-  --shadow-md: 0 0 12px rgba(204, 51, 255, 0.3);
-  --shadow-lg: 0 0 20px rgba(204, 51, 255, 0.5);
+  --shadow-sm: 0 0 6px rgba(170, 255, 0, 0.15);
+  --shadow-md: 0 0 12px rgba(170, 255, 0, 0.3);
+  --shadow-lg: 0 0 20px rgba(170, 255, 0, 0.5);
   --transition: all 0.15s ease;
-  --sidebar-bg: rgba(10, 0, 20, 0.95);
-  --glass-border: rgba(204, 51, 255, 0.4);
-  --input-border: rgba(204, 51, 255, 0.5);
-  --input-bg-focus: #0a0014;
-  --input-focus-ring: rgba(204, 51, 255, 0.2);
-  --bubble-bg: #0a0014;
-  --h-0: #12001e;
-  --h-1: #220033;
-  --h-2: #440066;
-  --h-3: #9900cc;
-  --h-4: #cc33ff;
+  --sidebar-bg: rgba(2, 9, 2, 0.95);
+  --glass-border: rgba(170, 255, 0, 0.4);
+  --input-border: rgba(170, 255, 0, 0.5);
+  --input-bg-focus: #020902;
+  --input-focus-ring: rgba(170, 255, 0, 0.2);
+  --bubble-bg: #020902;
+  --h-0: #020902;
+  --h-1: #0a1f00;
+  --h-2: #1a4400;
+  --h-3: #4a8800;
+  --h-4: #aaff00;
 }
 
-[data-theme="terminal-purple"] .glass {
-  border: 1px solid rgba(204, 51, 255, 0.3);
+[data-theme="terminal-acid"] .glass {
+  border: 1px solid rgba(170, 255, 0, 0.3);
   backdrop-filter: none;
-  background: rgba(10, 0, 20, 0.95);
-  box-shadow: 0 0 12px rgba(204, 51, 255, 0.08) inset,
-    0 0 1px rgba(204, 51, 255, 0.5);
+  background: rgba(2, 9, 2, 0.95);
+  box-shadow: 0 0 12px rgba(170, 255, 0, 0.08) inset,
+    0 0 1px rgba(170, 255, 0, 0.5);
 }
 
-
-[data-theme="terminal-purple"] .heatmap-cell[class*="intensity"] {
+[data-theme="terminal-acid"] .heatmap-cell[class*="intensity"] {
   border-radius: 0;
 }
 
-[data-theme="terminal-purple"] .btn {
+[data-theme="terminal-acid"] .btn {
   border: 1px solid var(--primary);
   background: transparent;
   color: var(--primary);
@@ -998,17 +998,17 @@
   font-size: 0.8em;
 }
 
-[data-theme="terminal-purple"] input,
-[data-theme="terminal-purple"] select,
-[data-theme="terminal-purple"] textarea {
-  border: 1px solid rgba(204, 51, 255, 0.4);
-  background: #0a0014;
+[data-theme="terminal-acid"] input,
+[data-theme="terminal-acid"] select,
+[data-theme="terminal-acid"] textarea {
+  border: 1px solid rgba(170, 255, 0, 0.4);
+  background: #020902;
   color: var(--text-dark);
   border-radius: 0;
 }
 
-[data-theme="terminal-purple"] .nav-item.active {
-  background: rgba(204, 51, 255, 0.12);
+[data-theme="terminal-acid"] .nav-item.active {
+  background: rgba(170, 255, 0, 0.12);
   border-left: 2px solid var(--primary);
 }
 

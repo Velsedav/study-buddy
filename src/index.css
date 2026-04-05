@@ -1012,6 +1012,30 @@
   border-left: 2px solid var(--primary);
 }
 
+/* ── Terminal Acid bloom: layered phosphor glow on all text ── */
+[data-theme="terminal-acid"] body {
+  text-shadow:
+    0 0 3px rgba(170, 255, 0, 0.95),
+    0 0 10px rgba(170, 255, 0, 0.55),
+    0 0 25px rgba(170, 255, 0, 0.2);
+}
+
+/* Glass panels: sharp edge glow + wide bloom */
+[data-theme="terminal-acid"] .glass {
+  box-shadow:
+    0 0 0 1px rgba(170, 255, 0, 0.6),
+    0 0 12px rgba(170, 255, 0, 0.25),
+    0 0 32px rgba(170, 255, 0, 0.1),
+    0 0 8px rgba(170, 255, 0, 0.08) inset !important;
+}
+
+/* Suppress bloom on img/svg so they don't get a text-shadow artifact */
+[data-theme="terminal-acid"] img,
+[data-theme="terminal-acid"] svg {
+  text-shadow: none;
+  filter: drop-shadow(0 0 4px rgba(170, 255, 0, 0.4));
+}
+
 /* Theme - Terminal Blue (P1 phosphor) */
 [data-theme="terminal-blue"] {
   --font-main: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;

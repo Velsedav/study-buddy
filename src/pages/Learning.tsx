@@ -807,6 +807,45 @@ export default function LearningTab() {
 
                 {/* ── Horizontal Carousel ── */}
                 <div className="lesson-carousel-wrapper">
+                    <div className="lesson-carousel-nav">
+                        <button
+                            className="btn-icon lesson-carousel-btn"
+                            onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(prev => Math.max(0, prev - 1)); }}
+                            disabled={activeLessonIdx === 0}
+                            aria-label="Previous lesson"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <div className="lesson-progress-dots" role="tablist" aria-label="Lesson progress">
+                            {flatLessons.map(({ lesson }, dotIdx) => {
+                                const qs = quizState[lesson.question.id] || {};
+                                const dotSolved = Object.values(qs).some(v => v === true);
+                                const dotWrong = !dotSolved && Object.values(qs).some(v => v === false);
+                                let dotClass = 'lesson-progress-dot';
+                                if (dotIdx === activeLessonIdx) dotClass += ' dot-active';
+                                else if (dotSolved) dotClass += ' dot-solved';
+                                else if (dotWrong) dotClass += ' dot-wrong';
+                                return (
+                                    <button
+                                        key={lesson.id}
+                                        className={dotClass}
+                                        onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(dotIdx); }}
+                                        aria-label={lesson.title}
+                                        aria-selected={dotIdx === activeLessonIdx}
+                                        role="tab"
+                                    />
+                                );
+                            })}
+                        </div>
+                        <button
+                            className="btn-icon lesson-carousel-btn"
+                            onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(prev => Math.min(flatLessons.length - 1, prev + 1)); }}
+                            disabled={activeLessonIdx === flatLessons.length - 1}
+                            aria-label="Next lesson"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                    </div>
                     <div
                         className="lesson-carousel-viewport"
                         style={{ '--carousel-height': `${carouselHeight}px` } as React.CSSProperties}
@@ -988,45 +1027,6 @@ export default function LearningTab() {
                         })}
                     </div>
 
-                    <div className="lesson-carousel-nav">
-                        <button
-                            className="btn-icon lesson-carousel-btn"
-                            onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(prev => Math.max(0, prev - 1)); }}
-                            disabled={activeLessonIdx === 0}
-                            aria-label="Previous lesson"
-                        >
-                            <ChevronLeft size={20} />
-                        </button>
-                        <div className="lesson-progress-dots" role="tablist" aria-label="Lesson progress">
-                            {flatLessons.map(({ lesson }, dotIdx) => {
-                                const qs = quizState[lesson.question.id] || {};
-                                const dotSolved = Object.values(qs).some(v => v === true);
-                                const dotWrong = !dotSolved && Object.values(qs).some(v => v === false);
-                                let dotClass = 'lesson-progress-dot';
-                                if (dotIdx === activeLessonIdx) dotClass += ' dot-active';
-                                else if (dotSolved) dotClass += ' dot-solved';
-                                else if (dotWrong) dotClass += ' dot-wrong';
-                                return (
-                                    <button
-                                        key={lesson.id}
-                                        className={dotClass}
-                                        onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(dotIdx); }}
-                                        aria-label={lesson.title}
-                                        aria-selected={dotIdx === activeLessonIdx}
-                                        role="tab"
-                                    />
-                                );
-                            })}
-                        </div>
-                        <button
-                            className="btn-icon lesson-carousel-btn"
-                            onClick={() => { playSFX('glass_ui_hover', theme); setActiveLessonIdx(prev => Math.min(flatLessons.length - 1, prev + 1)); }}
-                            disabled={activeLessonIdx === flatLessons.length - 1}
-                            aria-label="Next lesson"
-                        >
-                            <ChevronRight size={20} />
-                        </button>
-                    </div>
                 </div>
                 </div>
                 </div>

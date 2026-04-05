@@ -530,7 +530,7 @@
     opacity: 0.85;
 }
 
-/* Bottom carousel navigation row */
+/* Carousel navigation row — sits above the viewport */
 .lesson-carousel-nav {
     display: flex;
     align-items: center;

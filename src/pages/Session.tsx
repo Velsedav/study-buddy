@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { formatSecondsMMSS } from '../lib/time';
-import { updateSubjectStats, saveSession } from '../lib/db';
+import { updateSubjectStats, saveSession, saveErrorLogEntry } from '../lib/db';
 import { TECHNIQUES } from '../lib/techniques';
 import { open as openExternal } from '@tauri-apps/plugin-shell';
 import { invoke } from '@tauri-apps/api/core';
@@ -20,27 +20,112 @@ function openSource(src: ChapterSource) {
     else openExternal(src.url);
 }
 
-interface PrepItem {
+interface PrepItemDef {
+    emoji: string;
+    labelKey: string;
+    url?: string;
+    tooltipKey?: string;
+}
+
+interface PrepSectionDef {
+    labelKey: string;
+    icon: string;
+    items: PrepItemDef[];
+}
+
+// Custom items added by the user have a plain label string
+interface CustomPrepItem {
     emoji: string;
     label: string;
     url?: string;
 }
 
-const PREP_CHECKLIST: PrepItem[] = [
-    { emoji: '📵', label: 'Tél. éteint & rangé' },
-    { emoji: '🥤', label: 'Eau prête' },
-    { emoji: '🧹', label: 'Onglets et fenêtres inutiles fermés' },
-    { emoji: '🧘', label: 'Respiration 3–5 min', url: 'https://www.youtube.com/watch?v=1h_q1u9jncs' },
-    { emoji: '🔊', label: 'Bruit blanc', url: 'https://asoftmurmur.com/' },
-    { emoji: '👥', label: 'Body Doubling (Soutien psychologique)' },
-    { emoji: '🧦', label: 'Grosses chaussettes (Confort thermique)' },
-    { emoji: '🍇', label: 'Préparer un snack sain' },
-    { emoji: '🧹', label: 'Désencombrer mon espace de travail' },
+const PREP_SECTIONS: PrepSectionDef[] = [
+    {
+        labelKey: 'session.prep_section_memory',
+        icon: '🧠',
+        items: [
+            { emoji: '📵', labelKey: 'session.prep_phone', tooltipKey: 'session.prep_tip_phone' },
+            { emoji: '🧹', labelKey: 'session.prep_tabs', tooltipKey: 'session.prep_tip_tabs' },
+            { emoji: '🧹', labelKey: 'session.prep_workspace', tooltipKey: 'session.prep_tip_workspace' },
+        ],
+    },
+    {
+        labelKey: 'session.prep_section_fuel',
+        icon: '⚗️',
+        items: [
+            { emoji: '🥤', labelKey: 'session.prep_water', tooltipKey: 'session.prep_tip_water' },
+            { emoji: '🍇', labelKey: 'session.prep_snack', tooltipKey: 'session.prep_tip_snack' },
+            { emoji: '🧦', labelKey: 'session.prep_socks', tooltipKey: 'session.prep_tip_socks' },
+        ],
+    },
+    {
+        labelKey: 'session.prep_section_stress',
+        icon: '🧘',
+        items: [
+            { emoji: '🧘', labelKey: 'session.prep_breathing', tooltipKey: 'session.prep_tip_breathing', url: 'https://www.youtube.com/watch?v=1h_q1u9jncs' },
+            { emoji: '👥', labelKey: 'session.prep_body_double', tooltipKey: 'session.prep_tip_body_double' },
+            { emoji: '🔊', labelKey: 'session.prep_white_noise', tooltipKey: 'session.prep_tip_white_noise', url: 'https://asoftmurmur.com/' },
+        ],
+    },
 ];
 
-const CUSTOM_PREP_KEY = 'study-buddy-custom-prep';
+const BREAK_SECTIONS: PrepSectionDef[] = [
+    {
+        labelKey: 'session.break_section_bdnf',
+        icon: '🌱',
+        items: [
+            { emoji: '🚶', labelKey: 'session.break_walk', tooltipKey: 'session.break_tip_walk' },
+            { emoji: '💪', labelKey: 'session.break_exercise', tooltipKey: 'session.break_tip_exercise' },
+        ],
+    },
+    {
+        labelKey: 'session.break_section_diffuse',
+        icon: '🌊',
+        items: [
+            { emoji: '🧘', labelKey: 'session.break_stretch', tooltipKey: 'session.break_tip_stretch' },
+            { emoji: '💧', labelKey: 'session.break_drink', tooltipKey: 'session.break_tip_drink' },
+        ],
+    },
+    {
+        labelKey: 'session.break_section_replay',
+        icon: '😴',
+        items: [
+            { emoji: '😴', labelKey: 'session.break_eyes', tooltipKey: 'session.break_tip_eyes' },
+        ],
+    },
+];
 
-function loadCustomPrepItems(): PrepItem[] {
+const POST_STUDY_SECTIONS: PrepSectionDef[] = [
+    {
+        labelKey: 'session.post_section_during',
+        icon: '🧘',
+        items: [
+            { emoji: '🧘', labelKey: 'session.post_eyes_closed', tooltipKey: 'session.post_tip_eyes' },
+            { emoji: '📵', labelKey: 'session.post_no_stimulus', tooltipKey: 'session.post_tip_no_stimulus' },
+            { emoji: '🗣️', labelKey: 'session.post_vocalization', tooltipKey: 'session.post_tip_vocalization' },
+        ],
+    },
+    {
+        labelKey: 'session.post_section_after',
+        icon: '📋',
+        items: [
+            { emoji: '📅', labelKey: 'session.post_tomorrow_list', tooltipKey: 'session.post_tip_tomorrow' },
+            { emoji: '📊', labelKey: 'session.post_compass', tooltipKey: 'session.post_tip_compass' },
+            { emoji: '🚀', labelKey: 'session.post_shutdown', tooltipKey: 'session.post_tip_shutdown' },
+        ],
+    },
+];
+
+// flat counts for state array sizing
+const PREP_ITEM_COUNT = PREP_SECTIONS.reduce((n, s) => n + s.items.length, 0);
+const BREAK_ITEM_COUNT = BREAK_SECTIONS.reduce((n, s) => n + s.items.length, 0);
+const POST_ITEM_COUNT = POST_STUDY_SECTIONS.reduce((n, s) => n + s.items.length, 0);
+
+const CUSTOM_PREP_KEY = 'study-buddy-custom-prep';
+const CUSTOM_BREAK_KEY = 'study-buddy-custom-break';
+
+function loadCustomPrepItems(): CustomPrepItem[] {
     try {
         const saved = localStorage.getItem(CUSTOM_PREP_KEY);
         if (saved) return JSON.parse(saved);
@@ -48,20 +133,11 @@ function loadCustomPrepItems(): PrepItem[] {
     return [];
 }
 
-function saveCustomPrepItems(items: PrepItem[]) {
+function saveCustomPrepItems(items: CustomPrepItem[]) {
     localStorage.setItem(CUSTOM_PREP_KEY, JSON.stringify(items));
 }
 
-const BREAK_CHECKLIST: PrepItem[] = [
-    { emoji: '💧', label: "Boire de l'eau" },
-    { emoji: '🚶', label: 'Se lever et marcher' },
-    { emoji: '🧘', label: "S'étirer" },
-    { emoji: '💪', label: 'Exercice rapide' },
-];
-
-const CUSTOM_BREAK_KEY = 'study-buddy-custom-break';
-
-function loadCustomBreakItems(): PrepItem[] {
+function loadCustomBreakItems(): CustomPrepItem[] {
     try {
         const saved = localStorage.getItem(CUSTOM_BREAK_KEY);
         if (saved) return JSON.parse(saved);
@@ -69,7 +145,7 @@ function loadCustomBreakItems(): PrepItem[] {
     return [];
 }
 
-function saveCustomBreakItems(items: PrepItem[]) {
+function saveCustomBreakItems(items: CustomPrepItem[]) {
     localStorage.setItem(CUSTOM_BREAK_KEY, JSON.stringify(items));
 }
 
@@ -108,12 +184,13 @@ export default function Session() {
     const [remaining, setRemaining] = useState(0);
     const [paused, setPaused] = useState(false);
     const [completedWorkMinutes, setCompletedWorkMinutes] = useState<Record<string, number>>({});
-    const [customPrepItems, setCustomPrepItems] = useState<PrepItem[]>(loadCustomPrepItems);
-    const allPrepItems = [...PREP_CHECKLIST, ...customPrepItems];
-    const [checkedItems, setCheckedItems] = useState<boolean[]>(allPrepItems.map(() => false));
-    const [customBreakItems, setCustomBreakItems] = useState<PrepItem[]>(loadCustomBreakItems);
-    const allBreakItems = [...BREAK_CHECKLIST, ...customBreakItems];
-    const [breakCheckedItems, setBreakCheckedItems] = useState<boolean[]>(allBreakItems.map(() => false));
+    const [customPrepItems, setCustomPrepItems] = useState<CustomPrepItem[]>(loadCustomPrepItems);
+    const [checkedItems, setCheckedItems] = useState<boolean[]>(() => Array(PREP_ITEM_COUNT + loadCustomPrepItems().length).fill(false));
+    const [customBreakItems, setCustomBreakItems] = useState<CustomPrepItem[]>(loadCustomBreakItems);
+    const [breakCheckedItems, setBreakCheckedItems] = useState<boolean[]>(() => Array(BREAK_ITEM_COUNT + loadCustomBreakItems().length).fill(false));
+    const [postStudyChecked, setPostStudyChecked] = useState<boolean[]>(() => Array(POST_ITEM_COUNT).fill(false));
+    const [confidenceScores, setConfidenceScores] = useState<Record<string, number>>({});
+    const [zoneOmbre, setZoneOmbre] = useState('');
     const [workoutLog, setWorkoutLog] = useState<WorkoutLog>(loadWorkoutLog);
     const [workoutSets, setWorkoutSets] = useState<WorkoutSets>(loadWorkoutSets);
     const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'rate-chapters' | 'total-rest'>('none');
@@ -183,7 +260,7 @@ export default function Session() {
     // Reset break checklist whenever we enter a new BREAK block
     useEffect(() => {
         if (session && session.draft[session.nowBlockIdx]?.type === 'BREAK') {
-            setBreakCheckedItems(allBreakItems.map(() => false));
+            setBreakCheckedItems(Array(BREAK_ITEM_COUNT + customBreakItems.length).fill(false));
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [session?.nowBlockIdx]);
@@ -369,7 +446,20 @@ export default function Session() {
                 repeats: session.repeats,
                 planned_minutes: session.plannedMinutes,
                 actual_minutes: actualMins
-            }, session.draft);
+            }, session.draft, confidenceScores);
+
+            // Save zone d'ombre to error log
+            if (zoneOmbre.trim()) {
+                const lastWorkBlock = [...session.draft].reverse().find(
+                    (b: any) => b.type === 'WORK' && b.subject_id
+                );
+                await saveErrorLogEntry({
+                    created_at: endedAt,
+                    subject_id: lastWorkBlock?.subject_id ?? null,
+                    chapter_name: lastWorkBlock?.chapter_name ?? null,
+                    text: zoneOmbre.trim(),
+                });
+            }
 
             // Update subjects
             for (const [subjId, mins] of Object.entries(finalCompletedWork)) {
@@ -601,190 +691,249 @@ export default function Session() {
                     </div>
                 )}
 
-                {currentBlock.type === 'PREP' && (
-                    <div className="prep-checklist-card">
-                        <div className="prep-checklist-title">{t('session.prep_checklist')}</div>
-                        {allPrepItems.map((item, idx) => (
-                            <label
-                                key={idx}
-                                className={`prep-item-label ${idx < allPrepItems.length - 1 ? 'bordered' : ''} ${checkedItems[idx] ? 'checked' : ''}`}
-                            >
+                {currentBlock.type === 'PREP' && (() => {
+                    let globalIdx = 0;
+                    return (
+                        <div className="prep-checklist-card">
+                            <div className="prep-checklist-title">{t('session.prep_checklist')}</div>
+                            {PREP_SECTIONS.map(section => (
+                                <div key={section.labelKey} className="checklist-section">
+                                    <div className="checklist-section-header">
+                                        <span className="checklist-section-icon">{section.icon}</span>
+                                        <span className="checklist-section-label">{t(section.labelKey as any)}</span>
+                                    </div>
+                                    {section.items.map(item => {
+                                        const idx = globalIdx++;
+                                        return (
+                                            <label
+                                                key={item.labelKey}
+                                                className={`prep-item-label bordered ${checkedItems[idx] ? 'checked' : ''}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checkedItems[idx] || false}
+                                                    onChange={() => {
+                                                        const next = [...checkedItems];
+                                                        next[idx] = !next[idx];
+                                                        setCheckedItems(next);
+                                                        if (next[idx]) playSFX('glass_ui_check', theme);
+                                                    }}
+                                                    className="prep-item-checkbox"
+                                                />
+                                                <span className="prep-item-checkmark" />
+                                                <span className="prep-item-text">
+                                                    {item.emoji}{' '}
+                                                    {item.url ? (
+                                                        <a href="#" onClick={e => { e.preventDefault(); e.stopPropagation(); openExternal(item.url!); }} className="prep-item-link">
+                                                            {t(item.labelKey as any)}
+                                                        </a>
+                                                    ) : t(item.labelKey as any)}
+                                                </span>
+                                                {item.tooltipKey && (
+                                                    <span className="checklist-info-icon" title={t(item.tooltipKey as any)}>ⓘ</span>
+                                                )}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            ))}
+                            {/* Custom items */}
+                            {customPrepItems.length > 0 && (
+                                <div className="checklist-section">
+                                    {customPrepItems.map((item, customIdx) => {
+                                        const idx = PREP_ITEM_COUNT + customIdx;
+                                        return (
+                                            <label
+                                                key={customIdx}
+                                                className={`prep-item-label bordered ${checkedItems[idx] ? 'checked' : ''}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checkedItems[idx] || false}
+                                                    onChange={() => {
+                                                        const next = [...checkedItems];
+                                                        next[idx] = !next[idx];
+                                                        setCheckedItems(next);
+                                                        if (next[idx]) playSFX('glass_ui_check', theme);
+                                                    }}
+                                                    className="prep-item-checkbox"
+                                                />
+                                                <span className="prep-item-checkmark" />
+                                                <span className="prep-item-text">{item.emoji} {item.label}</span>
+                                                <button
+                                                    className="prep-item-remove-btn"
+                                                    onClick={e => {
+                                                        e.preventDefault(); e.stopPropagation();
+                                                        const newCustom = customPrepItems.filter((_, i) => i !== customIdx);
+                                                        setCustomPrepItems(newCustom);
+                                                        saveCustomPrepItems(newCustom);
+                                                        const newChecked = [...checkedItems];
+                                                        newChecked.splice(idx, 1);
+                                                        setCheckedItems(newChecked);
+                                                    }}
+                                                    title={t('session.remove_item')}
+                                                >✕</button>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <div className="prep-custom-container">
                                 <input
-                                    type="checkbox"
-                                    checked={checkedItems[idx] || false}
-                                    onChange={() => {
-                                        const next = [...checkedItems];
-                                        next[idx] = !next[idx];
-                                        setCheckedItems(next);
-                                        if (next[idx]) {
-                                            playSFX('glass_ui_check', theme);
-                                        }
-                                    }}
-                                    className="prep-item-checkbox"
-                                />
-                                <span className="prep-item-checkmark" />
-                                <span className="prep-item-text">
-                                    {item.emoji} {item.url ? (
-                                        <a
-                                            href="#"
-                                            onClick={e => { e.preventDefault(); e.stopPropagation(); openExternal(item.url!); }}
-                                            className="prep-item-link"
-                                        >
-                                            {item.label}
-                                        </a>
-                                    ) : item.label}
-                                </span>
-                                {/* Remove button for custom items */}
-                                {idx >= PREP_CHECKLIST.length && (
-                                    <button
-                                        className="prep-item-remove-btn"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            const customIdx = idx - PREP_CHECKLIST.length;
-                                            const newCustom = customPrepItems.filter((_, i) => i !== customIdx);
+                                    type="text"
+                                    placeholder={t('session.add_custom')}
+                                    value={newCustomItem}
+                                    onChange={e => setNewCustomItem(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && newCustomItem.trim()) {
+                                            const newItem: CustomPrepItem = { emoji: '📌', label: newCustomItem.trim() };
+                                            const newCustom = [...customPrepItems, newItem];
                                             setCustomPrepItems(newCustom);
                                             saveCustomPrepItems(newCustom);
-                                            const newChecked = [...checkedItems];
-                                            newChecked.splice(idx, 1);
-                                            setCheckedItems(newChecked);
-                                        }}
-                                        title={t('session.remove_item')}
-                                    >
-                                        ✕
-                                    </button>
-                                )}
-                            </label>
-                        ))}
-
-                        {/* Add custom item */}
-                        <div className="prep-custom-container">
-                            <input
-                                type="text"
-                                placeholder={t('session.add_custom')}
-                                value={newCustomItem}
-                                onChange={e => setNewCustomItem(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter' && newCustomItem.trim()) {
-                                        const newItem: PrepItem = { emoji: '📌', label: newCustomItem.trim() };
-                                        const newCustom = [...customPrepItems, newItem];
-                                        setCustomPrepItems(newCustom);
-                                        saveCustomPrepItems(newCustom);
-                                        setCheckedItems([...checkedItems, false]);
-                                        setNewCustomItem('');
-                                    }
-                                }}
-                                className="prep-custom-input"
-                            />
-                            <button
-                                className="btn btn-secondary prep-custom-btn"
-                                onClick={() => {
-                                    if (newCustomItem.trim()) {
-                                        const newItem: PrepItem = { emoji: '📌', label: newCustomItem.trim() };
-                                        const newCustom = [...customPrepItems, newItem];
-                                        setCustomPrepItems(newCustom);
-                                        saveCustomPrepItems(newCustom);
-                                        setCheckedItems([...checkedItems, false]);
-                                        setNewCustomItem('');
-                                    }
-                                }}
-                            >
-                                {t('session.add')}
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {currentBlock.type === 'BREAK' && (
-                    <div className="break-checklist-card">
-                        <div className="break-checklist-title">{t('session.break_checklist')}</div>
-                        {allBreakItems.map((item, idx) => (
-                            <label
-                                key={idx}
-                                className={`prep-item-label ${idx < allBreakItems.length - 1 ? 'bordered' : ''} ${breakCheckedItems[idx] ? 'checked' : ''}`}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={breakCheckedItems[idx] || false}
-                                    onChange={() => {
-                                        const next = [...breakCheckedItems];
-                                        next[idx] = !next[idx];
-                                        setBreakCheckedItems(next);
-                                        if (next[idx]) {
-                                            playSFX('glass_ui_check', theme);
+                                            setCheckedItems([...checkedItems, false]);
+                                            setNewCustomItem('');
                                         }
                                     }}
-                                    className="prep-item-checkbox"
+                                    className="prep-custom-input"
                                 />
-                                <span className="prep-item-checkmark" />
-                                <span className="prep-item-text">
-                                    {item.emoji} {item.url ? (
-                                        <a
-                                            href="#"
-                                            onClick={e => { e.preventDefault(); e.stopPropagation(); openExternal(item.url!); }}
-                                            className="prep-item-link"
-                                        >
-                                            {item.label}
-                                        </a>
-                                    ) : item.label}
-                                </span>
-                                {idx >= BREAK_CHECKLIST.length && (
-                                    <button
-                                        className="prep-item-remove-btn"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            const customIdx = idx - BREAK_CHECKLIST.length;
-                                            const newCustom = customBreakItems.filter((_, i) => i !== customIdx);
+                                <button
+                                    className="btn btn-secondary prep-custom-btn"
+                                    onClick={() => {
+                                        if (newCustomItem.trim()) {
+                                            const newItem: CustomPrepItem = { emoji: '📌', label: newCustomItem.trim() };
+                                            const newCustom = [...customPrepItems, newItem];
+                                            setCustomPrepItems(newCustom);
+                                            saveCustomPrepItems(newCustom);
+                                            setCheckedItems([...checkedItems, false]);
+                                            setNewCustomItem('');
+                                        }
+                                    }}
+                                >
+                                    {t('session.add')}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {currentBlock.type === 'BREAK' && (() => {
+                    let globalIdx = 0;
+                    return (
+                        <div className="break-checklist-card">
+                            <div className="break-checklist-title">{t('session.break_checklist')}</div>
+                            {BREAK_SECTIONS.map(section => (
+                                <div key={section.labelKey} className="checklist-section">
+                                    <div className="checklist-section-header">
+                                        <span className="checklist-section-icon">{section.icon}</span>
+                                        <span className="checklist-section-label">{t(section.labelKey as any)}</span>
+                                    </div>
+                                    {section.items.map(item => {
+                                        const idx = globalIdx++;
+                                        return (
+                                            <label
+                                                key={item.labelKey}
+                                                className={`prep-item-label bordered ${breakCheckedItems[idx] ? 'checked' : ''}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={breakCheckedItems[idx] || false}
+                                                    onChange={() => {
+                                                        const next = [...breakCheckedItems];
+                                                        next[idx] = !next[idx];
+                                                        setBreakCheckedItems(next);
+                                                        if (next[idx]) playSFX('glass_ui_check', theme);
+                                                    }}
+                                                    className="prep-item-checkbox"
+                                                />
+                                                <span className="prep-item-checkmark" />
+                                                <span className="prep-item-text">
+                                                    {item.emoji} {t(item.labelKey as any)}
+                                                </span>
+                                                {item.tooltipKey && (
+                                                    <span className="checklist-info-icon" title={t(item.tooltipKey as any)}>ⓘ</span>
+                                                )}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            ))}
+                            {customBreakItems.length > 0 && (
+                                <div className="checklist-section">
+                                    {customBreakItems.map((item, customIdx) => {
+                                        const idx = BREAK_ITEM_COUNT + customIdx;
+                                        return (
+                                            <label
+                                                key={customIdx}
+                                                className={`prep-item-label bordered ${breakCheckedItems[idx] ? 'checked' : ''}`}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={breakCheckedItems[idx] || false}
+                                                    onChange={() => {
+                                                        const next = [...breakCheckedItems];
+                                                        next[idx] = !next[idx];
+                                                        setBreakCheckedItems(next);
+                                                        if (next[idx]) playSFX('glass_ui_check', theme);
+                                                    }}
+                                                    className="prep-item-checkbox"
+                                                />
+                                                <span className="prep-item-checkmark" />
+                                                <span className="prep-item-text">{item.emoji} {item.label}</span>
+                                                <button
+                                                    className="prep-item-remove-btn"
+                                                    onClick={e => {
+                                                        e.preventDefault(); e.stopPropagation();
+                                                        const newCustom = customBreakItems.filter((_, i) => i !== customIdx);
+                                                        setCustomBreakItems(newCustom);
+                                                        saveCustomBreakItems(newCustom);
+                                                        const newChecked = [...breakCheckedItems];
+                                                        newChecked.splice(idx, 1);
+                                                        setBreakCheckedItems(newChecked);
+                                                    }}
+                                                    title={t('session.remove_item')}
+                                                >✕</button>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            <div className="prep-custom-container">
+                                <input
+                                    type="text"
+                                    placeholder={t('session.add_custom')}
+                                    value={newCustomBreakItem}
+                                    onChange={e => setNewCustomBreakItem(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && newCustomBreakItem.trim()) {
+                                            const newItem: CustomPrepItem = { emoji: '📌', label: newCustomBreakItem.trim() };
+                                            const newCustom = [...customBreakItems, newItem];
                                             setCustomBreakItems(newCustom);
                                             saveCustomBreakItems(newCustom);
-                                            const newChecked = [...breakCheckedItems];
-                                            newChecked.splice(idx, 1);
-                                            setBreakCheckedItems(newChecked);
-                                        }}
-                                        title={t('session.remove_item')}
-                                    >
-                                        ✕
-                                    </button>
-                                )}
-                            </label>
-                        ))}
-                        <div className="prep-custom-container">
-                            <input
-                                type="text"
-                                placeholder={t('session.add_custom')}
-                                value={newCustomBreakItem}
-                                onChange={e => setNewCustomBreakItem(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key === 'Enter' && newCustomBreakItem.trim()) {
-                                        const newItem: PrepItem = { emoji: '📌', label: newCustomBreakItem.trim() };
-                                        const newCustom = [...customBreakItems, newItem];
-                                        setCustomBreakItems(newCustom);
-                                        saveCustomBreakItems(newCustom);
-                                        setBreakCheckedItems([...breakCheckedItems, false]);
-                                        setNewCustomBreakItem('');
-                                    }
-                                }}
-                                className="prep-custom-input"
-                            />
-                            <button
-                                className="btn btn-secondary prep-custom-btn"
-                                onClick={() => {
-                                    if (newCustomBreakItem.trim()) {
-                                        const newItem: PrepItem = { emoji: '📌', label: newCustomBreakItem.trim() };
-                                        const newCustom = [...customBreakItems, newItem];
-                                        setCustomBreakItems(newCustom);
-                                        saveCustomBreakItems(newCustom);
-                                        setBreakCheckedItems([...breakCheckedItems, false]);
-                                        setNewCustomBreakItem('');
-                                    }
-                                }}
-                            >
-                                {t('session.add')}
-                            </button>
+                                            setBreakCheckedItems([...breakCheckedItems, false]);
+                                            setNewCustomBreakItem('');
+                                        }
+                                    }}
+                                    className="prep-custom-input"
+                                />
+                                <button
+                                    className="btn btn-secondary prep-custom-btn"
+                                    onClick={() => {
+                                        if (newCustomBreakItem.trim()) {
+                                            const newItem: CustomPrepItem = { emoji: '📌', label: newCustomBreakItem.trim() };
+                                            const newCustom = [...customBreakItems, newItem];
+                                            setCustomBreakItems(newCustom);
+                                            saveCustomBreakItems(newCustom);
+                                            setBreakCheckedItems([...breakCheckedItems, false]);
+                                            setNewCustomBreakItem('');
+                                        }
+                                    }}
+                                >
+                                    {t('session.add')}
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {currentBlock.type === 'BREAK' && isWorkoutMode() && (() => {
                     const categories = (['upper', 'lower', 'core', 'stretch'] as const).map(cat => ({
@@ -968,9 +1117,7 @@ export default function Session() {
                         {endConfirmStep === 'total-rest' && (
                             <div className="total-rest-container">
                                 <h2 className="total-rest-title">{t('session.total_rest')}</h2>
-                                <p className="total-rest-subtitle">
-                                    {t('session.session_complete')}
-                                </p>
+                                <p className="total-rest-subtitle">{t('session.session_complete')}</p>
 
                                 {Object.keys(completedWorkMinutes).length > 0 && (
                                     <div className="total-rest-summary">
@@ -987,15 +1134,97 @@ export default function Session() {
                                     className="total-rest-img"
                                 />
 
-                                <div className="total-rest-desc">
-                                    <p>{t('session.rest_desc').split('\n\n')[0]}</p>
-                                    <p className="total-rest-nothing">{t('session.rest_nothing')}</p>
-                                    <ul className="total-rest-no-list">
-                                        {t('session.rest_no_list').split('|').map((item, i) => (
-                                            <li key={i} className="total-rest-no-item">{item}</li>
-                                        ))}
-                                    </ul>
-                                    <p>{t('session.rest_desc').split('\n\n')[1]}</p>
+                                {/* Countdown */}
+                                <div className={`total-rest-countdown ${restCountdown === 0 ? 'done' : restCountdown < 120 ? 'urgent' : restCountdown < 360 ? 'mid' : 'calm'}`}>
+                                    {String(Math.floor(restCountdown / 60)).padStart(2, '0')}<span className="timer-colon">:</span>{String(restCountdown % 60).padStart(2, '0')}
+                                </div>
+
+                                {/* Post-study checklist */}
+                                {(() => {
+                                    let postIdx = 0;
+                                    return POST_STUDY_SECTIONS.map(section => (
+                                        <div key={section.labelKey} className="checklist-section post-study-section">
+                                            <div className="checklist-section-header">
+                                                <span className="checklist-section-icon">{section.icon}</span>
+                                                <span className="checklist-section-label">{t(section.labelKey as any)}</span>
+                                            </div>
+                                            {section.items.map(item => {
+                                                const idx = postIdx++;
+                                                return (
+                                                    <label
+                                                        key={item.labelKey}
+                                                        className={`prep-item-label bordered ${postStudyChecked[idx] ? 'checked' : ''}`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={postStudyChecked[idx] || false}
+                                                            onChange={() => {
+                                                                const next = [...postStudyChecked];
+                                                                next[idx] = !next[idx];
+                                                                setPostStudyChecked(next);
+                                                                if (next[idx]) playSFX('glass_ui_check', theme);
+                                                            }}
+                                                            className="prep-item-checkbox"
+                                                        />
+                                                        <span className="prep-item-checkmark" />
+                                                        <span className="prep-item-text">{item.emoji} {t(item.labelKey as any)}</span>
+                                                        {item.tooltipKey && (
+                                                            <span className="checklist-info-icon" title={t(item.tooltipKey as any)}>ⓘ</span>
+                                                        )}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    ));
+                                })()}
+
+                                {/* Confidence score per work block */}
+                                {session && session.draft.some((b: any) => b.type === 'WORK' && b.subject_id) && (
+                                    <div className="post-calibration-section">
+                                        <div className="post-calibration-title">
+                                            {t('session.confidence_label')}
+                                            <span className="post-calibration-hint">{t('session.confidence_hint')}</span>
+                                        </div>
+                                        {session.draft
+                                            .filter((b: any) => b.type === 'WORK' && b.subject_id)
+                                            .map((b: any) => (
+                                                <div key={b.id} className="post-confidence-row">
+                                                    <span className="post-confidence-block-name">
+                                                        {b.chapter_name || b.subject_id}
+                                                    </span>
+                                                    <div className="post-confidence-buttons">
+                                                        {[1, 2, 3, 4].map(score => (
+                                                            <button
+                                                                key={score}
+                                                                className={`post-confidence-btn${confidenceScores[b.id] === score ? ' active' : ''}`}
+                                                                onClick={() => setConfidenceScores(prev => ({ ...prev, [b.id]: score }))}
+                                                            >
+                                                                {score}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        }
+                                    </div>
+                                )}
+
+                                {/* Zone d'ombre */}
+                                <div className="post-zone-ombre-section">
+                                    <label className="post-zone-ombre-label" htmlFor="zone-ombre-input">
+                                        {isTerminal ? '[?]' : '🌑'} {t('session.zone_ombre_label')}
+                                    </label>
+                                    <textarea
+                                        id="zone-ombre-input"
+                                        className="post-zone-ombre-input"
+                                        placeholder={t('session.zone_ombre_placeholder')}
+                                        value={zoneOmbre}
+                                        onChange={e => setZoneOmbre(e.target.value)}
+                                        rows={2}
+                                    />
+                                    {zoneOmbre.trim() && (
+                                        <span className="post-zone-ombre-saved">{t('session.zone_ombre_saved')}</span>
+                                    )}
                                 </div>
 
                                 {hasPaperNotes && (
@@ -1012,10 +1241,8 @@ export default function Session() {
                                     </div>
                                 )}
 
-                                {/* Countdown */}
-                                <div className={`total-rest-countdown ${restCountdown === 0 ? 'done' : restCountdown < 120 ? 'urgent' : restCountdown < 360 ? 'mid' : 'calm'}`}>
-                                    {String(Math.floor(restCountdown / 60)).padStart(2, '0')}<span className="timer-colon">:</span>{String(restCountdown % 60).padStart(2, '0')}
-                                </div>
+                                {/* Quote */}
+                                <p className="total-rest-quote">{t('session.post_quote')}</p>
 
                                 <div className="total-rest-actions">
                                     <button className="btn btn-primary btn-holographic total-rest-btn" onClick={() => finishSession(pendingCompletedAll, true)}>

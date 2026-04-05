@@ -42,6 +42,26 @@ export async function patchSchema() {
     } catch {
         // Column already exists
     }
+
+    // Add confidence_score to session_blocks (post-study calibration)
+    try {
+        await db.execute(`ALTER TABLE session_blocks ADD COLUMN confidence_score INTEGER NULL`);
+        console.log(`[SchemaPatch] Added column confidence_score to session_blocks`);
+    } catch {
+        // Column already exists
+    }
+
+    // Create error_log table (zones d'ombre / carnet d'erreurs)
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS error_log (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            subject_id TEXT NULL,
+            chapter_name TEXT NULL,
+            text TEXT NOT NULL,
+            resolved INTEGER DEFAULT 0
+        )
+    `);
 }
 
 
@@ -223,7 +243,11 @@ export async function updateSubjectStats(id: string, addMinutes: number, studied
     );
 }
 
-export async function saveSession(session: Omit<Session, 'id'> & { id: string }, blocks: any[]) {
+export async function saveSession(
+    session: Omit<Session, 'id'> & { id: string },
+    blocks: any[],
+    confidenceScores?: Record<string, number>
+) {
     const db = await getDb();
     await db.execute(
         `INSERT INTO sessions (id, started_at, ended_at, template, repeats, planned_minutes, actual_minutes)
@@ -233,12 +257,46 @@ export async function saveSession(session: Omit<Session, 'id'> & { id: string },
 
     for (let i = 0; i < blocks.length; i++) {
         const b = blocks[i];
+        const confidence = confidenceScores?.[b.id] ?? null;
         await db.execute(
-            `INSERT INTO session_blocks (id, session_id, idx, type, minutes, subject_id, technique_id, chapter_name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [crypto.randomUUID(), session.id, i, b.type, b.minutes, b.subject_id, b.technique_id, b.chapter_name ?? null]
+            `INSERT INTO session_blocks (id, session_id, idx, type, minutes, subject_id, technique_id, chapter_name, confidence_score)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [crypto.randomUUID(), session.id, i, b.type, b.minutes, b.subject_id, b.technique_id, b.chapter_name ?? null, confidence]
         );
     }
+}
+
+// ── Error Log (Carnet d'erreurs / Zones d'ombre) ──
+
+export interface ErrorLogEntry {
+    id: string;
+    created_at: string;
+    subject_id: string | null;
+    chapter_name: string | null;
+    text: string;
+    resolved: boolean;
+}
+
+export async function saveErrorLogEntry(entry: Omit<ErrorLogEntry, 'id' | 'resolved'>) {
+    const db = await getDb();
+    await db.execute(
+        `INSERT INTO error_log (id, created_at, subject_id, chapter_name, text, resolved)
+         VALUES ($1, $2, $3, $4, $5, 0)`,
+        [crypto.randomUUID(), entry.created_at, entry.subject_id, entry.chapter_name, entry.text]
+    );
+}
+
+export async function getErrorLogEntries(): Promise<ErrorLogEntry[]> {
+    const db = await getDb();
+    const rows = await db.select<(Omit<ErrorLogEntry, 'resolved'> & { resolved: number })[]>(
+        `SELECT * FROM error_log ORDER BY created_at DESC`
+    );
+    return rows.map(r => ({ ...r, resolved: Boolean(r.resolved) }));
+}
+
+export async function resolveErrorLogEntry(id: string) {
+    const db = await getDb();
+    await db.execute(`UPDATE error_log SET resolved = 1 WHERE id = $1`, [id]);
 }
 
 // ── Sessions ──
@@ -256,6 +314,7 @@ export interface SessionBlock {
     subject_id: string | null;
     technique_id: string | null;
     chapter_name: string | null;
+    confidence_score: number | null;
     started_at: string | null;
     ended_at: string | null;
 }

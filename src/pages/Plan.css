@@ -1097,3 +1097,70 @@
 .plan-five-min-btn:hover {
     opacity: 1;
 }
+
+/* ── Objective combobox (carnet d'erreurs suggestions) ── */
+
+.obj-combobox-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.obj-suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    z-index: 200;
+    overflow: hidden;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.obj-suggestion-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.06);
+}
+
+.obj-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.obj-suggestion-item:hover {
+    background: rgba(var(--primary-rgb), 0.08);
+}
+
+.obj-suggestion-text {
+    font-size: 0.88rem;
+    color: var(--text-dark);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.obj-suggestion-meta {
+    font-size: 0.73rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.obj-suggestion-empty {
+    display: block;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+}

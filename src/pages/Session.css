@@ -1052,3 +1052,202 @@
     background: rgba(var(--primary-rgb), 0.2);
     border-color: var(--primary);
 }
+
+/* ── Grouped checklist sections (prep / break / post-study) ── */
+
+.checklist-section {
+    margin-bottom: 8px;
+}
+
+.checklist-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 4px 4px;
+    border-bottom: 1px solid rgba(var(--primary-rgb), 0.12);
+    margin-bottom: 2px;
+}
+
+.checklist-section-icon {
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.checklist-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.checklist-info-icon {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    cursor: help;
+    margin-left: auto;
+    transition: opacity 0.15s;
+}
+
+.checklist-info-icon:hover {
+    opacity: 1;
+}
+
+/* Post-study section variant — slightly more prominent card */
+.post-study-section {
+    background: rgba(var(--primary-rgb), 0.04);
+    border: 1px solid rgba(var(--primary-rgb), 0.10);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+/* ── Post-session confidence calibration ── */
+
+.post-calibration-section {
+    background: rgba(var(--primary-rgb), 0.05);
+    border: 1px solid rgba(var(--primary-rgb), 0.14);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.post-calibration-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.post-calibration-hint {
+    font-weight: 400;
+    font-size: 0.7rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-muted);
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.post-confidence-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.post-confidence-row:last-child {
+    border-bottom: none;
+}
+
+.post-confidence-block-name {
+    font-size: 0.85rem;
+    color: var(--text-dark);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.post-confidence-buttons {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.post-confidence-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid rgba(var(--primary-rgb), 0.30);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.post-confidence-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.post-confidence-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+/* ── Zone d'ombre textarea ── */
+
+.post-zone-ombre-section {
+    text-align: left;
+    margin-bottom: 10px;
+}
+
+.post-zone-ombre-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.post-zone-ombre-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: rgba(var(--primary-rgb), 0.04);
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.post-zone-ombre-input:focus {
+    border-color: rgba(var(--primary-rgb), 0.5);
+}
+
+.post-zone-ombre-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.post-zone-ombre-saved {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--success);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* ── Post-study inspirational quote ── */
+
+.total-rest-quote {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    margin: 8px 0 16px;
+    opacity: 0.75;
+    line-height: 1.5;
+}

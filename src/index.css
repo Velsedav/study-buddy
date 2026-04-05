@@ -4,7 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Parisienne&display=swap');
 
 :root {
   --font-main: 'Plus Jakarta Sans', sans-serif;
@@ -5367,7 +5367,7 @@ input[type="checkbox"] {
 [data-theme="starry-night"] {
   /* ── Palette ── */
   --bg-color: #0d1b3e;
-  --font-heading: 'Great Vibes', 'Lora', Georgia, serif;
+  --font-heading: 'Parisienne', 'Lora', Georgia, serif;
   /* fallback dark ultramarine */
   --bg-gradient: linear-gradient(160deg, #0d1b3e 0%, #1a3060 100%);
   /* overridden below */
@@ -5555,7 +5555,7 @@ input[type="checkbox"] {
 
 /* ── Sidebar logo & mascot bubble over the painting ── */
 [data-theme="starry-night"] .logo h2 {
-  font-family: 'Great Vibes', cursive;
+  font-family: 'Parisienne', cursive;
   font-size: 1.7rem;
   font-weight: 400;
   color: #f0e8d4;
@@ -5568,86 +5568,109 @@ input[type="checkbox"] {
   filter: drop-shadow(0 0 6px rgba(232, 200, 74, 0.50));
 }
 
-/* ── Starry Night: painterly mascot bubble ── */
+/* ── Starry Night: floating calligraphy quote (no speech bubble) ── */
+
+/* Strip all bubble chrome — pure typography on the night sky */
 [data-theme="starry-night"] .mascot-bubble {
-  background: linear-gradient(
-    145deg,
-    rgba(6, 14, 42, 0.93) 0%,
-    rgba(12, 24, 60, 0.88) 55%,
-    rgba(8, 18, 50, 0.93) 100%
-  );
-  border: 1px solid rgba(232, 200, 74, 0.42);
-  box-shadow:
-    0 4px 24px rgba(5, 12, 40, 0.72),
-    0 0 18px rgba(232, 200, 74, 0.14),
-    inset 0 1px 0 rgba(232, 200, 74, 0.10);
-  color: #f0e8d4;
-  font-family: 'Great Vibes', cursive;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  padding: 0 6px 10px;
+  font-family: 'Parisienne', cursive;
   font-size: 1.05rem;
   font-weight: 400;
-  line-height: 1.55;
-  border-radius: 18px;
-  backdrop-filter: blur(14px);
+  color: #f0e8d4;
+  text-shadow:
+    0 1px 10px rgba(5, 12, 40, 0.95),
+    0 0 24px rgba(5, 12, 40, 0.80);
+  line-height: 1.6;
+  text-align: center;
 }
 
-/* Tail border: golden */
+/* Decorative golden opening quote mark */
 [data-theme="starry-night"] .mascot-bubble::before {
-  border-color: rgba(232, 200, 74, 0.42) transparent transparent transparent;
+  content: '\201C';
+  display: block;
+  font-family: 'Parisienne', cursive;
+  font-size: 2.8rem;
+  line-height: 0.6;
+  color: rgba(232, 200, 74, 0.65);
+  text-shadow: 0 0 14px rgba(232, 200, 74, 0.45);
+  margin-bottom: 6px;
+  /* Override triangle border values */
+  border: none;
+  position: static;
+  transform: none;
+  bottom: auto;
+  left: auto;
 }
 
-/* Tail fill: matches bubble deep navy */
+/* Hide tail fill triangle */
 [data-theme="starry-night"] .mascot-bubble::after {
-  border-color: rgba(8, 18, 50, 0.93) transparent transparent transparent;
+  display: none;
 }
 
-/* Painterly entrance — blur dissolve, gentle rise from the mist */
+/* Wrapper: gentle dark vignette so text reads against the painting */
+[data-theme="starry-night"] .mascot-bubble-wrapper {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(5, 10, 28, 0.55) 100%
+  );
+  border-radius: 12px;
+  padding: 8px 4px 4px;
+}
+
+/* Entrance: soft drift up from the mist */
 @keyframes starry-quote-in {
   0% {
     opacity: 0;
-    transform: scale(0.88) translateY(10px) rotate(-1deg);
-    filter: blur(6px);
+    transform: translateY(8px);
+    filter: blur(5px);
   }
-  55% {
+  60% {
     opacity: 0.9;
     filter: blur(0.5px);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0) rotate(0deg);
+    transform: translateY(0);
     filter: blur(0);
   }
 }
 
-/* Painterly exit — dissolves back into the night */
+/* Exit: dissolves upward into the night */
 @keyframes starry-quote-out {
   0% {
     opacity: 1;
-    transform: scale(1) translateY(0) rotate(0deg);
+    transform: translateY(0);
     filter: blur(0);
   }
   100% {
     opacity: 0;
-    transform: scale(0.92) translateY(-8px) rotate(0.8deg);
+    transform: translateY(-6px);
     filter: blur(5px);
   }
 }
 
 [data-theme="starry-night"] .quote-enter {
-  animation: starry-quote-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: starry-quote-in 0.70s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 [data-theme="starry-night"] .quote-exit {
   animation: starry-quote-out 0.35s cubic-bezier(0.55, 0, 1, 0.45) forwards;
 }
 
-/* Edit button: golden to match bubble border */
+/* Edit button: floats in the night palette */
 [data-theme="starry-night"] .quote-edit-btn {
-  background: rgba(8, 18, 50, 0.92);
-  border-color: rgba(232, 200, 74, 0.50);
+  background: rgba(8, 18, 50, 0.85);
+  border-color: rgba(232, 200, 74, 0.45);
   color: #e8c84a;
 }
 
-/* Mascot image: soft golden halo, floats in the painting atmosphere */
+/* Mascot image: soft golden halo */
 [data-theme="starry-night"] .mascot-img {
   filter: drop-shadow(0 0 10px rgba(232, 200, 74, 0.20))
           drop-shadow(0 4px 14px rgba(5, 12, 40, 0.60));
@@ -5690,7 +5713,7 @@ input[type="checkbox"] {
   text-shadow: 0 1px 10px rgba(5, 12, 40, 0.80);
 }
 
-/* Great Vibes has no bold weight — size compensates for visual presence */
+/* Parisienne has no bold weight — size compensates for visual presence */
 [data-theme="starry-night"] h1 { font-size: 2.4rem; }
 [data-theme="starry-night"] h2 { font-size: 1.85rem; }
 [data-theme="starry-night"] h3 { font-size: 1.4rem; }

@@ -489,6 +489,17 @@ export async function deleteBingoQuote(id: string) {
   await db.execute(`DELETE FROM bingo_quotes WHERE id = ?`, [id]);
 }
 
+export async function deleteAllBingoData() {
+  const db = await getBingoDb();
+  await db.execute(`DELETE FROM media_items`);
+  await db.execute(`DELETE FROM subobjectives`);
+  await db.execute(`DELETE FROM time_sessions`);
+  await db.execute(`DELETE FROM bingo_year_slots`);
+  await db.execute(`DELETE FROM bingo_quotes`);
+  await db.execute(`DELETE FROM slots`);
+  await db.execute(`DELETE FROM objectives`);
+}
+
 export async function exportBingoBackupTo(path: string) {
   const db = await getBingoDb();
   try { await db.execute("PRAGMA wal_checkpoint(TRUNCATE);"); } catch { }

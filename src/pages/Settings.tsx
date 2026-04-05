@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Palette, Calendar, Keyboard, Globe, Database, AlertTriangle, Trash2, Volume2, Play, Brain, Power, Settings as SettingsIcon, FolderOpen, X } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { deleteAllData } from '../lib/db';
+import { deleteAllBingoData } from '../lib/bingoals/db';
 import { getDefaultSpacing, setDefaultSpacing, parseSpacing, DEFAULT_SPACING } from '../lib/chapters';
 import { getAutostart, setAutostart } from '../lib/autostart';
 import { CustomSelect } from '../components/CustomSelect';
@@ -26,7 +27,7 @@ export default function SettingsTab() {
         metacognitionDay, setMetacognitionDay
     } = useSettings();
     const { t } = useTranslation();
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<'studybuddy' | 'bingoals' | 'all' | null>(null);
     const [deleteInput, setDeleteInput] = useState('');
     const [volumeSettings, setVolumeSettings] = useState<VolumeSettings>(loadVolumeSettings);
     const [defaultSpacing, setDefaultSpacingState] = useState(() => getDefaultSpacing());
@@ -214,15 +215,14 @@ export default function SettingsTab() {
         }
     };
 
-    const handleDeleteAll = async () => {
-        if (deleteInput.toLowerCase() === t('settings.delete_keyword').toLowerCase()) {
-            playSFX('glass_ui_cancel', theme);
-            await deleteAllData();
-            alert("Database Cleared!");
-            window.location.reload();
-        } else {
-            alert("Keyword didn't match.");
-        }
+    const handleDeleteConfirm = async () => {
+        if (deleteInput.toLowerCase() !== t('settings.delete_keyword').toLowerCase()) return;
+        playSFX('glass_ui_cancel', theme);
+        if (deleteTarget === 'studybuddy' || deleteTarget === 'all') await deleteAllData();
+        if (deleteTarget === 'bingoals' || deleteTarget === 'all') await deleteAllBingoData();
+        setDeleteTarget(null);
+        setDeleteInput('');
+        window.location.reload();
     };
 
     return (
@@ -233,7 +233,7 @@ export default function SettingsTab() {
                     <h1>{t('nav.settings')}</h1>
                 </div>
             </div>
-            {showDeleteModal && (
+            {deleteTarget !== null && (
                 <div className="modal-overlay">
                     <div className="modal-content danger-modal">
                         <div className="settings-header danger-modal-header">
@@ -241,7 +241,9 @@ export default function SettingsTab() {
                             <h2>{t('settings.danger_zone')}</h2>
                         </div>
                         <p className="danger-modal-text">
-                            {t('settings.delete_confirm_msg')}
+                            {deleteTarget === 'studybuddy' && t('settings.delete_confirm_studybuddy')}
+                            {deleteTarget === 'bingoals' && t('settings.delete_confirm_bingoals')}
+                            {deleteTarget === 'all' && t('settings.delete_confirm_msg')}
                             <br /><br />
                             <strong>{t('settings.delete_keyword')}</strong>
                         </p>
@@ -254,16 +256,16 @@ export default function SettingsTab() {
                         />
                         <div className="danger-modal-actions">
                             <button className="btn btn-secondary" onMouseEnter={() => playSFX(SFX.HOVER)} onClick={() => {
-                                setShowDeleteModal(false);
+                                setDeleteTarget(null);
                                 setDeleteInput('');
                             }}>{t('settings.cancel')}</button>
                             <button
                                 className="btn btn-danger-outline btn-danger-outline-solid"
                                 disabled={deleteInput.toLowerCase() !== t('settings.delete_keyword').toLowerCase()}
                                 onMouseEnter={() => playSFX(SFX.HOVER)}
-                                onClick={handleDeleteAll}
+                                onClick={handleDeleteConfirm}
                             >
-                                <Trash2 size={18} style={{ marginRight: '8px' }} />
+                                <Trash2 size={18} className="danger-btn-icon" />
                                 {t('settings.confirm_delete')}
                             </button>
                         </div>
@@ -594,15 +596,32 @@ export default function SettingsTab() {
                         <AlertTriangle size={18} className="settings-danger-icon" />
                         <h3 className="settings-danger-title">{t('settings.danger_zone')}</h3>
                     </div>
-                    <p className="settings-desc settings-danger-desc">{t('settings.delete_all_data')}</p>
-                    <button
-                        className="btn btn-danger-outline w-full delete-all-btn"
-                        onMouseEnter={() => playSFX(SFX.HOVER)}
-                        onClick={() => setShowDeleteModal(true)}
-                    >
-                        <Trash2 size={18} style={{ marginRight: '8px' }} />
-                        {t('settings.delete_all_data')}
-                    </button>
+                    <div className="delete-actions">
+                        <button
+                            className="btn btn-danger-outline w-full delete-all-btn"
+                            onMouseEnter={() => playSFX(SFX.HOVER)}
+                            onClick={() => setDeleteTarget('studybuddy')}
+                        >
+                            <Trash2 size={16} className="danger-btn-icon" />
+                            {t('settings.delete_studybuddy')}
+                        </button>
+                        <button
+                            className="btn btn-danger-outline w-full delete-all-btn"
+                            onMouseEnter={() => playSFX(SFX.HOVER)}
+                            onClick={() => setDeleteTarget('bingoals')}
+                        >
+                            <Trash2 size={16} className="danger-btn-icon" />
+                            {t('settings.delete_bingoals')}
+                        </button>
+                        <button
+                            className="btn btn-danger-outline w-full delete-all-btn delete-all-both"
+                            onMouseEnter={() => playSFX(SFX.HOVER)}
+                            onClick={() => setDeleteTarget('all')}
+                        >
+                            <Trash2 size={16} className="danger-btn-icon" />
+                            {t('settings.delete_all_data')}
+                        </button>
+                    </div>
                 </div>
 
             </div>

@@ -187,8 +187,27 @@
     flex-direction: column;
 }
 
-.delete-all-btn {
+.delete-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin-top: 8px;
+}
+
+.delete-all-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.delete-all-both {
+    opacity: 0.75;
+    font-size: 0.85rem;
+}
+
+.danger-btn-icon {
+    flex-shrink: 0;
 }
 
 /* ── Export / Save Locations ── */

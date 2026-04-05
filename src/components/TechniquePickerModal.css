@@ -355,6 +355,11 @@
     white-space: nowrap;
 }
 
+/* Terminal themes: active breadcrumb pill is solid neon primary — white text is unreadable */
+[data-theme^="terminal-"] .tech-breadcrumb-active {
+    color: var(--bg-color);
+}
+
 /* Suggested technique card highlight */
 .tech-card.suggested-technique {
     border-color: rgba(var(--primary-rgb), 0.60);

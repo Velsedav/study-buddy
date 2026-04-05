@@ -85,7 +85,6 @@ export default function Plan() {
     const [landedBlockIds, setLandedBlockIds] = useState<Set<string>>(new Set());
     const [flyingSubject, setFlyingSubject] = useState<FlyingSubject | null>(null);
     const [errorLogEntries, setErrorLogEntries] = useState<ErrorLogEntry[]>([]);
-    const [objFocusedBlockId, setObjFocusedBlockId] = useState<string | null>(null);
 
     const dragRef = useRef<{ id: string, startY: number, startBlocks: Block[], lastDeltaSteps: number } | null>(null);
 
@@ -375,11 +374,11 @@ export default function Plan() {
         setHoveredBlockId(null);
     };
 
-    const handleTechniqueSelected = (techId: string) => {
+    const handleTechniqueSelected = (techId: string, objective: string) => {
         if (!pickingBlockId) return;
         const newBlocks = blocks.map(b => {
             if (b.id === pickingBlockId) {
-                return { ...b, technique_id: techId };
+                return { ...b, technique_id: techId, objective: objective || b.objective };
             }
             return b;
         });
@@ -902,52 +901,14 @@ export default function Plan() {
                                                                 <span className="technique-btn-label">{t('plan.add_technique')}</span>
                                                             )}
                                                         </button>
-                                                        {(() => {
-                                                            const query = block.objective.toLowerCase();
-                                                            const suggestions = errorLogEntries
-                                                                .filter(e => !query || e.text.toLowerCase().includes(query))
-                                                                .slice(0, 8);
-                                                            const showDropdown = objFocusedBlockId === block.id && suggestions.length > 0;
-                                                            return (
-                                                                <div className="obj-combobox-wrapper">
-                                                                    <input
-                                                                        type="text"
-                                                                        placeholder={t('plan.objective_placeholder')}
-                                                                        value={block.objective}
-                                                                        onChange={e => handleObjectiveChange(block.id, e.target.value)}
-                                                                        onFocus={() => setObjFocusedBlockId(block.id)}
-                                                                        onBlur={() => setTimeout(() => setObjFocusedBlockId(null), 150)}
-                                                                        className={`block-objective-input${!block.objective ? ' empty' : ''}`}
-                                                                        aria-label={t('plan.objective_label')}
-                                                                        autoComplete="off"
-                                                                    />
-                                                                    {showDropdown && (
-                                                                        <div className="obj-suggestions-dropdown" role="listbox">
-                                                                            {suggestions.map(entry => (
-                                                                                <button
-                                                                                    key={entry.id}
-                                                                                    className="obj-suggestion-item"
-                                                                                    role="option"
-                                                                                    onMouseDown={e => {
-                                                                                        e.preventDefault();
-                                                                                        handleObjectiveChange(block.id, entry.text);
-                                                                                        setObjFocusedBlockId(null);
-                                                                                    }}
-                                                                                >
-                                                                                    <span className="obj-suggestion-text">{entry.text}</span>
-                                                                                    {entry.chapter_name && (
-                                                                                        <span className="obj-suggestion-meta">{entry.chapter_name}</span>
-                                                                                    )}
-                                                                                </button>
-                                                                            ))}
-                                                                            {errorLogEntries.length === 0 && (
-                                                                                <span className="obj-suggestion-empty">{t('plan.error_log_empty_hint')}</span>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })()}
+                                                        <input
+                                                            type="text"
+                                                            placeholder={t('plan.objective_placeholder')}
+                                                            value={block.objective}
+                                                            onChange={e => handleObjectiveChange(block.id, e.target.value)}
+                                                            className={`block-objective-input${!block.objective ? ' empty' : ''}`}
+                                                            aria-label={t('plan.objective_label')}
+                                                        />
                                                     </div>
                                                 ) : (
                                                     <span className="block-drop-prompt">{t('plan.drop_subject')}</span>
@@ -1029,8 +990,10 @@ export default function Plan() {
                 return (
                     <TechniquePickerModal
                         onClose={() => { setPickingBlockId(null); clearSuggestion(); }}
-                        onSelect={(id) => { handleTechniqueSelected(id); clearSuggestion(); }}
+                        onSelect={(id, objective) => { handleTechniqueSelected(id, objective); clearSuggestion(); }}
                         currentSelection={pickingBlock?.technique_id || ""}
+                        currentObjective={pickingBlock?.objective || ""}
+                        errorLogEntries={errorLogEntries}
                         recommendedCategory={recommendedCategory}
                         suggestedTechniqueId={suggestedTechniqueId}
                         suggestionLabel={suggestionLabel}

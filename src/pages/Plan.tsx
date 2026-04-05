@@ -529,10 +529,11 @@ export default function Plan() {
 
     // Summarize times
     const totalWork = workBlocks.reduce((acc, b) => acc + b.minutes, 0);
-    const totalBreak = blocks.filter(b => b.type !== 'WORK').reduce((acc, b) => acc + b.minutes, 0);
+    const totalPrep = blocks.filter(b => b.type === 'PREP').reduce((acc, b) => acc + b.minutes, 0);
+    const totalBreak = blocks.filter(b => b.type === 'BREAK').reduce((acc, b) => acc + b.minutes, 0);
 
     const now = new Date();
-    const endsAt = new Date(now.getTime() + (totalWork + totalBreak) * 60000);
+    const endsAt = new Date(now.getTime() + (totalWork + totalPrep + totalBreak) * 60000);
     const endsText = `${endsAt.getHours().toString().padStart(2, '0')}:${endsAt.getMinutes().toString().padStart(2, '0')}`;
     const incompleteWorkBlocks = workBlocks.filter(b => !b.objective?.trim()).length;
     const startTooltip = incompleteWorkBlocks > 0
@@ -549,7 +550,7 @@ export default function Plan() {
             </div>
 
             <div className="planner-toolbar">
-                <p className="drag-dim planner-session-info">{t('plan.ends_at')} {endsText} • {totalWork}m {t('plan.work')}, {totalBreak}m {t('plan.rest')}</p>
+                <p className="drag-dim planner-session-info">{t('plan.ends_at')} {endsText} • {totalWork}m {t('plan.work')}{totalPrep > 0 ? `, ${totalPrep}m ${t('plan.prep')}` : ''}{totalBreak > 0 ? `, ${totalBreak}m ${t('plan.rest')}` : ''}</p>
                 <div className="planner-controls">
                     <div className="planner-control-group drag-dim">
                         <label className="planner-control-label">{t('plan.style')}</label>

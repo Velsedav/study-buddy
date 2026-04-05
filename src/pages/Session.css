@@ -663,6 +663,55 @@
 }
 .rate-chapters-skip:hover { color: var(--text-dark); }
 
+/* ── Full-page shells ── */
+
+.session-rate-chapters-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 48px 24px;
+}
+
+.session-total-rest-page {
+    min-height: 100vh;
+    padding: 48px 40px;
+}
+
+/* Two-column layout: left = hero/timer (sticky), right = checklist */
+.total-rest-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 48px;
+    max-width: 1000px;
+    margin: 0 auto;
+    align-items: start;
+}
+
+.total-rest-left {
+    position: sticky;
+    top: 48px;
+    text-align: center;
+}
+
+.total-rest-right {
+    text-align: left;
+}
+
+@media (max-width: 720px) {
+    .total-rest-layout {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+    .total-rest-left {
+        position: static;
+    }
+    .session-total-rest-page {
+        padding: 32px 20px;
+    }
+}
+
+/* legacy single-col container kept for any residual references */
 .total-rest-container {
     padding: 16px 0;
     text-align: left;

@@ -111,7 +111,6 @@ const POST_STUDY_SECTIONS: PrepSectionDef[] = [
         icon: '📋',
         items: [
             { emoji: '📅', labelKey: 'session.post_tomorrow_list', tooltipKey: 'session.post_tip_tomorrow' },
-            { emoji: '📊', labelKey: 'session.post_compass', tooltipKey: 'session.post_tip_compass' },
             { emoji: '🚀', labelKey: 'session.post_shutdown', tooltipKey: 'session.post_tip_shutdown' },
         ],
     },
@@ -547,6 +546,195 @@ export default function Session() {
                 <h2>{t('session.no_active')}</h2>
                 <p className="session-no-active-text">{t('session.draft_plan')}</p>
                 <Link to="/plan" className="btn btn-primary">{t('session.open_planner')}</Link>
+            </div>
+        );
+    }
+
+    // ── Rate-chapters helpers (hoisted for early-return render) ──
+    const rateChapterCurrent = rateChapterList[rateChapterIdx];
+    const rateChapterIsLast = rateChapterIdx >= rateChapterList.length - 1;
+    function rateAndAdvance(rating: MasteryRating | null) {
+        if (rateChapterCurrent && rating) {
+            setChapterRatings(prev => new Map(prev).set(rateChapterCurrent.id, rating));
+        }
+        if (rateChapterIsLast) {
+            setRestCountdown(600);
+            setEndConfirmStep('total-rest');
+        } else {
+            setRateChapterIdx(i => i + 1);
+        }
+    }
+
+    // ── Full-page: rate chapters ──
+    if (endConfirmStep === 'rate-chapters') {
+        return (
+            <div className="session-page session-rate-chapters-page">
+                <div className="rate-chapters-container">
+                    <h2 className="rate-chapters-title">{t('session.rate_chapters')}</h2>
+                    <p className="rate-chapters-progress">{rateChapterIdx + 1} / {rateChapterList.length}</p>
+                    <div key={rateChapterIdx} className="rate-chapters-card">
+                        <div className="rate-chapters-chapter-name">{rateChapterCurrent?.name}</div>
+                        <p className="rate-chapters-how">{t('session.rate_how')}</p>
+                        <div className="rate-chapters-buttons">
+                            {(['forgot', 'hard', 'good', 'easy'] as MasteryRating[]).map(r => (
+                                <button
+                                    key={r}
+                                    className={`btn rate-btn rate-btn-${r}`}
+                                    onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                    onClick={() => rateAndAdvance(r)}
+                                >
+                                    {t(`session.mastery_${r}`)}
+                                </button>
+                            ))}
+                        </div>
+                        <button className="rate-chapters-skip" onClick={() => rateAndAdvance(null)}>
+                            {rateChapterIsLast ? t('session.rating_done') : t('session.rating_next')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Full-page: total rest ──
+    if (endConfirmStep === 'total-rest') {
+        let postIdx = 0;
+        return (
+            <div className="session-page session-total-rest-page">
+                <div className="total-rest-layout">
+
+                    {/* Left column — hero + timer */}
+                    <div className="total-rest-left">
+                        <h2 className="total-rest-title">{t('session.total_rest')}</h2>
+                        <p className="total-rest-subtitle">{t('session.session_complete')}</p>
+                        {Object.keys(completedWorkMinutes).length > 0 && (
+                            <div className="total-rest-summary">
+                                <span className="total-rest-work-mins">{displayedWorkMins}</span> {t('session.rest_min_label')}
+                                {Object.keys(completedWorkMinutes).length > 1 && (
+                                    <> · {Object.keys(completedWorkMinutes).length} {t('session.rest_subjects')}</>
+                                )}
+                            </div>
+                        )}
+                        <img
+                            src="/assets/images/learning center/01_mascot-diffuse-mode.png"
+                            alt="Diffuse mode rest"
+                            className="total-rest-img"
+                        />
+                        <div className={`total-rest-countdown ${restCountdown === 0 ? 'done' : restCountdown < 120 ? 'urgent' : restCountdown < 360 ? 'mid' : 'calm'}`}>
+                            {String(Math.floor(restCountdown / 60)).padStart(2, '0')}<span className="timer-colon">:</span>{String(restCountdown % 60).padStart(2, '0')}
+                        </div>
+                        <p className="total-rest-quote">{t('session.post_quote')}</p>
+                        <div className="total-rest-actions">
+                            <button className="btn btn-primary btn-holographic total-rest-btn" onClick={() => finishSession(pendingCompletedAll, true)}>
+                                {restCountdown === 0 ? t('session.rested') : t('session.skip_rest')}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Right column — checklist + zone ombre */}
+                    <div className="total-rest-right">
+                        {POST_STUDY_SECTIONS.map(section => (
+                            <div key={section.labelKey} className="checklist-section post-study-section">
+                                <div className="checklist-section-header">
+                                    <span className="checklist-section-icon">{section.icon}</span>
+                                    <span className="checklist-section-label">{t(section.labelKey as any)}</span>
+                                </div>
+                                {section.items.map(item => {
+                                    const idx = postIdx++;
+                                    return (
+                                        <label
+                                            key={item.labelKey}
+                                            className={`prep-item-label bordered ${postStudyChecked[idx] ? 'checked' : ''}`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={postStudyChecked[idx] || false}
+                                                onChange={() => {
+                                                    const next = [...postStudyChecked];
+                                                    next[idx] = !next[idx];
+                                                    setPostStudyChecked(next);
+                                                    if (next[idx]) playSFX('glass_ui_check', theme);
+                                                }}
+                                                className="prep-item-checkbox"
+                                            />
+                                            <span className="prep-item-checkmark" />
+                                            <span className="prep-item-text">{item.emoji} {t(item.labelKey as any)}</span>
+                                            {item.tooltipKey && (
+                                                <span className="checklist-info-icon" data-tooltip={t(item.tooltipKey as any)}>ⓘ</span>
+                                            )}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        ))}
+
+                        {/* Zone d'ombre */}
+                        <div className="post-zone-ombre-section">
+                            <div className="post-zone-ombre-label">
+                                {isTerminal ? '[?]' : '🌑'} {t('session.zone_ombre_label')}
+                            </div>
+                            <p className="post-zone-ombre-desc">{t('session.zone_ombre_desc')}</p>
+                            <div className="post-zone-ombre-input-row">
+                                <input
+                                    id="zone-ombre-input"
+                                    className="post-zone-ombre-input"
+                                    placeholder={t('session.zone_ombre_placeholder')}
+                                    value={zoneOmbreInput}
+                                    onChange={e => setZoneOmbreInput(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && zoneOmbreInput.trim()) {
+                                            e.preventDefault();
+                                            setZoneOmbreItems(prev => [...prev, zoneOmbreInput.trim()]);
+                                            setZoneOmbreInput('');
+                                        }
+                                    }}
+                                />
+                                <button
+                                    className="btn btn-secondary zone-ombre-add-btn"
+                                    disabled={!zoneOmbreInput.trim()}
+                                    onClick={() => {
+                                        if (zoneOmbreInput.trim()) {
+                                            setZoneOmbreItems(prev => [...prev, zoneOmbreInput.trim()]);
+                                            setZoneOmbreInput('');
+                                        }
+                                    }}
+                                >+</button>
+                            </div>
+                            {zoneOmbreItems.length > 0 && (
+                                <ul className="post-zone-ombre-list">
+                                    {zoneOmbreItems.map((item, i) => (
+                                        <li key={i} className="post-zone-ombre-item">
+                                            <span className="post-zone-ombre-item-text">{item}</span>
+                                            <button
+                                                className="post-zone-ombre-remove"
+                                                onClick={() => setZoneOmbreItems(prev => prev.filter((_, j) => j !== i))}
+                                                aria-label="Remove"
+                                            >×</button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {zoneOmbreItems.length > 0 && (
+                                <span className="post-zone-ombre-saved">{t('session.zone_ombre_saved')}</span>
+                            )}
+                        </div>
+
+                        {hasPaperNotes && (
+                            <div className="total-rest-paper-card">
+                                <div className="total-rest-paper-label">{isTerminal ? '[N]' : '📄'} {paperTitle.trim() || t('session.paper_notes_card')}</div>
+                                <div className="paper-copy-row">
+                                    <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyPaperNotes}>
+                                        {paperCopied ? t('session.paper_copied') : t('session.paper_copy_btn')}
+                                    </button>
+                                    <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyObsidian}>
+                                        {obsidianCopied ? t('session.paper_copied') : t('session.paper_obsidian_btn')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                </div>
             </div>
         );
     }
@@ -1039,8 +1227,8 @@ export default function Session() {
                 </div>
             </div>
 
-            {/* End Session Confirmation Modal */}
-            {endConfirmStep !== 'none' && (
+            {/* End Session Confirmation Modal (small dialogs only) */}
+            {(endConfirmStep === 'confirm-stop' || endConfirmStep === 'confirm-save') && (
                 <div className="modal-overlay" onClick={() => { playSFX(SFX.CANCEL, theme); setEndConfirmStep('none'); setPaused(false); }}>
                     <div className="modal-content confirm-modal-content" onClick={e => e.stopPropagation()}>
                         {endConfirmStep === 'confirm-stop' && (
@@ -1077,186 +1265,6 @@ export default function Session() {
                             </>
                         )}
 
-                        {endConfirmStep === 'rate-chapters' && (() => {
-                            const current = rateChapterList[rateChapterIdx];
-                            const isLast = rateChapterIdx >= rateChapterList.length - 1;
-                            function rateAndAdvance(rating: MasteryRating | null) {
-                                if (current && rating) {
-                                    setChapterRatings(prev => new Map(prev).set(current.id, rating));
-                                }
-                                if (isLast) {
-                                    setRestCountdown(600);
-                                    setEndConfirmStep('total-rest');
-                                } else {
-                                    setRateChapterIdx(i => i + 1);
-                                }
-                            }
-                            return (
-                                <div className="rate-chapters-container">
-                                    <h2 className="rate-chapters-title">{t('session.rate_chapters')}</h2>
-                                    <p className="rate-chapters-progress">{rateChapterIdx + 1} / {rateChapterList.length}</p>
-                                    <div key={rateChapterIdx} className="rate-chapters-card">
-                                        <div className="rate-chapters-chapter-name">{current?.name}</div>
-                                        <p className="rate-chapters-how">{t('session.rate_how')}</p>
-                                        <div className="rate-chapters-buttons">
-                                            {(['forgot', 'hard', 'good', 'easy'] as MasteryRating[]).map(r => (
-                                                <button
-                                                    key={r}
-                                                    className={`btn rate-btn rate-btn-${r}`}
-                                                    onMouseEnter={() => playSFX(SFX.HOVER, theme)}
-                                                    onClick={() => rateAndAdvance(r)}
-                                                >
-                                                    {t(`session.mastery_${r}`)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button className="rate-chapters-skip" onClick={() => rateAndAdvance(null)}>
-                                            {isLast ? t('session.rating_done') : t('session.rating_next')}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })()}
-
-                        {endConfirmStep === 'total-rest' && (
-                            <div className="total-rest-container">
-                                <h2 className="total-rest-title">{t('session.total_rest')}</h2>
-                                <p className="total-rest-subtitle">{t('session.session_complete')}</p>
-
-                                {Object.keys(completedWorkMinutes).length > 0 && (
-                                    <div className="total-rest-summary">
-                                        <span className="total-rest-work-mins">{displayedWorkMins}</span> {t('session.rest_min_label')}
-                                        {Object.keys(completedWorkMinutes).length > 1 && (
-                                            <> · {Object.keys(completedWorkMinutes).length} {t('session.rest_subjects')}</>
-                                        )}
-                                    </div>
-                                )}
-
-                                <img
-                                    src="/assets/images/learning center/01_mascot-diffuse-mode.png"
-                                    alt="Diffuse mode rest"
-                                    className="total-rest-img"
-                                />
-
-                                {/* Countdown */}
-                                <div className={`total-rest-countdown ${restCountdown === 0 ? 'done' : restCountdown < 120 ? 'urgent' : restCountdown < 360 ? 'mid' : 'calm'}`}>
-                                    {String(Math.floor(restCountdown / 60)).padStart(2, '0')}<span className="timer-colon">:</span>{String(restCountdown % 60).padStart(2, '0')}
-                                </div>
-
-                                {/* Post-study checklist */}
-                                {(() => {
-                                    let postIdx = 0;
-                                    return POST_STUDY_SECTIONS.map(section => (
-                                        <div key={section.labelKey} className="checklist-section post-study-section">
-                                            <div className="checklist-section-header">
-                                                <span className="checklist-section-icon">{section.icon}</span>
-                                                <span className="checklist-section-label">{t(section.labelKey as any)}</span>
-                                            </div>
-                                            {section.items.map(item => {
-                                                const idx = postIdx++;
-                                                return (
-                                                    <label
-                                                        key={item.labelKey}
-                                                        className={`prep-item-label bordered ${postStudyChecked[idx] ? 'checked' : ''}`}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={postStudyChecked[idx] || false}
-                                                            onChange={() => {
-                                                                const next = [...postStudyChecked];
-                                                                next[idx] = !next[idx];
-                                                                setPostStudyChecked(next);
-                                                                if (next[idx]) playSFX('glass_ui_check', theme);
-                                                            }}
-                                                            className="prep-item-checkbox"
-                                                        />
-                                                        <span className="prep-item-checkmark" />
-                                                        <span className="prep-item-text">{item.emoji} {t(item.labelKey as any)}</span>
-                                                        {item.tooltipKey && (
-                                                            <span className="checklist-info-icon" data-tooltip={t(item.tooltipKey as any)}>ⓘ</span>
-                                                        )}
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-                                    ));
-                                })()}
-
-                                {/* Zone d'ombre — multi-item list */}
-                                <div className="post-zone-ombre-section">
-                                    <div className="post-zone-ombre-label">
-                                        {isTerminal ? '[?]' : '🌑'} {t('session.zone_ombre_label')}
-                                    </div>
-                                    <p className="post-zone-ombre-desc">{t('session.zone_ombre_desc')}</p>
-                                    <div className="post-zone-ombre-input-row">
-                                        <input
-                                            id="zone-ombre-input"
-                                            className="post-zone-ombre-input"
-                                            placeholder={t('session.zone_ombre_placeholder')}
-                                            value={zoneOmbreInput}
-                                            onChange={e => setZoneOmbreInput(e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter' && zoneOmbreInput.trim()) {
-                                                    e.preventDefault();
-                                                    setZoneOmbreItems(prev => [...prev, zoneOmbreInput.trim()]);
-                                                    setZoneOmbreInput('');
-                                                }
-                                            }}
-                                        />
-                                        <button
-                                            className="btn btn-secondary zone-ombre-add-btn"
-                                            disabled={!zoneOmbreInput.trim()}
-                                            onClick={() => {
-                                                if (zoneOmbreInput.trim()) {
-                                                    setZoneOmbreItems(prev => [...prev, zoneOmbreInput.trim()]);
-                                                    setZoneOmbreInput('');
-                                                }
-                                            }}
-                                        >+</button>
-                                    </div>
-                                    {zoneOmbreItems.length > 0 && (
-                                        <ul className="post-zone-ombre-list">
-                                            {zoneOmbreItems.map((item, i) => (
-                                                <li key={i} className="post-zone-ombre-item">
-                                                    <span className="post-zone-ombre-item-text">{item}</span>
-                                                    <button
-                                                        className="post-zone-ombre-remove"
-                                                        onClick={() => setZoneOmbreItems(prev => prev.filter((_, j) => j !== i))}
-                                                        aria-label="Remove"
-                                                    >×</button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                    {zoneOmbreItems.length > 0 && (
-                                        <span className="post-zone-ombre-saved">{t('session.zone_ombre_saved')}</span>
-                                    )}
-                                </div>
-
-                                {hasPaperNotes && (
-                                    <div className="total-rest-paper-card">
-                                        <div className="total-rest-paper-label">{isTerminal ? '[N]' : '📄'} {paperTitle.trim() || t('session.paper_notes_card')}</div>
-                                        <div className="paper-copy-row">
-                                            <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyPaperNotes}>
-                                                {paperCopied ? t('session.paper_copied') : t('session.paper_copy_btn')}
-                                            </button>
-                                            <button className="btn btn-secondary paper-copy-btn" onClick={handleCopyObsidian}>
-                                                {obsidianCopied ? t('session.paper_copied') : t('session.paper_obsidian_btn')}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Quote */}
-                                <p className="total-rest-quote">{t('session.post_quote')}</p>
-
-                                <div className="total-rest-actions">
-                                    <button className="btn btn-primary btn-holographic total-rest-btn" onClick={() => finishSession(pendingCompletedAll, true)}>
-                                        {restCountdown === 0 ? t('session.rested') : t('session.skip_rest')}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             )}

@@ -946,7 +946,7 @@
 
 .bingoals-root .slide:fullscreen .mediaFade { max-height: 100vh; }
 .bingoals-root .slide:fullscreen .slideImg { max-height: 100vh; max-width: 100vw; object-fit: contain; }
-.bingoals-root .slide:fullscreen .quote { font-size: 3rem; color: #fff; padding: 2rem; }
+.bingoals-root .slide:fullscreen .quote { font-size: 3rem; color: var(--text-dark); padding: 2rem; }
 .bingoals-root .slide:fullscreen .mediaTrashBtn,
 .bingoals-root .slide:fullscreen .mediaFullscreenBtn { opacity: 0; }
 .bingoals-root .slide:fullscreen:hover .mediaTrashBtn,

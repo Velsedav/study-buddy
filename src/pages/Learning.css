@@ -97,7 +97,17 @@
 .lesson-card.solved {
     border: 2px solid var(--success);
     background: linear-gradient(145deg, rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.02));
-    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.05);
+    animation: solvedGlow 0.6s ease;
+}
+
+@keyframes solvedGlow {
+    0%   { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.05); }
+    40%  { box-shadow: 0 4px 32px rgba(34, 197, 94, 0.4); }
+    100% { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lesson-card.solved { animation: none; }
 }
 
 .lesson-card-title {
@@ -434,6 +444,26 @@
     opacity: 1;
     z-index: 3;
     pointer-events: all;
+}
+
+@keyframes lessonContentEnter {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.panel-active .lesson-card-content {
+    animation: lessonContentEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+}
+
+.panel-active .concept-check-container {
+    animation: lessonContentEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .panel-active .lesson-card-content,
+    .panel-active .concept-check-container {
+        animation: none;
+    }
 }
 
 /* Previous panel — peeks in from left, angled away */

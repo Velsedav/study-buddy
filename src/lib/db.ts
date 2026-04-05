@@ -403,6 +403,7 @@ export async function deleteAllData() {
     await db.execute(`DELETE FROM subjects`);
     await db.execute(`DELETE FROM quotes WHERE id NOT LIKE 'default_%'`);
     await db.execute(`DELETE FROM metacognition_logs`);
+    await db.execute(`DELETE FROM error_log`);
 
     const keysToRemove = [
         'study-buddy-technique-week',
@@ -418,6 +419,8 @@ export async function deleteAllData() {
         'study-buddy-chapters',
         'study-buddy-custom-prep',
         'study-buddy-custom-break',
+        'study-buddy-mastery-ratings',
+        'study-buddy-pre-recall',
         'activeSession',
     ];
     keysToRemove.forEach(k => localStorage.removeItem(k));

@@ -940,12 +940,12 @@
 }
 
 /* Theme - Terminal Purple */
-/* Theme - Terminal Acid (P31 phosphor — #aaff00 green, inspired by TDR Acid) */
+/* Theme - Terminal Acid (terminal monospace + TDR Acid #aaff00 green) */
 [data-theme="terminal-acid"] {
   --font-main: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-  --bg-color: #020902;
-  --bg-gradient: linear-gradient(180deg, #020902, #030c03);
-  --card-bg: #020902;
+  --bg-color: #0d0d0d;
+  --bg-gradient: linear-gradient(180deg, #0d0d0d, #0d0d0d);
+  --card-bg: #1a1a1a;
   --primary: #aaff00;
   --primary-rgb: 170, 255, 0;
   --primary-hover: #bbff33;
@@ -953,34 +953,34 @@
   --accent: #ccff66;
   --success: #00ff88;
   --danger: #ff3355;
-  --text-dark: #aaff66;
-  --text-muted: #2a5500;
-  --text-light: #aaff66;
+  --text-dark: #f0ede6;
+  --text-muted: #888888;
+  --text-light: #f0ede6;
   --border-radius: 0px;
   --border-radius-sm: 0px;
-  --shadow-sm: 0 0 6px rgba(170, 255, 0, 0.15);
-  --shadow-md: 0 0 12px rgba(170, 255, 0, 0.3);
-  --shadow-lg: 0 0 20px rgba(170, 255, 0, 0.5);
+  --shadow-sm: 0 0 6px rgba(170, 255, 0, 0.2);
+  --shadow-md: 0 0 14px rgba(170, 255, 0, 0.35);
+  --shadow-lg: 0 0 24px rgba(170, 255, 0, 0.55);
   --transition: all 0.15s ease;
-  --sidebar-bg: rgba(2, 9, 2, 0.95);
-  --glass-border: rgba(170, 255, 0, 0.4);
+  --sidebar-bg: #080808;
+  --glass-border: rgba(170, 255, 0, 0.45);
   --input-border: rgba(170, 255, 0, 0.5);
-  --input-bg-focus: #020902;
-  --input-focus-ring: rgba(170, 255, 0, 0.2);
-  --bubble-bg: #020902;
-  --h-0: #020902;
-  --h-1: #0a1f00;
-  --h-2: #1a4400;
-  --h-3: #4a8800;
-  --h-4: #aaff00;
+  --input-bg-focus: #1a1a1a;
+  --input-focus-ring: rgba(170, 255, 0, 0.25);
+  --bubble-bg: #1a1a1a;
+  --h-0: #0d1a00;
+  --h-1: #224400;
+  --h-2: #558800;
+  --h-3: #aaff00;
+  --h-4: #ccff66;
 }
 
 [data-theme="terminal-acid"] .glass {
-  border: 1px solid rgba(170, 255, 0, 0.3);
+  border: 1px solid rgba(170, 255, 0, 0.35);
   backdrop-filter: none;
-  background: rgba(2, 9, 2, 0.95);
-  box-shadow: 0 0 12px rgba(170, 255, 0, 0.08) inset,
-    0 0 1px rgba(170, 255, 0, 0.5);
+  background: #1a1a1a;
+  box-shadow: 0 0 12px rgba(170, 255, 0, 0.06) inset,
+    0 0 1px rgba(170, 255, 0, 0.6);
 }
 
 [data-theme="terminal-acid"] .heatmap-cell[class*="intensity"] {
@@ -1001,8 +1001,8 @@
 [data-theme="terminal-acid"] input,
 [data-theme="terminal-acid"] select,
 [data-theme="terminal-acid"] textarea {
-  border: 1px solid rgba(170, 255, 0, 0.4);
-  background: #020902;
+  border: 1px solid rgba(170, 255, 0, 0.45);
+  background: #1a1a1a;
   color: var(--text-dark);
   border-radius: 0;
 }

@@ -1066,7 +1066,7 @@
 }
 
 [data-theme="terminal-acid"] .bingoals-root .card {
-  background: #030c03;
+  background: #1a1a1a;
   color: #aaff00;
   border: 1px solid #aaff00;
   border-radius: 0;
@@ -1075,8 +1075,8 @@
 
 [data-theme="terminal-acid"] .bingoals-root .card:hover {
   border-color: #bbff33;
-  background: #0a1f00;
-  box-shadow: 0 0 15px rgba(170,255,0,0.6);
+  background: #222;
+  box-shadow: 0 0 18px rgba(170,255,0,0.6);
 }
 
 [data-theme="terminal-blue"] .bingoals-root .card {

@@ -119,9 +119,9 @@
 }
 
 [data-theme="terminal-acid"] .bingoals-root {
-  --red:    #030c03;
+  --red:    #0d1a00;
   --white:  #aaff00;
-  --black:  #020902;
+  --black:  #060a00;
   --green:  #ccff66;
   --border: 1px solid rgba(170,255,0,0.5);
   --shadow: 0 0 10px rgba(170,255,0,0.4);
@@ -1066,7 +1066,7 @@
 }
 
 [data-theme="terminal-acid"] .bingoals-root .card {
-  background: #1a1a1a;
+  background: #060a00;
   color: #aaff00;
   border: 1px solid #aaff00;
   border-radius: 0;
@@ -1075,7 +1075,7 @@
 
 [data-theme="terminal-acid"] .bingoals-root .card:hover {
   border-color: #bbff33;
-  background: #222;
+  background: #0d1a00;
   box-shadow: 0 0 18px rgba(170,255,0,0.6);
 }
 

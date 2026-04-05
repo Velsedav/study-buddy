@@ -1095,23 +1095,25 @@ export default function Session() {
                                 <div className="rate-chapters-container">
                                     <h2 className="rate-chapters-title">{t('session.rate_chapters')}</h2>
                                     <p className="rate-chapters-progress">{rateChapterIdx + 1} / {rateChapterList.length}</p>
-                                    <div className="rate-chapters-chapter-name">{current?.name}</div>
-                                    <p className="rate-chapters-how">{t('session.rate_how')}</p>
-                                    <div className="rate-chapters-buttons">
-                                        {(['forgot', 'hard', 'good', 'easy'] as MasteryRating[]).map(r => (
-                                            <button
-                                                key={r}
-                                                className={`btn rate-btn rate-btn-${r}`}
-                                                onMouseEnter={() => playSFX(SFX.HOVER, theme)}
-                                                onClick={() => rateAndAdvance(r)}
-                                            >
-                                                {t(`session.mastery_${r}`)}
-                                            </button>
-                                        ))}
+                                    <div key={rateChapterIdx} className="rate-chapters-card">
+                                        <div className="rate-chapters-chapter-name">{current?.name}</div>
+                                        <p className="rate-chapters-how">{t('session.rate_how')}</p>
+                                        <div className="rate-chapters-buttons">
+                                            {(['forgot', 'hard', 'good', 'easy'] as MasteryRating[]).map(r => (
+                                                <button
+                                                    key={r}
+                                                    className={`btn rate-btn rate-btn-${r}`}
+                                                    onMouseEnter={() => playSFX(SFX.HOVER, theme)}
+                                                    onClick={() => rateAndAdvance(r)}
+                                                >
+                                                    {t(`session.mastery_${r}`)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button className="rate-chapters-skip" onClick={() => rateAndAdvance(null)}>
+                                            {isLast ? t('session.rating_done') : t('session.rating_next')}
+                                        </button>
                                     </div>
-                                    <button className="rate-chapters-skip" onClick={() => rateAndAdvance(null)}>
-                                        {isLast ? t('session.rating_done') : t('session.rating_next')}
-                                    </button>
                                 </div>
                             );
                         })()}
@@ -1185,6 +1187,7 @@ export default function Session() {
                                     <div className="post-zone-ombre-label">
                                         {isTerminal ? '[?]' : '🌑'} {t('session.zone_ombre_label')}
                                     </div>
+                                    <p className="post-zone-ombre-desc">{t('session.zone_ombre_desc')}</p>
                                     <div className="post-zone-ombre-input-row">
                                         <input
                                             id="zone-ombre-input"

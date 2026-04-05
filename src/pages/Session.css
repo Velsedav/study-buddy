@@ -548,6 +548,17 @@
 }
 
 /* Mastery Rating screen */
+@keyframes rate-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(32px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 .rate-chapters-container {
     padding: 16px 0;
     display: flex;
@@ -555,6 +566,15 @@
     align-items: center;
     gap: 12px;
     min-width: 340px;
+}
+
+.rate-chapters-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    animation: rate-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .rate-chapters-title {
@@ -645,6 +665,7 @@
 
 .total-rest-container {
     padding: 16px 0;
+    text-align: left;
 }
 
 .total-rest-title {
@@ -1228,6 +1249,13 @@
 .post-zone-ombre-section {
     text-align: left;
     margin-bottom: 10px;
+}
+
+.post-zone-ombre-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 2px 0 10px;
+    line-height: 1.4;
 }
 
 .post-zone-ombre-label {

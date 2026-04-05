@@ -5570,46 +5570,33 @@ input[type="checkbox"] {
 
 /* ── Starry Night: floating calligraphy quote (no speech bubble) ── */
 
-/* Strip all bubble chrome — pure typography on the night sky */
+/* Strip all bubble chrome — floating text on the night sky */
 [data-theme="starry-night"] .mascot-bubble {
-  background: transparent;
+  background: rgba(5, 10, 30, 0.52);
   border: none;
   box-shadow: none;
-  border-radius: 0;
-  backdrop-filter: none;
-  padding: 0 6px 10px;
-  font-family: 'Parisienne', cursive;
-  font-size: 1.05rem;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  padding: 10px 12px 12px;
+  font-family: 'Lora', Georgia, serif;
+  font-size: 0.88rem;
   font-weight: 400;
+  font-style: italic;
   color: #f0e8d4;
-  text-shadow:
-    0 1px 10px rgba(5, 12, 40, 0.95),
-    0 0 24px rgba(5, 12, 40, 0.80);
+  text-shadow: 0 1px 6px rgba(5, 12, 40, 0.90);
   line-height: 1.6;
   text-align: center;
 }
 
-/* Decorative golden opening quote mark */
-[data-theme="starry-night"] .mascot-bubble::before {
-  content: '\201C';
-  display: block;
-  font-family: 'Parisienne', cursive;
-  font-size: 2.8rem;
-  line-height: 0.6;
-  color: rgba(232, 200, 74, 0.65);
-  text-shadow: 0 0 14px rgba(232, 200, 74, 0.45);
-  margin-bottom: 6px;
-  /* Override triangle border values */
-  border: none;
-  position: static;
-  transform: none;
-  bottom: auto;
-  left: auto;
-}
-
-/* Hide tail fill triangle */
+/* Hide both tail triangles */
+[data-theme="starry-night"] .mascot-bubble::before,
 [data-theme="starry-night"] .mascot-bubble::after {
   display: none;
+}
+
+/* No uppercase anywhere in this theme */
+[data-theme="starry-night"] * {
+  text-transform: none !important;
 }
 
 /* Wrapper: gentle dark vignette so text reads against the painting */

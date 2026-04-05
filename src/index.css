@@ -5568,11 +5568,89 @@ input[type="checkbox"] {
   filter: drop-shadow(0 0 6px rgba(232, 200, 74, 0.50));
 }
 
+/* ── Starry Night: painterly mascot bubble ── */
 [data-theme="starry-night"] .mascot-bubble {
-  background: rgba(8, 18, 50, 0.78);
-  border: 1px solid rgba(74, 143, 200, 0.32);
+  background: linear-gradient(
+    145deg,
+    rgba(6, 14, 42, 0.93) 0%,
+    rgba(12, 24, 60, 0.88) 55%,
+    rgba(8, 18, 50, 0.93) 100%
+  );
+  border: 1px solid rgba(232, 200, 74, 0.42);
+  box-shadow:
+    0 4px 24px rgba(5, 12, 40, 0.72),
+    0 0 18px rgba(232, 200, 74, 0.14),
+    inset 0 1px 0 rgba(232, 200, 74, 0.10);
   color: #f0e8d4;
-  backdrop-filter: blur(8px);
+  font-family: 'Great Vibes', cursive;
+  font-size: 1.05rem;
+  font-weight: 400;
+  line-height: 1.55;
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+}
+
+/* Tail border: golden */
+[data-theme="starry-night"] .mascot-bubble::before {
+  border-color: rgba(232, 200, 74, 0.42) transparent transparent transparent;
+}
+
+/* Tail fill: matches bubble deep navy */
+[data-theme="starry-night"] .mascot-bubble::after {
+  border-color: rgba(8, 18, 50, 0.93) transparent transparent transparent;
+}
+
+/* Painterly entrance — blur dissolve, gentle rise from the mist */
+@keyframes starry-quote-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(10px) rotate(-1deg);
+    filter: blur(6px);
+  }
+  55% {
+    opacity: 0.9;
+    filter: blur(0.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+    filter: blur(0);
+  }
+}
+
+/* Painterly exit — dissolves back into the night */
+@keyframes starry-quote-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-8px) rotate(0.8deg);
+    filter: blur(5px);
+  }
+}
+
+[data-theme="starry-night"] .quote-enter {
+  animation: starry-quote-in 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+[data-theme="starry-night"] .quote-exit {
+  animation: starry-quote-out 0.35s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+
+/* Edit button: golden to match bubble border */
+[data-theme="starry-night"] .quote-edit-btn {
+  background: rgba(8, 18, 50, 0.92);
+  border-color: rgba(232, 200, 74, 0.50);
+  color: #e8c84a;
+}
+
+/* Mascot image: soft golden halo, floats in the painting atmosphere */
+[data-theme="starry-night"] .mascot-img {
+  filter: drop-shadow(0 0 10px rgba(232, 200, 74, 0.20))
+          drop-shadow(0 4px 14px rgba(5, 12, 40, 0.60));
 }
 
 /* ── Tags / chips ── */

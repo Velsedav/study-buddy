@@ -189,8 +189,8 @@ export default function Session() {
     const [customBreakItems, setCustomBreakItems] = useState<CustomPrepItem[]>(loadCustomBreakItems);
     const [breakCheckedItems, setBreakCheckedItems] = useState<boolean[]>(() => Array(BREAK_ITEM_COUNT + loadCustomBreakItems().length).fill(false));
     const [postStudyChecked, setPostStudyChecked] = useState<boolean[]>(() => Array(POST_ITEM_COUNT).fill(false));
-    const [confidenceScores, setConfidenceScores] = useState<Record<string, number>>({});
-    const [zoneOmbre, setZoneOmbre] = useState('');
+    const [zoneOmbreItems, setZoneOmbreItems] = useState<string[]>([]);
+    const [zoneOmbreInput, setZoneOmbreInput] = useState('');
     const [workoutLog, setWorkoutLog] = useState<WorkoutLog>(loadWorkoutLog);
     const [workoutSets, setWorkoutSets] = useState<WorkoutSets>(loadWorkoutSets);
     const [endConfirmStep, setEndConfirmStep] = useState<'none' | 'confirm-stop' | 'confirm-save' | 'rate-chapters' | 'total-rest'>('none');
@@ -446,19 +446,21 @@ export default function Session() {
                 repeats: session.repeats,
                 planned_minutes: session.plannedMinutes,
                 actual_minutes: actualMins
-            }, session.draft, confidenceScores);
+            }, session.draft, {});
 
-            // Save zone d'ombre to error log
-            if (zoneOmbre.trim()) {
+            // Save each zone d'ombre item to error log
+            if (zoneOmbreItems.length > 0) {
                 const lastWorkBlock = [...session.draft].reverse().find(
                     (b: any) => b.type === 'WORK' && b.subject_id
                 );
-                await saveErrorLogEntry({
-                    created_at: endedAt,
-                    subject_id: lastWorkBlock?.subject_id ?? null,
-                    chapter_name: lastWorkBlock?.chapter_name ?? null,
-                    text: zoneOmbre.trim(),
-                });
+                for (const item of zoneOmbreItems) {
+                    await saveErrorLogEntry({
+                        created_at: endedAt,
+                        subject_id: lastWorkBlock?.subject_id ?? null,
+                        chapter_name: lastWorkBlock?.chapter_name ?? null,
+                        text: item,
+                    });
+                }
             }
 
             // Update subjects
@@ -730,7 +732,7 @@ export default function Session() {
                                                     ) : t(item.labelKey as any)}
                                                 </span>
                                                 {item.tooltipKey && (
-                                                    <span className="checklist-info-icon" title={t(item.tooltipKey as any)}>ⓘ</span>
+                                                    <span className="checklist-info-icon" data-tooltip={t(item.tooltipKey as any)}>ⓘ</span>
                                                 )}
                                             </label>
                                         );
@@ -850,7 +852,7 @@ export default function Session() {
                                                     {item.emoji} {t(item.labelKey as any)}
                                                 </span>
                                                 {item.tooltipKey && (
-                                                    <span className="checklist-info-icon" title={t(item.tooltipKey as any)}>ⓘ</span>
+                                                    <span className="checklist-info-icon" data-tooltip={t(item.tooltipKey as any)}>ⓘ</span>
                                                 )}
                                             </label>
                                         );
@@ -1169,7 +1171,7 @@ export default function Session() {
                                                         <span className="prep-item-checkmark" />
                                                         <span className="prep-item-text">{item.emoji} {t(item.labelKey as any)}</span>
                                                         {item.tooltipKey && (
-                                                            <span className="checklist-info-icon" title={t(item.tooltipKey as any)}>ⓘ</span>
+                                                            <span className="checklist-info-icon" data-tooltip={t(item.tooltipKey as any)}>ⓘ</span>
                                                         )}
                                                     </label>
                                                 );
@@ -1178,51 +1180,52 @@ export default function Session() {
                                     ));
                                 })()}
 
-                                {/* Confidence score per work block */}
-                                {session && session.draft.some((b: any) => b.type === 'WORK' && b.subject_id) && (
-                                    <div className="post-calibration-section">
-                                        <div className="post-calibration-title">
-                                            {t('session.confidence_label')}
-                                            <span className="post-calibration-hint">{t('session.confidence_hint')}</span>
-                                        </div>
-                                        {session.draft
-                                            .filter((b: any) => b.type === 'WORK' && b.subject_id)
-                                            .map((b: any) => (
-                                                <div key={b.id} className="post-confidence-row">
-                                                    <span className="post-confidence-block-name">
-                                                        {b.chapter_name || b.subject_id}
-                                                    </span>
-                                                    <div className="post-confidence-buttons">
-                                                        {[1, 2, 3, 4].map(score => (
-                                                            <button
-                                                                key={score}
-                                                                className={`post-confidence-btn${confidenceScores[b.id] === score ? ' active' : ''}`}
-                                                                onClick={() => setConfidenceScores(prev => ({ ...prev, [b.id]: score }))}
-                                                            >
-                                                                {score}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ))
-                                        }
-                                    </div>
-                                )}
-
-                                {/* Zone d'ombre */}
+                                {/* Zone d'ombre — multi-item list */}
                                 <div className="post-zone-ombre-section">
-                                    <label className="post-zone-ombre-label" htmlFor="zone-ombre-input">
+                                    <div className="post-zone-ombre-label">
                                         {isTerminal ? '[?]' : '🌑'} {t('session.zone_ombre_label')}
-                                    </label>
-                                    <textarea
-                                        id="zone-ombre-input"
-                                        className="post-zone-ombre-input"
-                                        placeholder={t('session.zone_ombre_placeholder')}
-                                        value={zoneOmbre}
-                                        onChange={e => setZoneOmbre(e.target.value)}
-                                        rows={2}
-                                    />
-                                    {zoneOmbre.trim() && (
+                                    </div>
+                                    <div className="post-zone-ombre-input-row">
+                                        <input
+                                            id="zone-ombre-input"
+                                            className="post-zone-ombre-input"
+                                            placeholder={t('session.zone_ombre_placeholder')}
+                                            value={zoneOmbreInput}
+                                            onChange={e => setZoneOmbreInput(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && zoneOmbreInput.trim()) {
+                                                    e.preventDefault();
+                                                    setZoneOmbreItems(prev => [...prev, zoneOmbreInput.trim()]);
+                                                    setZoneOmbreInput('');
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            className="btn btn-secondary zone-ombre-add-btn"
+                                            disabled={!zoneOmbreInput.trim()}
+                                            onClick={() => {
+                                                if (zoneOmbreInput.trim()) {
+                                                    setZoneOmbreItems(prev => [...prev, zoneOmbreInput.trim()]);
+                                                    setZoneOmbreInput('');
+                                                }
+                                            }}
+                                        >+</button>
+                                    </div>
+                                    {zoneOmbreItems.length > 0 && (
+                                        <ul className="post-zone-ombre-list">
+                                            {zoneOmbreItems.map((item, i) => (
+                                                <li key={i} className="post-zone-ombre-item">
+                                                    <span className="post-zone-ombre-item-text">{item}</span>
+                                                    <button
+                                                        className="post-zone-ombre-remove"
+                                                        onClick={() => setZoneOmbreItems(prev => prev.filter((_, j) => j !== i))}
+                                                        aria-label="Remove"
+                                                    >×</button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {zoneOmbreItems.length > 0 && (
                                         <span className="post-zone-ombre-saved">{t('session.zone_ombre_saved')}</span>
                                     )}
                                 </div>

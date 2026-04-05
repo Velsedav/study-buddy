@@ -4,6 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
 
 :root {
   --font-main: 'Plus Jakarta Sans', sans-serif;
@@ -5366,6 +5367,7 @@ input[type="checkbox"] {
 [data-theme="starry-night"] {
   /* ── Palette ── */
   --bg-color: #0d1b3e;
+  --font-heading: 'Great Vibes', 'Lora', Georgia, serif;
   /* fallback dark ultramarine */
   --bg-gradient: linear-gradient(160deg, #0d1b3e 0%, #1a3060 100%);
   /* overridden below */
@@ -5553,8 +5555,12 @@ input[type="checkbox"] {
 
 /* ── Sidebar logo & mascot bubble over the painting ── */
 [data-theme="starry-night"] .logo h2 {
+  font-family: 'Great Vibes', cursive;
+  font-size: 1.7rem;
+  font-weight: 400;
   color: #f0e8d4;
-  text-shadow: 0 1px 8px rgba(5, 12, 40, 0.80), 0 0 16px rgba(232, 200, 74, 0.18);
+  text-shadow: 0 1px 8px rgba(5, 12, 40, 0.80), 0 0 20px rgba(232, 200, 74, 0.30);
+  letter-spacing: 0.01em;
 }
 
 [data-theme="starry-night"] .icon-gold {
@@ -5602,8 +5608,14 @@ input[type="checkbox"] {
 [data-theme="starry-night"] h2,
 [data-theme="starry-night"] h3 {
   font-family: var(--font-heading);
+  font-weight: 400;
   text-shadow: 0 1px 10px rgba(5, 12, 40, 0.80);
 }
+
+/* Great Vibes has no bold weight — size compensates for visual presence */
+[data-theme="starry-night"] h1 { font-size: 2.4rem; }
+[data-theme="starry-night"] h2 { font-size: 1.85rem; }
+[data-theme="starry-night"] h3 { font-size: 1.4rem; }
 
 /* ── Learning section cards: lift and edge glow on hover ── */
 [data-theme="starry-night"] .learning-section-card:hover {

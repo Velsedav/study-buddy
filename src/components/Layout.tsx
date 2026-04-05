@@ -405,7 +405,7 @@ export default function Layout() {
                             </button>
                         </div>
                         <img
-                            src="/mascot.png"
+                            src={theme === 'starry-night' ? '/assets/images/starry_night_mascot.png' : '/mascot.png'}
                             alt="Study Buddy Mascot"
                             className="mascot-img"
                             onClick={handleMascotClick}

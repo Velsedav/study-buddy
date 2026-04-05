@@ -1012,12 +1012,11 @@
   border-left: 2px solid var(--primary);
 }
 
-/* ── Terminal Acid bloom: layered phosphor glow on all text ── */
+/* ── Terminal Acid bloom: phosphor glow radiates around letters, not through them ── */
 [data-theme="terminal-acid"] body {
   text-shadow:
-    0 0 3px rgba(170, 255, 0, 0.95),
-    0 0 10px rgba(170, 255, 0, 0.55),
-    0 0 25px rgba(170, 255, 0, 0.2);
+    0 0 7px rgba(170, 255, 0, 0.55),
+    0 0 20px rgba(170, 255, 0, 0.18);
 }
 
 /* Glass panels: sharp edge glow + wide bloom */

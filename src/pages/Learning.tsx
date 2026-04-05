@@ -41,38 +41,6 @@ function getNextDayStart(): Date {
     return d;
 }
 
-/** Renders lesson content: supports **bold**, paragraphs (\n\n), and - list items */
-function renderContent(text: string) {
-    const boldify = (s: string) => s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    const blocks = text.split('\n\n');
-    return (
-        <div className="lesson-card-desc">
-            {blocks.map((block, i) => {
-                const lines = block.split('\n');
-                if (lines.length > 1 && lines.every(l => l.startsWith('- '))) {
-                    return (
-                        <ul key={i} className="lesson-content-list">
-                            {lines.map((line, j) => (
-                                <li key={j} dangerouslySetInnerHTML={{ __html: boldify(line.slice(2)) }} />
-                            ))}
-                        </ul>
-                    );
-                }
-                // Mixed block: some lines are list items, some are not
-                if (lines.some(l => l.startsWith('- '))) {
-                    return (
-                        <ul key={i} className="lesson-content-list">
-                            {lines.filter(l => l.startsWith('- ')).map((line, j) => (
-                                <li key={j} dangerouslySetInnerHTML={{ __html: boldify(line.slice(2)) }} />
-                            ))}
-                        </ul>
-                    );
-                }
-                return <p key={i} dangerouslySetInnerHTML={{ __html: boldify(block) }} />;
-            })}
-        </div>
-    );
-}
 
 function getSectionQuestionIds(section: Section): number[] {
     return section.chapters.flatMap(ch => ch.lessons.map(l => l.question.id));
@@ -985,7 +953,7 @@ export default function LearningTab() {
                                                                         {isSolved && <CheckCircle2 size={20} className="lesson-card-title-icon" />}
                                                                     </h4>
                                                                     <div className="lesson-card-body">
-                                                                        {renderContent(lesson.content)}
+                                                                        <p className="lesson-card-desc">{lesson.content}</p>
                                                                     </div>
                                                                 </div>
                                                                 {quizCol}

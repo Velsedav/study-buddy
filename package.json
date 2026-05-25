@@ -1,7 +1,7 @@
 {
   "name": "study-buddy",
   "private": true,
-  "version": "1.8.3a",
+  "version": "1.8.3-a",
   "type": "module",
   "scripts": {
     "dev": "vite",
